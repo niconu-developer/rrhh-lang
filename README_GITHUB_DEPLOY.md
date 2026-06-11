@@ -107,6 +107,46 @@ docker compose -f docker-compose.example.yml exec rrhh cp /data/planner.db /data
 
 Para una instalacion nueva, el backend crea/migra la base automaticamente al iniciar usando `schema.sql` y seeds controlados.
 
+## PostgreSQL en paralelo
+
+La app actual todavia corre contra SQLite. Estos archivos permiten empezar la migracion a PostgreSQL sin romper el entorno local:
+
+- `backend/schema.postgres.sql`
+- `backend/seed.postgres.sql`
+- `docker-compose.postgres.example.yml`
+- `.env.postgres.example`
+- `scripts/update_postgres_database.py`
+- `scripts/migrate_sqlite_to_postgres.py`
+
+Levantar solo PostgreSQL para pruebas:
+
+```bash
+cp .env.postgres.example .env.postgres
+docker compose --env-file .env.postgres -f docker-compose.postgres.example.yml up -d
+```
+
+Instalar el conector de PostgreSQL:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+Crear/verificar estructura PostgreSQL:
+
+```bash
+DATABASE_URL=postgresql://lang_rrhh:cambiar-esta-clave@127.0.0.1:5433/lang_rrhh \
+python3 scripts/update_postgres_database.py
+```
+
+Copiar datos desde SQLite hacia PostgreSQL:
+
+```bash
+DATABASE_URL=postgresql://lang_rrhh:cambiar-esta-clave@127.0.0.1:5433/lang_rrhh \
+python3 scripts/migrate_sqlite_to_postgres.py --truncate
+```
+
+Importante: esta fase crea y carga PostgreSQL. El cambio para que la aplicacion use PostgreSQL en runtime requiere migrar la capa de consultas del backend.
+
 ## Seguridad minima
 
 Antes de exponerlo:
