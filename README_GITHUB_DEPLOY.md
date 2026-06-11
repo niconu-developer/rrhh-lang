@@ -1,6 +1,6 @@
 # LANG - Sistema de gestion de personal
 
-Proyecto web vanilla + backend Python/SQLite para plan semanal, reloj, marcas, incidencias, validacion de jornales, operaciones, reportes, facturacion y liquidacion.
+Proyecto web vanilla + backend Python/PostgreSQL para plan semanal, reloj, marcas, incidencias, validacion de jornales, operaciones, reportes, facturacion y liquidacion.
 
 ## Que se sube a GitHub
 
@@ -13,6 +13,8 @@ Subir codigo y estructura:
 - `.env.example`
 - `backend/schema.sql`
 - `backend/seed.sql`
+- `backend/schema.postgres.sql`
+- `backend/seed.postgres.sql`
 
 No subir datos locales ni respaldos:
 
@@ -50,6 +52,8 @@ cp .env.example .env
 ```text
 PLANNER_PUBLIC_PORT=8766
 PLANNER_ADMIN_PASSWORD=una-clave-segura
+POSTGRES_PASSWORD=una-clave-segura-de-base
+DATABASE_URL=postgresql://lang_rrhh:una-clave-segura-de-base@rrhh-db:5432/lang_rrhh
 ```
 
 3. Levantar:
@@ -68,10 +72,12 @@ http://SERVIDOR:8766
 
 Este sistema debe correr como servicio separado:
 
-- contenedor: `lang-rrhh`
+- contenedor app: `lang-rrhh`
+- contenedor base: `lang-rrhh-db`
 - puerto interno: `8765`
 - puerto externo sugerido: `8766`
-- volumen Docker: `rrhh_data`
+- volumen Docker app: `rrhh_data`
+- volumen Docker PostgreSQL: `rrhh_postgres_data`
 
 Si en el mismo servidor ya existe otra app, no usar su mismo puerto publico ni su mismo path `/api` en Nginx.
 
@@ -86,10 +92,10 @@ Evitar al principio:
 
 ## Base de datos
 
-En Docker, SQLite vive dentro del volumen `rrhh_data` como:
+En Docker, la base activa es PostgreSQL si `DATABASE_URL` esta configurada:
 
 ```text
-/data/planner.db
+postgresql://lang_rrhh:...@rrhh-db:5432/lang_rrhh
 ```
 
 Para crear o actualizar la estructura de base:
@@ -98,17 +104,17 @@ Para crear o actualizar la estructura de base:
 docker compose -f docker-compose.example.yml exec rrhh python3 scripts/update_database.py
 ```
 
-Para backup:
+SQLite queda como fallback local si no se define `DATABASE_URL`. En ese caso vive en:
 
-```bash
-docker compose -f docker-compose.example.yml exec rrhh cp /data/planner.db /data/planner-backup.db
+```text
+backend/planner.db
 ```
 
-Para una instalacion nueva, el backend crea/migra la base automaticamente al iniciar usando `schema.sql` y seeds controlados.
+Para una instalacion nueva, el backend crea/migra la base automaticamente al iniciar usando `schema.postgres.sql` y seeds controlados.
 
 ## PostgreSQL en paralelo
 
-La app actual todavia corre contra SQLite. Estos archivos permiten empezar la migracion a PostgreSQL sin romper el entorno local:
+Estos archivos permiten crear y poblar PostgreSQL:
 
 - `backend/schema.postgres.sql`
 - `backend/seed.postgres.sql`
@@ -143,8 +149,6 @@ Copiar datos desde SQLite hacia PostgreSQL:
 DATABASE_URL=postgresql://lang_rrhh:cambiar-esta-clave@127.0.0.1:5433/lang_rrhh \
 python3 scripts/migrate_sqlite_to_postgres.py --truncate
 ```
-
-Importante: esta fase crea y carga PostgreSQL. El cambio para que la aplicacion use PostgreSQL en runtime requiere migrar la capa de consultas del backend.
 
 ## Seguridad minima
 

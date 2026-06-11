@@ -26,6 +26,7 @@ backend/*.sqbpro
 data/
 backups/
 OLD/
+RESPALDO/
 
 # Generated exports and delivery bundles
 *.zip

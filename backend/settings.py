@@ -5,6 +5,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 FRONTEND_DIR = Path(os.environ.get("PLANNER_FRONTEND_DIR", PROJECT_DIR / "frontend"))
 BACKEND_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("PLANNER_DB", BACKEND_DIR / "planner.db"))
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 HOST = os.environ.get("PLANNER_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PLANNER_PORT", "8765"))
 SERVE_STATIC = os.environ.get("PLANNER_SERVE_STATIC", "1").lower() in {"1", "true", "yes", "si"}

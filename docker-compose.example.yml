@@ -1,8 +1,27 @@
 services:
+  rrhh-db:
+    image: postgres:16-alpine
+    container_name: lang-rrhh-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lang_rrhh}
+      POSTGRES_USER: ${POSTGRES_USER:-lang_rrhh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cambiar-esta-clave-postgres}
+    volumes:
+      - rrhh_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lang_rrhh} -d ${POSTGRES_DB:-lang_rrhh}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   rrhh:
     build: .
     container_name: lang-rrhh
     restart: unless-stopped
+    depends_on:
+      rrhh-db:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -12,3 +31,4 @@ services:
 
 volumes:
   rrhh_data:
+  rrhh_postgres_data:

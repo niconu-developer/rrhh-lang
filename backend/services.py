@@ -868,14 +868,16 @@ class IncidenciasService:
         touched_dates = set()
         touched_jornales = []
         for incident in incidents:
+            parsed_incident_day = parse_iso_date(incident["fecha"])
+            next_incident_day = (parsed_incident_day + timedelta(days=1)).strftime("%Y-%m-%d") if parsed_incident_day else incident["fecha"]
             marks = connection.execute("""
                 SELECT *
                 FROM marcas
                 WHERE persona_id = ?
-                  AND date(fecha_hora) BETWEEN date(?) AND date(?, '+1 day')
+                  AND date(fecha_hora) BETWEEN date(?) AND date(?)
                   AND COALESCE(anulada, 0) = 0
                 ORDER BY fecha_hora
-            """, (incident["persona_id"], incident["fecha"], incident["fecha"])).fetchall()
+            """, (incident["persona_id"], incident["fecha"], next_incident_day)).fetchall()
             if not marks:
                 raise ValueError(f"No hay marcas para pasar al plan semanal: {incident['persona'] or 'Sin persona'} {incident['fecha']}")
             entries = [mark for mark in marks if str(mark["tipo"] or "").lower() == "entrada" and date_from_db_datetime(mark["fecha_hora"]) == incident["fecha"]]

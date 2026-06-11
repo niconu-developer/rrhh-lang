@@ -1,12 +1,13 @@
 import json
 from datetime import datetime, timedelta
 
-from .database import connect, rows, one
+from .database import IS_POSTGRES, connect, rows, one
 from .security import hash_password, token_hash, verify_password
 from .settings import SESSION_TTL_HOURS
 
 
 def list_personas():
+    tariff_ids_sql = "string_agg(CAST(tarifa_id AS TEXT), ',')" if IS_POSTGRES else "group_concat(tarifa_id)"
     return rows("""
         SELECT
           personas.id,
@@ -28,7 +29,7 @@ def list_personas():
           usuarios.activo AS usuario_activo,
           roles_app.nombre AS rol_app,
           (
-            SELECT group_concat(tarifa_id)
+            SELECT {tariff_ids_sql}
             FROM persona_operacion_tarifas
             WHERE persona_operacion_tarifas.persona_id = personas.id
           ) AS operacion_tarifa_ids
@@ -37,7 +38,7 @@ def list_personas():
         LEFT JOIN usuarios ON usuarios.persona_id = personas.id
         LEFT JOIN roles_app ON roles_app.id = usuarios.rol_app_id
         ORDER BY roles_operativos.id, personas.nombre
-    """)
+    """.format(tariff_ids_sql=tariff_ids_sql))
 
 
 def list_usuarios():

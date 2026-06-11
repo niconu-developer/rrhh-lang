@@ -20,7 +20,7 @@ if __package__ in {None, ""}:
 
 from backend import repositories as repo
 from backend import routes as api_routes
-from backend.database import connect, one, rows
+from backend.database import IS_POSTGRES, connect, execute_script, one, rows
 from backend.security import hash_password, is_password_hash
 from backend.services import AprobacionesService, IncidenciasService
 from backend.settings import (
@@ -40,12 +40,25 @@ from backend.settings import (
 
 
 def ensure_database():
-    schema_path = BACKEND_DIR / "schema.sql"
-    seed_path = BACKEND_DIR / "seed.sql"
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    schema_path = BACKEND_DIR / ("schema.postgres.sql" if IS_POSTGRES else "schema.sql")
+    seed_path = BACKEND_DIR / ("seed.postgres.sql" if IS_POSTGRES else "seed.sql")
+    if not IS_POSTGRES:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     with connect() as connection:
         if schema_path.exists():
-            connection.executescript(schema_path.read_text(encoding="utf-8"))
+            execute_script(connection, schema_path.read_text(encoding="utf-8"))
+        if IS_POSTGRES:
+            if seed_path.exists():
+                execute_script(connection, seed_path.read_text(encoding="utf-8"))
+            ensure_required_role_permissions(connection)
+            ensure_private_person_codes(connection)
+            ensure_identity_model(connection)
+            ensure_email_identifiers(connection)
+            migrate_passwords_to_hash(connection)
+            ensure_bootstrap_admin(connection)
+            seed_default_operation_tarifas(connection)
+            seed_default_persona_operation_tarifas(connection)
+            return
         ensure_column(connection, "personas", "codigo_privado", "TEXT")
         ensure_column(connection, "personas", "email", "TEXT")
         ensure_private_person_codes(connection)
@@ -61,7 +74,7 @@ def ensure_database():
         ensure_turnos_unique_index(connection)
         ensure_required_role_permissions(connection)
         if seed_path.exists():
-            connection.executescript(seed_path.read_text(encoding="utf-8"))
+            execute_script(connection, seed_path.read_text(encoding="utf-8"))
         ensure_required_role_permissions(connection)
         ensure_private_person_codes(connection)
         ensure_identity_model(connection)
