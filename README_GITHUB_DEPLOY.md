@@ -165,6 +165,7 @@ Configurar en `.env`:
 PLANNER_EXTERNAL_AUTH_ME_URL=https://app.lang.uy/api/auth/me
 PLANNER_EXTERNAL_AUTH_COOKIE_NAME=connect.sid
 PLANNER_EXTERNAL_AUTH_TIMEOUT_SECONDS=3
+PLANNER_EXTERNAL_AUTH_DEBUG=0
 ```
 
 Flujo:
@@ -176,3 +177,47 @@ Flujo:
 5. Si existe y esta activo, usa el rol local de RRHH (`admin`, `rrhh`, `usuario`).
 
 El rol que devuelve Depósito no reemplaza el rol local de RRHH. El matching es por email.
+
+Para probar localmente con logs:
+
+```bash
+PLANNER_EXTERNAL_AUTH_ME_URL=https://app.lang.uy/api/auth/me \
+PLANNER_EXTERNAL_AUTH_COOKIE_NAME=connect.sid \
+PLANNER_EXTERNAL_AUTH_DEBUG=1 \
+python3 backend/app.py
+```
+
+Probar Depósito sin cookie:
+
+```bash
+curl -i https://app.lang.uy/api/auth/me
+```
+
+Probar Depósito con cookie real:
+
+```bash
+curl -i https://app.lang.uy/api/auth/me \
+  -H 'Cookie: connect.sid=PEGAR_COOKIE_REAL'
+```
+
+Probar RRHH local sin cookie:
+
+```bash
+curl -i http://127.0.0.1:8765/api/personas
+```
+
+Probar RRHH local reenviando cookie real:
+
+```bash
+curl -i http://127.0.0.1:8765/api/personas \
+  -H 'Cookie: connect.sid=PEGAR_COOKIE_REAL'
+```
+
+Probar RRHH local con cookie invalida:
+
+```bash
+curl -i http://127.0.0.1:8765/api/personas \
+  -H 'Cookie: connect.sid=COOKIE_INVALIDA'
+```
+
+No guardar cookies reales en archivos ni commits.

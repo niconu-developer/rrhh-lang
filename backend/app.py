@@ -28,6 +28,7 @@ from backend.settings import (
     BACKEND_DIR,
     DB_PATH,
     EXTERNAL_AUTH_COOKIE_NAME,
+    EXTERNAL_AUTH_DEBUG,
     EXTERNAL_AUTH_ME_URL,
     EXTERNAL_AUTH_TIMEOUT_SECONDS,
     FRONTEND_DIR,
@@ -869,6 +870,11 @@ def cookie_header_contains(cookie_header, cookie_name):
     return any(part.strip().startswith(prefix) for part in str(cookie_header).split(";"))
 
 
+def external_auth_log(message):
+    if EXTERNAL_AUTH_DEBUG:
+        print(f"[external-auth] {message}", file=sys.stderr)
+
+
 class PlannerHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
@@ -947,10 +953,13 @@ class PlannerHandler(SimpleHTTPRequestHandler):
 
     def authenticate_external_cookie(self):
         if not EXTERNAL_AUTH_ME_URL:
+            external_auth_log("sin PLANNER_EXTERNAL_AUTH_ME_URL; se omite SSO externo")
             return None
         cookie_header = self.headers.get("Cookie", "")
         if not cookie_header_contains(cookie_header, EXTERNAL_AUTH_COOKIE_NAME):
+            external_auth_log(f"no se encontro cookie {EXTERNAL_AUTH_COOKIE_NAME}")
             return None
+        external_auth_log(f"cookie {EXTERNAL_AUTH_COOKIE_NAME} detectada; consultando /me")
         try:
             request = Request(
                 EXTERNAL_AUTH_ME_URL,
@@ -961,17 +970,30 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             )
             with urlopen(request, timeout=EXTERNAL_AUTH_TIMEOUT_SECONDS) as response:
                 if response.status != 200:
+                    external_auth_log(f"/me respondio {response.status}")
                     return None
                 external_user = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+                external_auth_log("/me respondio 200")
+        except HTTPError as error:
+            external_auth_log(f"/me respondio {error.code}")
+            return None
+        except (URLError, TimeoutError) as error:
+            external_auth_log(f"error de conexion contra /me: {error.__class__.__name__}")
+            return None
+        except (ValueError, json.JSONDecodeError):
+            external_auth_log("/me devolvio una respuesta no JSON")
             return None
 
         email = str(external_user.get("email") or "").strip().lower()
         if not email:
+            external_auth_log("/me no devolvio email")
             return None
+        external_auth_log(f"/me devolvio email {email}")
         user = repo.user_by_email(email)
         if not user:
+            external_auth_log(f"email {email} no existe activo en RRHH")
             return None
+        external_auth_log(f"email {email} aceptado con rol local {user.get('rol_app')}")
         user["external_auth"] = True
         user["external_user_id"] = external_user.get("id")
         user["external_role"] = external_user.get("role")
