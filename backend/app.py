@@ -29,7 +29,6 @@ from backend.settings import (
     HOST,
     PORT,
     PUBLIC_FACE_CLOCK,
-    RRHH_BOOTSTRAP_PASSWORD,
     SERVE_STATIC,
 )
 
@@ -138,28 +137,10 @@ def ensure_identity_model(connection):
         )
         connection.execute("DELETE FROM roles_operativos WHERE id = ?", (legacy_admin["id"],))
 
-    rrhh_role = connection.execute("SELECT id FROM roles_app WHERE nombre = 'rrhh'").fetchone()
-    if not rrhh_role:
-        rrhh_role_id = connection.execute("INSERT INTO roles_app (nombre) VALUES ('rrhh')").lastrowid
-    else:
-        rrhh_role_id = rrhh_role["id"]
-    rrhh_user = connection.execute("SELECT id FROM usuarios WHERE usuario = 'rrhh'").fetchone()
-    if rrhh_user:
-        connection.execute("""
-            UPDATE usuarios
-            SET persona_id = NULL, rol_app_id = ?, email = 'rrhh@empresa.local', activo = 1
-            WHERE id = ?
-        """, (rrhh_role_id, rrhh_user["id"]))
-    elif RRHH_BOOTSTRAP_PASSWORD:
-        connection.execute("""
-            INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo)
-            VALUES ('rrhh', ?, 'rrhh@empresa.local', NULL, ?, 1)
-        """, (hash_password(RRHH_BOOTSTRAP_PASSWORD), rrhh_role_id))
-
     connection.execute("""
         UPDATE usuarios
         SET persona_id = NULL
-        WHERE usuario IN ('admin', 'rrhh')
+        WHERE usuario = 'admin'
     """)
 
 

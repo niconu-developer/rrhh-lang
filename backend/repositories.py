@@ -452,8 +452,8 @@ def save_usuario_for_persona(connection, persona_id, access_payload):
     if not email:
         raise ValueError("El correo es obligatorio para crear acceso")
     username = email
-    if username.lower() in {"admin", "rrhh"}:
-        raise ValueError("admin y rrhh se reservan como usuarios técnicos del sistema")
+    if username.lower() == "admin":
+        raise ValueError("admin se reserva como usuario tecnico del sistema")
 
     duplicate = connection.execute(
         "SELECT id FROM usuarios WHERE (usuario = ? OR lower(coalesce(email, '')) = lower(?)) AND (? IS NULL OR id <> ?)",
@@ -867,12 +867,12 @@ def save_usuario(payload, user_id=None):
             persona_id = persona_id_by_name(connection, payload.get("persona"))
         if not persona_id:
             persona_id = None
-        technical_users = {"admin", "rrhh", "admin@empresa.local", "rrhh@empresa.local"}
+        technical_users = {"admin", "admin@empresa.local"}
         is_technical_user = username.lower() in technical_users
         if not persona_id and not is_technical_user:
-            raise ValueError("Todo usuario debe estar vinculado a una persona, salvo admin y rrhh")
+            raise ValueError("Todo usuario debe estar vinculado a una persona, salvo admin")
         if persona_id and is_technical_user:
-            raise ValueError("admin y rrhh se reservan como usuarios técnicos sin persona vinculada")
+            raise ValueError("admin se reserva como usuario tecnico sin persona vinculada")
         duplicate = connection.execute("""
             SELECT id FROM usuarios
             WHERE (usuario = ? OR lower(coalesce(email, '')) = lower(?))

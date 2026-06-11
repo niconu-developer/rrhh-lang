@@ -50,7 +50,6 @@ cp .env.example .env
 ```text
 PLANNER_PUBLIC_PORT=8766
 PLANNER_ADMIN_PASSWORD=una-clave-segura
-PLANNER_RRHH_PASSWORD=otra-clave-segura
 ```
 
 3. Levantar:
