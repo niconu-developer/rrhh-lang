@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Validación de jornales</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/aprobaciones.css?v=20260610-approval-header1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Validación de jornales</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <h2>Cierre de jornales</h2>
+          </div>
+          <span class="kiosk-badge approval-total-badge" id="approvalCount">0 jornadas · Diferencia 0 h</span>
+        </div>
+        <div class="report-filters approval-filters">
+          <label>Desde<input id="approvalFrom" type="date" /></label>
+          <label>Hasta<input id="approvalTo" type="date" /></label>
+          <label>Persona o rol<input id="approvalPerson" type="search" placeholder="Buscar: lucas, brai, logistico" autocomplete="off" /></label>
+          <label>Estado
+            <select id="approvalStatus">
+              <option value="PENDIENTE" selected>Pendientes</option>
+              <option value="REQUIERE_REVISION">Requiere revisión</option>
+              <option value="todos">Todos los estados</option>
+              <option value="APROBADA">Validados</option>
+              <option value="VALIDADA_CON_INCIDENCIA">Validados con incidencia</option>
+              <option value="RECHAZADA">Rechazados</option>
+            </select>
+          </label>
+          <label>Orden
+            <select id="approvalSort">
+              <option value="fecha">Fecha</option>
+              <option value="diferencia_abs">Mayor diferencia</option>
+              <option value="faltante">Mayor faltante</option>
+              <option value="sin_marcas">Sin marcas primero</option>
+            </select>
+          </label>
+          <div class="approval-inline-actions">
+            <button class="ghost-button" id="approvalRefresh" type="button">Actualizar</button>
+            <button class="primary-button" id="approveSelection" type="button" disabled>Aprobar selección</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead>
+              <tr>
+                <th class="select-column">
+                  <input id="selectAllApprovals" type="checkbox" aria-label="Seleccionar todas las jornadas visibles" />
+                </th>
+                <th>Fecha</th>
+                <th>Persona</th>
+                <th>Turno previsto</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Diferencia</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="approvalTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="approvalModal" aria-hidden="true">
+      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="approvalModalTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Jornada</p>
+            <h2 id="approvalModalTitle">Detalle de jornal</h2>
+          </div>
+          <button class="ghost-button small" id="closeApprovalModal" type="button">Cerrar</button>
+        </div>
+        <div class="incident-detail-grid" id="approvalDetailBody"></div>
+        <label>Observación<textarea id="approvalObservation" rows="3" placeholder="Opcional"></textarea></label>
+        <div class="modal-actions">
+          <button class="ghost-button" id="rejectApprovalDetail" type="button">Rechazar</button>
+          <button class="primary-button" id="approveApprovalDetail" type="button">Aprobar</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="approvalMarkModal" aria-hidden="true">
+      <section class="person-modal mark-edit-modal" role="dialog" aria-modal="true" aria-labelledby="approvalMarkModalTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Validación de jornales</p>
+            <h2 id="approvalMarkModalTitle">Editar marca</h2>
+          </div>
+        </div>
+        <form id="approvalMarkForm" class="mark-edit-form">
+          <input id="approvalMarkId" type="hidden" />
+          <input id="approvalMarkPersonId" type="hidden" />
+          <input id="approvalMarkType" type="hidden" />
+          <div class="mark-single-fields">
+            <label>Fecha
+              <input id="approvalMarkDate" type="date" required />
+            </label>
+            <label>Hora
+              <input id="approvalMarkTime" type="text" inputmode="numeric" placeholder="HH:MM" required />
+            </label>
+            <label>Actividad / ubicación
+              <input id="approvalMarkActivity" type="text" placeholder="Actividad / ubicación" />
+            </label>
+          </div>
+          <label>Observaciones
+            <textarea id="approvalMarkObservation" rows="3" placeholder="Justificación de carga o edición manual" required></textarea>
+          </label>
+          <p class="incident-modal-note">La marca queda registrada como MARCA MANUAL ADMIN y actualiza la validación del jornal.</p>
+          <div class="modal-actions">
+            <button class="ghost-button" id="cancelApprovalMark" type="button">Cancelar</button>
+            <button class="primary-button" type="submit">Guardar marca</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./aprobaciones.js?v=20260610-no-work-approval1"></script>
+  </body>
+</html>

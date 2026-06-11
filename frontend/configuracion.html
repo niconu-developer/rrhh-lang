@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Configuración</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/configuracion.css?v=20260611-density-pass1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Configuración</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="config-shell">
+      <aside class="config-sidebar" aria-label="Secciones de configuración">
+        <button class="config-nav active" data-config-tab="roles" type="button">Roles operativos</button>
+        <button class="config-nav" data-config-tab="parametros" type="button">Parámetros</button>
+        <button class="config-nav" data-config-tab="ubicaciones" type="button">Ubicaciones</button>
+        <button class="config-nav" data-config-tab="permisos" type="button">Roles y permisos</button>
+      </aside>
+
+      <section class="config-content">
+      <section class="admin-panel config-section active" data-config-panel="roles">
+        <div class="section-head">
+          <div>
+            <p class="muted">Roles de la empresa</p>
+            <h2>Roles operativos</h2>
+          </div>
+        </div>
+        <form class="inline-form" id="operatorTypeForm">
+          <input id="operatorTypeInput" type="text" placeholder="Ej: Referente" />
+          <button class="primary-button" type="submit">Agregar</button>
+        </form>
+        <div class="admin-list" id="operatorTypeList"></div>
+      </section>
+
+      <section class="admin-panel config-section" data-config-panel="parametros">
+        <div class="section-head">
+          <div>
+            <p class="muted">Reglas operativas</p>
+            <h2>Parámetros generales</h2>
+          </div>
+          <button class="primary-button" id="saveGeneralParams" type="button">Guardar parámetros</button>
+        </div>
+        <div class="settings-grid compact-settings-grid">
+          <label class="setting-card">
+            <span>Pre-aprobación</span>
+            <strong>Tolerancia de jornal</strong>
+            <small>Si entrada y salida están dentro de este margen, el jornal se pre-aprueba automáticamente.</small>
+            <div class="setting-input-line">
+              <input id="approvalToleranceInput" type="number" min="0" step="1" />
+              <span>min</span>
+            </div>
+          </label>
+          <label class="setting-card">
+            <span>Alertas</span>
+            <strong>Umbral amarillo</strong>
+            <small>Desde este desfasaje se muestra una alerta informativa de atención media.</small>
+            <div class="setting-input-line">
+              <input id="alertGreenToleranceInput" type="number" min="0" step="1" />
+              <span>min</span>
+            </div>
+          </label>
+          <label class="setting-card">
+            <span>Alertas</span>
+            <strong>Umbral rojo</strong>
+            <small>Desde este desfasaje la alerta pasa a prioridad alta.</small>
+            <div class="setting-input-line">
+              <input id="alertYellowToleranceInput" type="number" min="0" step="1" />
+              <span>min</span>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section class="admin-panel config-section" data-config-panel="ubicaciones">
+        <div class="section-head">
+          <div>
+            <p class="muted">Ubicaciones autorizadas</p>
+            <h2>Lugares para marcas</h2>
+          </div>
+          <button class="primary-button" id="newLocationButton" type="button">Nueva ubicación</button>
+        </div>
+        <div class="admin-list" id="locationList"></div>
+      </section>
+
+      <section class="admin-panel config-section access-panel" data-config-panel="permisos">
+        <div class="section-head">
+          <div>
+            <p class="muted">Acceso</p>
+            <h2>Roles y permisos</h2>
+          </div>
+        </div>
+        <div class="access-column">
+          <div class="access-subhead">
+            <h3>Permisos por rol</h3>
+            <span>Marcá qué ve cada rol.</span>
+          </div>
+          <div class="role-card-grid" id="rolePermissionList"></div>
+        </div>
+      </section>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="locationModal" aria-hidden="true">
+      <section class="person-modal location-modal" role="dialog" aria-modal="true" aria-labelledby="locationModalTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Ubicación</p>
+            <h2 id="locationModalTitle">Editar locación</h2>
+          </div>
+          <button class="ghost-button small" id="closeLocationModal" type="button">Cerrar</button>
+        </div>
+        <form class="person-form" id="locationEditForm">
+          <input id="locationEditId" type="hidden" />
+          <div class="person-form-grid">
+            <label>Etiqueta<input id="locationEditName" type="text" /></label>
+            <label>Link de Google Maps<input id="locationEditMap" type="url" /></label>
+            <label>Tolerancia metros<input id="locationEditTolerance" type="number" min="1" step="1" /></label>
+            <label>Dirección OpenStreetMap<input id="locationEditAddress" type="text" /></label>
+          </div>
+          <label class="check-line">
+            <input id="locationEditIncident" type="checkbox" />
+            Esta locación genera incidencia
+          </label>
+          <div class="modal-actions">
+            <button class="ghost-button" id="lookupLocationAddress" type="button">Traer dirección</button>
+            <button class="primary-button" type="submit">Guardar locación</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./configuracion.js?v=20260611-general-params1"></script>
+  </body>
+</html>

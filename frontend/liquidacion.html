@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Liquidación de sueldos</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/liquidacion.css?v=20260611-density-pass1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Liquidación de sueldos</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell payroll-shell">
+      <section class="report-panel">
+        <div class="section-head payroll-head">
+          <div>
+            <p class="muted">Borrador de liquidación</p>
+            <h2>Persona y período</h2>
+          </div>
+          <span class="kiosk-badge" id="payrollStatus">Sin calcular</span>
+        </div>
+        <div class="payroll-controls">
+          <label>
+            Persona
+            <select id="payrollPerson"></select>
+          </label>
+          <div class="month-nav payroll-month-nav" aria-label="Navegar liquidación por mes">
+            <button class="ghost-button small" id="payrollPreviousMonth" type="button" aria-label="Mes anterior">&lt;</button>
+            <button class="ghost-button small" id="payrollCurrentMonth" type="button">Mes actual</button>
+            <button class="ghost-button small" id="payrollNextMonth" type="button" aria-label="Mes siguiente">&gt;</button>
+            <span class="day-summary-separator" aria-hidden="true"></span>
+            <div>
+              <h2 id="payrollMonthLabel">Mes</h2>
+              <p class="current-date">Liquidación mensual</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="payroll-summary-grid" aria-label="Resumen liquidación">
+        <article class="payroll-summary-card">
+          <span>Total horas</span>
+          <strong id="payrollTotalHours">0 h</strong>
+          <small>Solo jornales validados</small>
+        </article>
+        <article class="payroll-summary-card">
+          <span>Valor hora</span>
+          <strong id="payrollHourlyRate">$0</strong>
+          <small>Tomado del personal</small>
+        </article>
+        <article class="payroll-summary-card">
+          <span>Operaciones</span>
+          <strong id="payrollOperationsCount">0</strong>
+          <small>Cantidad aprobada · Total <b id="payrollOperationsTotal">$0</b></small>
+        </article>
+        <article class="payroll-summary-card">
+          <span>Subtotal</span>
+          <strong id="payrollSubtotal">$0</strong>
+          <small>Horas + operaciones</small>
+        </article>
+        <article class="payroll-summary-card">
+          <span>Total deducciones</span>
+          <strong id="payrollDeductionsTotal">$0</strong>
+          <small>Fijas y porcentuales</small>
+        </article>
+        <article class="payroll-summary-card total">
+          <span>Monto total a cobrar</span>
+          <strong id="payrollNetTotal">$0</strong>
+          <small id="payrollGrossBreakdown">Horas + operaciones - deducciones</small>
+        </article>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Control previo</p>
+            <h2>Jornales pendientes de validación</h2>
+          </div>
+          <span class="kiosk-badge warning" id="payrollPendingCount">0 pendientes</span>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table payroll-pending-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Plan semanal</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Horas</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="payrollPendingBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Control previo</p>
+            <h2>Operaciones pendientes de validación</h2>
+          </div>
+          <span class="kiosk-badge warning" id="payrollPendingOperationsCount">0 pendientes</span>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table payroll-pending-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Franja</th>
+                <th>Referencia</th>
+                <th>Valor estimado</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="payrollPendingOperationsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="payroll-detail-grid">
+        <article class="report-panel">
+          <div class="section-head">
+            <div>
+              <p class="muted">Base liquidable</p>
+              <h2>Jornales validados</h2>
+            </div>
+            <span class="kiosk-badge" id="payrollApprovedHoursBadge">0 h</span>
+          </div>
+          <div class="dashboard-table-wrap">
+            <table class="dashboard-table payroll-detail-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Plan semanal</th>
+                  <th>Horas validadas</th>
+                  <th>Tipo validación</th>
+                </tr>
+              </thead>
+              <tbody id="payrollApprovedBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="report-panel">
+          <div class="section-head">
+            <div>
+              <p class="muted">Base liquidable</p>
+              <h2>Operaciones aprobadas</h2>
+            </div>
+            <span class="kiosk-badge" id="payrollApprovedOperationsBadge">0 operaciones</span>
+          </div>
+          <div class="dashboard-table-wrap">
+            <table class="dashboard-table payroll-detail-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Franja</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody id="payrollOperationsBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Ajustes manuales</p>
+            <h2>Deducciones</h2>
+          </div>
+          <button class="ghost-button" id="addDeduction" type="button">Agregar deducción</button>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table payroll-deductions-table">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Monto calculado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="payrollDeductionsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./liquidacion.js?v=20260610-no-work-approval1"></script>
+  </body>
+</html>

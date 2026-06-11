@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Facturación</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/facturacion.css?v=20260611-density-pass1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Facturación</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Carga masiva</p>
+            <h2>Importar facturación</h2>
+          </div>
+          <span class="kiosk-badge" id="billingTotal">$0</span>
+        </div>
+        <form class="billing-import-form" id="billingImportForm">
+          <div class="billing-file-field">
+            <span>Archivo CSV o Excel</span>
+            <label class="file-drop-control" for="billingImportFile">
+              <strong>Seleccionar archivo</strong>
+              <small id="billingImportFileName">CSV o XLSX</small>
+            </label>
+            <input id="billingImportFile" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          </div>
+          <button class="primary-button" type="submit">Importar archivo</button>
+          <p class="import-hint">Columnas requeridas: orden, fecha, monto, referencia y lugar. Observación es opcional.</p>
+        </form>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Carga manual</p>
+            <h2>Agregar línea</h2>
+          </div>
+        </div>
+        <form class="billing-form" id="billingForm">
+          <input id="billingId" type="hidden" />
+          <label>Orden<input id="billingOrder" type="text" placeholder="Orden" required /></label>
+          <label>Fecha<input id="billingDate" type="date" required /></label>
+          <label>Monto<input id="billingAmount" type="text" inputmode="decimal" placeholder="0,00" required /></label>
+          <label>Referencia<input id="billingReference" type="text" placeholder="Referencia" required /></label>
+          <label>Lugar<input id="billingPlace" type="text" placeholder="Lugar" required /></label>
+          <label>Observación<input id="billingNote" type="text" placeholder="Opcional" /></label>
+          <button class="primary-button" type="submit">Guardar línea</button>
+          <button class="ghost-button" id="clearBillingForm" type="button">Nuevo</button>
+        </form>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Datos cargados</p>
+            <h2>Listado de facturación</h2>
+          </div>
+          <span class="kiosk-badge" id="billingCount">0 líneas</span>
+        </div>
+        <div class="billing-list-toolbar">
+          <div class="month-nav billing-month-nav" aria-label="Navegar facturación por mes">
+            <button class="ghost-button small" id="billingPreviousMonth" type="button" aria-label="Mes anterior">&lt;</button>
+            <button class="ghost-button small" id="billingCurrentMonth" type="button">Mes actual</button>
+            <button class="ghost-button small" id="billingNextMonth" type="button" aria-label="Mes siguiente">&gt;</button>
+            <span class="day-summary-separator" aria-hidden="true"></span>
+            <div>
+              <h2>Facturación</h2>
+              <p class="current-date" id="billingMonthLabel">Mes de año</p>
+            </div>
+          </div>
+          <label class="billing-search">Buscar
+            <input id="billingSearch" type="search" placeholder="Orden, referencia o lugar" autocomplete="off" />
+          </label>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Fecha</th>
+                <th>Monto</th>
+                <th>Referencia</th>
+                <th>Lugar</th>
+                <th>Observación</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="billingTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./facturacion.js?v=20260610-import-ui1"></script>
+  </body>
+</html>

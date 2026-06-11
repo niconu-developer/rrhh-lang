@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Incidencias</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/incidencias.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Incidencias</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Registro de novedades</p>
+            <h2>Buscar incidencias</h2>
+          </div>
+          <span class="kiosk-badge" id="incidentCount">0 incidencias</span>
+        </div>
+        <div class="report-filters">
+          <label>Desde<input id="incidentFrom" type="date" /></label>
+          <label>Hasta<input id="incidentTo" type="date" /></label>
+          <label>Persona<input id="incidentPerson" type="search" placeholder="Buscar personas: lucas, brai" autocomplete="off" /></label>
+          <label>Tipo
+            <select id="incidentType">
+              <option value="todos">Todos</option>
+            </select>
+          </label>
+          <label>Severidad
+            <select id="incidentSeverity">
+              <option value="todos">Todas</option>
+              <option value="ROJA">Roja</option>
+              <option value="AMARILLA">Amarilla</option>
+              <option value="INFO">Info</option>
+            </select>
+          </label>
+          <label>Estado
+            <select id="incidentStatus">
+              <option value="pendientes">Pendientes</option>
+              <option value="todos">Todas</option>
+              <option value="resueltas">Aprobadas</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Persona</th>
+                <th>Tipo</th>
+                <th>Severidad</th>
+                <th>Detalle</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="incidentTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="incidentDetailModal" aria-hidden="true">
+      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="incidentDetailTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Detalle</p>
+            <h2 id="incidentDetailTitle">Incidencia</h2>
+          </div>
+          <button class="ghost-button small" id="closeIncidentDetail" type="button">Cerrar</button>
+        </div>
+        <div class="incident-detail-grid" id="incidentDetailBody"></div>
+        <div class="modal-actions">
+          <button class="ghost-button" id="passIncidentToPlanDetail" type="button">Pasar a plan semanal</button>
+          <button class="ghost-button" id="markIncidentAbsentDetail" type="button">Marcar ausente</button>
+          <button class="primary-button" id="resolveIncidentDetail" type="button">Aprobar incidencia</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="incidentMarkEditModal" aria-hidden="true">
+      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="incidentMarkEditTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Marca asociada</p>
+            <h2 id="incidentMarkEditTitle">Editar marca</h2>
+          </div>
+        </div>
+        <form id="incidentMarkEditForm" class="mark-edit-form">
+          <input id="incidentMarkId" type="hidden" />
+          <div class="mark-single-fields">
+            <label>Tipo
+              <select id="incidentMarkType">
+                <option value="Entrada">Entrada</option>
+                <option value="Salida">Salida</option>
+              </select>
+            </label>
+            <label>Fecha
+              <input id="incidentMarkDate" type="date" />
+            </label>
+            <label>Hora
+              <input id="incidentMarkTime" type="text" inputmode="numeric" placeholder="HH:MM" />
+            </label>
+            <label>Actividad / ubicación
+              <input id="incidentMarkActivity" type="text" placeholder="Actividad / ubicación" />
+            </label>
+            <label>Ubicación detectada
+              <input id="incidentMarkLocation" type="text" placeholder="Ubicación detectada" />
+            </label>
+          </div>
+          <label>Observación
+            <textarea id="incidentMarkObservation" rows="3" placeholder="Motivo obligatorio de la modificación"></textarea>
+          </label>
+          <div class="modal-actions">
+            <button class="ghost-button" id="cancelIncidentMarkEdit" type="button">Cancelar</button>
+            <button class="primary-button" type="submit">Guardar marca</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./incidencias.js?v=20260610-frontend-actions2"></script>
+  </body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Análisis - Sistema de personal</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/analisis.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Análisis</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell analysis-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Tablero de control</p>
+            <h2>Análisis mensual</h2>
+          </div>
+          <span class="kiosk-badge" id="analysisStatus">Calculando</span>
+        </div>
+        <div class="month-nav report-month-nav" aria-label="Navegar análisis por mes">
+          <button class="ghost-button small" id="analysisPreviousMonth" type="button" aria-label="Mes anterior">&lt;</button>
+          <button class="ghost-button small" id="analysisCurrentMonth" type="button">Mes actual</button>
+          <button class="ghost-button small" id="analysisNextMonth" type="button" aria-label="Mes siguiente">&gt;</button>
+          <span class="day-summary-separator" aria-hidden="true"></span>
+          <div>
+            <h2 id="analysisMonthLabel">Mes</h2>
+            <p class="current-date">Base: jornales validados y operaciones aprobadas</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="analysis-kpi-grid" aria-label="Indicadores principales">
+        <article class="analysis-kpi-card">
+          <span>Personas activas</span>
+          <strong id="analysisPeople">0</strong>
+          <small>Con rol operativo activo</small>
+        </article>
+        <article class="analysis-kpi-card">
+          <span>Horas validadas</span>
+          <strong id="analysisHours">0 h</strong>
+          <small>Jornales aprobados</small>
+        </article>
+        <article class="analysis-kpi-card">
+          <span>Costo horas</span>
+          <strong id="analysisHourCost">$0</strong>
+          <small>Horas x valor hora</small>
+        </article>
+        <article class="analysis-kpi-card">
+          <span>Costo operaciones</span>
+          <strong id="analysisOperationCost">$0</strong>
+          <small id="analysisOperationCount">0 operaciones</small>
+        </article>
+        <article class="analysis-kpi-card total">
+          <span>Costo total estimado</span>
+          <strong id="analysisTotalCost">$0</strong>
+          <small>Horas + operaciones</small>
+        </article>
+        <article class="analysis-kpi-card">
+          <span>Facturación</span>
+          <strong id="analysisRevenue">$0</strong>
+          <small id="analysisRevenueCount">0 órdenes</small>
+        </article>
+        <article class="analysis-kpi-card">
+          <span>Costo / facturación</span>
+          <strong id="analysisCostRevenueRatio">0%</strong>
+          <small>Personal sobre facturación</small>
+        </article>
+        <article class="analysis-kpi-card">
+          <span>Facturación por hora</span>
+          <strong id="analysisRevenuePerHour">$0</strong>
+          <small>Facturación / horas validadas</small>
+        </article>
+      </section>
+
+      <section class="analysis-grid">
+        <article class="report-panel">
+          <div class="section-head">
+            <div>
+              <p class="muted">Horas por persona</p>
+              <h2>Franjas de horas</h2>
+            </div>
+          </div>
+          <div class="analysis-band-list" id="analysisHourBands"></div>
+        </article>
+
+        <article class="report-panel">
+          <div class="section-head">
+            <div>
+              <p class="muted">Sueldo estimado</p>
+              <h2>Familias de sueldos</h2>
+            </div>
+          </div>
+          <div class="analysis-band-list" id="analysisSalaryBands"></div>
+        </article>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Cruce operativo</p>
+            <h2>Facturación por semana</h2>
+          </div>
+          <span class="kiosk-badge" id="analysisBillingRowsCount">0 semanas</span>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead>
+              <tr>
+                <th>Semana</th>
+                <th>Facturación</th>
+                <th>Costo personal</th>
+                <th>Costo / facturación</th>
+                <th>Facturación / hora</th>
+              </tr>
+            </thead>
+            <tbody id="analysisBillingWeeks"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Detalle mensual</p>
+            <h2>Personas, horas y costos</h2>
+          </div>
+          <span class="kiosk-badge" id="analysisRowsCount">0 filas</span>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Rol</th>
+                <th>Valor hora</th>
+                <th>Horas</th>
+                <th>Costo horas</th>
+                <th>Operaciones</th>
+                <th>Costo operaciones</th>
+                <th>Total estimado</th>
+                <th>Franja horas</th>
+                <th>Familia sueldo</th>
+              </tr>
+            </thead>
+            <tbody id="analysisPeopleBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./analisis.js?v=20260610-analysis-order1"></script>
+  </body>
+</html>

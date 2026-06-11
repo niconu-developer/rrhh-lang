@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reloj</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/marcas.css?v=20260610-css-split1" />
+  </head>
+  <body class="kiosk-body">
+    <main class="kiosk-shell">
+      <section class="kiosk-card">
+        <div class="kiosk-head">
+          <a class="brand-home kiosk-logo-only" href="./index.html" aria-label="Ir al Home">
+            <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+          </a>
+          <div class="kiosk-nav" aria-label="Sesión"></div>
+        </div>
+
+        <section class="today-shift" aria-label="Turno del operador">
+          <div class="detail-list compact kiosk-sync-grid">
+            <div>
+              <span>Fecha</span>
+              <strong id="kioskDate">Hoy</strong>
+            </div>
+            <div>
+              <span>Hora</span>
+              <strong id="kioskClock">--:--</strong>
+            </div>
+            <div>
+              <span>Ubicación</span>
+              <strong id="kioskDetectedLocation">Ubicación pendiente</strong>
+            </div>
+          </div>
+          <div class="detail-list compact kiosk-shift-grid">
+            <div>
+              <span>Horario previsto</span>
+              <strong id="kioskTime">Libre</strong>
+            </div>
+            <div>
+              <span>Actividad o ubicación</span>
+              <strong id="kioskActivityLocation">LIBRE</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="mark-actions" aria-label="Registrar marcas">
+          <button class="mark-button in" id="entryButton" type="button">Marcar entrada</button>
+          <button class="mark-button out" id="exitButton" type="button">Marcar salida</button>
+        </section>
+
+        <section class="operations-panel" id="operationsPanel" aria-label="Operación adicional">
+          <div class="section-head">
+            <div>
+              <h2>Operación</h2>
+            </div>
+          </div>
+          <form class="operation-form" id="operationForm">
+            <label>
+              Fecha
+              <input id="operationDate" type="date" required />
+            </label>
+            <label>
+              Categoría
+              <select id="operationTariff" required></select>
+            </label>
+            <label>
+              Franja
+              <select id="operationBand" required></select>
+            </label>
+            <label>
+              Referencia
+              <input id="operationReference" type="text" placeholder="Evento, cliente o lugar" />
+            </label>
+            <label>
+              Observación
+              <input id="operationNote" type="text" placeholder="Detalle breve" />
+            </label>
+            <button class="primary-button full" type="submit">Enviar operación</button>
+          </form>
+        </section>
+
+        <section class="kiosk-day-summary" aria-label="Resumen del día">
+          <div class="day-summary-nav" aria-label="Navegar planificación">
+            <button class="ghost-button small" id="previousPlanDay" type="button" aria-label="Día anterior">&lt;</button>
+            <button class="ghost-button small" id="todayPlanDay" type="button">Hoy</button>
+            <button class="ghost-button small" id="nextPlanDay" type="button" aria-label="Día siguiente">&gt;</button>
+            <span class="day-summary-separator" aria-hidden="true"></span>
+            <div>
+              <h2>Resumen del día</h2>
+              <p class="current-date" id="visiblePlanDate">Hoy</p>
+            </div>
+          </div>
+          <div class="day-summary-list" id="daySummaryList"></div>
+        </section>
+
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./marcas.js?v=20260610-operation-tariffs1"></script>
+  </body>
+</html>

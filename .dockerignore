@@ -1,0 +1,14 @@
+.DS_Store
+__MACOSX/
+__pycache__/
+*.pyc
+*.pyo
+*.zip
+.git/
+backend/planner.db
+backend/*.sqbpro
+backend/*.db
+backups/
+OLD/
+data/
+logs/

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home - Sistema de personal</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/index.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Home</h1>
+        </div>
+      </div>
+      <div class="top-actions" id="sessionActions"></div>
+    </header>
+
+    <main class="home-shell">
+      <section class="home-grid" id="homeGrid"></section>
+    </main>
+
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./home.js?v=20260610-dashboard-datos1"></script>
+  </body>
+</html>

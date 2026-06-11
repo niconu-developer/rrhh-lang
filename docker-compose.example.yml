@@ -1,0 +1,14 @@
+services:
+  rrhh:
+    build: .
+    container_name: lang-rrhh
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PLANNER_PUBLIC_PORT:-8766}:8765"
+    volumes:
+      - rrhh_data:/data
+
+volumes:
+  rrhh_data:

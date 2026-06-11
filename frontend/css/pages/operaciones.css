@@ -1,0 +1,34 @@
+.operation-validation-filters {
+  grid-template-columns: 126px 126px minmax(220px, 1fr) 128px 154px 168px;
+  align-items: end;
+}
+
+.operation-selection-actions {
+  display: contents;
+}
+
+.operation-selection-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
+  width: 100%;
+  font-size: 12px;
+}
+
+.operations-validation-table {
+  min-width: 1120px;
+}
+
+.operations-validation-table th,
+.operations-validation-table td {
+  vertical-align: middle;
+}
+
+.operations-validation-table .table-actions {
+  justify-content: flex-end;
+  min-width: 300px;
+}
+
+.operations-validation-table .table-actions button {
+  min-width: 78px;
+}

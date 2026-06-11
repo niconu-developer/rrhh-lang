@@ -1,0 +1,38 @@
+.DS_Store
+__MACOSX/
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local databases and user data
+backend/planner.db
+backend/*.db
+backend/*.db-*
+backend/*.sqlite
+backend/*.sqlite3
+backend/*.sqbpro
+data/
+backups/
+OLD/
+
+# Generated exports and delivery bundles
+*.zip
+*.tar
+*.tar.gz
+capturas-sistema-*/
+scripts/seed_may_demo.py
+
+# Logs
+*.log
+logs/

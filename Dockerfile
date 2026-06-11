@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PLANNER_HOST=0.0.0.0
+ENV PLANNER_PORT=8765
+ENV PLANNER_DB=/data/planner.db
+
+WORKDIR /app
+
+COPY . /app
+
+RUN mkdir -p /data
+
+EXPOSE 8765
+
+CMD ["python3", "backend/app.py"]

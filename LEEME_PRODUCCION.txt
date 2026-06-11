@@ -1,0 +1,75 @@
+LANG - Sistema de gestion de personal
+Paquete para produccion / despliegue
+
+Contenido principal
+- Frontend: carpeta frontend/ con archivos .html, .js, css/ y assets/
+- Backend: backend/app.py
+- Base de datos SQLite actual: backend/planner.db
+- Estructura de base: backend/schema.sql
+- Datos base/semillas: backend/seed.sql
+- Docker: Dockerfile, docker-compose.example.yml, .dockerignore
+- Variables de entorno ejemplo: .env.example
+
+Como levantarlo localmente
+1. Abrir una terminal en esta carpeta.
+2. Ejecutar:
+   python3 backend/app.py
+3. Abrir en el navegador:
+   http://127.0.0.1:8765/
+
+Usuario de contingencia
+- Usuario: admin
+- Password: definir PLANNER_ADMIN_PASSWORD en .env antes de arrancar.
+- Usuario asistente: rrhh, si se define PLANNER_RRHH_PASSWORD.
+
+Como levantarlo con Docker
+1. Copiar .env.example como .env.
+2. Cambiar PLANNER_ADMIN_PASSWORD por una clave fuerte.
+3. Ejecutar:
+   docker compose -f docker-compose.example.yml up --build -d
+4. Abrir:
+   http://127.0.0.1:8765/
+
+Seguridad incluida en esta version
+- Login con token de sesion del lado servidor.
+- Endpoints /api protegidos por Authorization Bearer.
+- Passwords guardadas con PBKDF2-SHA256.
+- Migracion automatica de passwords viejas en texto plano.
+- /api/health publico sin datos sensibles.
+- Reloj facial publico desactivado por defecto.
+
+Notas para produccion
+- No subir backend/planner.db a GitHub. En Docker, la base vive en /data/planner.db.
+- El backend sirve tanto la API como los archivos web.
+- En desarrollo, el backend sirve frontend/ automaticamente.
+- En produccion, Nginx puede servir frontend/ y dejar Python solo para /api usando PLANNER_SERVE_STATIC=0.
+- Si se despliega en un servidor, configurar HTTPS antes de usar camara, geolocalizacion o reconocimiento facial.
+- La variable PLANNER_DB permite apuntar a otra ruta de base de datos si se quiere separar datos de codigo.
+- La variable PLANNER_HOST permite definir la interfaz de escucha.
+- La variable PLANNER_PORT permite cambiar el puerto.
+- La variable PLANNER_FRONTEND_DIR permite indicar la carpeta estatica del frontend.
+- La variable PLANNER_SERVE_STATIC permite prender/apagar el servido de frontend desde Python.
+- La variable PLANNER_PUBLIC_FACE_CLOCK habilita el reloj facial sin login. Usar solo atras de Nginx/VPN/IP allowlist.
+
+Comando ejemplo en servidor
+PLANNER_HOST=0.0.0.0 PLANNER_PORT=8765 python3 backend/app.py
+
+Modulos incluidos
+- Home
+- Dashboard
+- Plan semanal
+- Incidencias
+- Validacion de jornales
+- Reportes
+- Liquidacion de sueldos
+- Configuracion
+- Personal
+- Reloj
+- Reloj facial
+- Ayuda y documentacion
+
+Importante
+- No borrar usuarios historicos si existen marcas, incidencias, operaciones o aprobaciones asociadas.
+- Para bajas de personal o usuarios, usar deshabilitar.
+- Las marcas manuales de administrador deben quedar justificadas con observacion.
+- Las incidencias de marcas en dias sin horario previsto deben corregirse cargando el turno en plan semanal o marcando ausente segun corresponda.

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reportes</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/reportes.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Reportes</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Datos exportables</p>
+            <h2>Generar CSV</h2>
+          </div>
+          <span class="kiosk-badge" id="reportRowCount">0 filas</span>
+        </div>
+        <div class="month-nav report-month-nav" aria-label="Navegar reportes por mes">
+          <button class="ghost-button small" id="previousReportMonth" type="button" aria-label="Mes anterior">&lt;</button>
+          <button class="ghost-button small" id="currentReportMonth" type="button">Mes actual</button>
+          <button class="ghost-button small" id="nextReportMonth" type="button" aria-label="Mes siguiente">&gt;</button>
+          <span class="day-summary-separator" aria-hidden="true"></span>
+          <p class="current-date" id="reportMonthLabel">Mes de año</p>
+        </div>
+        <div class="report-filters">
+          <label>Reporte<select id="reportType"></select></label>
+          <input id="reportFrom" type="hidden" />
+          <input id="reportTo" type="hidden" />
+          <label>Persona<input id="reportPerson" type="search" placeholder="Buscar personas: lucas, brai" autocomplete="off" /></label>
+          <label>Rol operativo<input id="reportRole" type="search" placeholder="Roles: logistico, operador" autocomplete="off" /></label>
+          <label>Estado<select id="reportStatus"></select></label>
+        </div>
+        <div class="report-actions">
+          <button class="ghost-button" id="previewReport" type="button">Ver datos</button>
+          <button class="primary-button" id="exportReport" type="button">Exportar CSV</button>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Vista previa</p>
+            <h2 id="reportPreviewTitle">Sin reporte generado</h2>
+          </div>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead id="reportPreviewHead"></thead>
+            <tbody id="reportPreviewBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./reportes.js?v=20260610-opstate1"></script>
+  </body>
+</html>

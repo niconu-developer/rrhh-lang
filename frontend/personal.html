@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Personal</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/personal.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Personal</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="config-shell personnel-shell">
+      <aside class="config-sidebar" aria-label="Secciones de personal">
+        <button class="config-nav active" data-person-tab="listado" type="button">Listado de personal</button>
+        <button class="config-nav" data-person-tab="costos-hora" type="button">Costo horas por persona</button>
+        <button class="config-nav" data-person-tab="precios-operaciones" type="button">Precios operaciones</button>
+      </aside>
+
+      <section class="config-content">
+      <section class="admin-panel personnel-panel config-section active" data-person-panel="listado">
+        <div class="section-head">
+          <div>
+            <h2>Listado de personal</h2>
+          </div>
+          <div class="table-actions">
+            <button class="primary-button" id="newPersonButton" type="button">Nueva persona</button>
+          </div>
+        </div>
+        <div class="personnel-table-tools">
+          <input id="personFilterInput" type="search" placeholder="Buscar personas, roles o documentos: lucas, brai" autocomplete="off" aria-label="Buscar personal" />
+          <span class="kiosk-badge" id="personListCount">0 personas</span>
+        </div>
+        <div class="person-table-wrap">
+          <table class="person-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Persona</th>
+                <th>Mail</th>
+                <th>Rol</th>
+                <th>Operador</th>
+                <th>Documentación</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="personList"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel personnel-panel config-section" data-person-panel="costos-hora">
+        <div class="section-head">
+          <div>
+            <p class="muted">Horas comunes</p>
+            <h2>Costo horas por persona</h2>
+          </div>
+          <div class="table-actions">
+            <button class="ghost-button" id="toggleHourlyEdit" type="button">Modo editar</button>
+            <button class="primary-button" id="saveHourlyRates" type="button" disabled>Guardar</button>
+          </div>
+        </div>
+        <div class="personnel-table-tools hourly-rate-tools">
+          <label>Filtro<input id="hourlyRateFilterInput" type="search" placeholder="Buscar personas o roles: lucas, brai" autocomplete="off" /></label>
+          <span class="kiosk-badge" id="hourlyRateCount">0 personas</span>
+        </div>
+        <div class="hourly-rate-wrap">
+          <table class="hourly-rate-table">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Rol</th>
+                <th>Valor hora</th>
+                <th>Horas acordadas</th>
+              </tr>
+            </thead>
+            <tbody id="hourlyRateList"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-panel personnel-panel config-section" data-person-panel="precios-operaciones">
+        <div class="section-head">
+          <div>
+            <p class="muted">Operaciones</p>
+            <h2>Precios de operaciones</h2>
+          </div>
+          <div class="table-actions">
+            <button class="ghost-button" id="newOperationTariff" type="button">Nueva tarifa</button>
+            <button class="primary-button" id="saveOperationPrices" type="button">Guardar cambios</button>
+          </div>
+        </div>
+        <div class="operation-price-grid" id="operationValueList"></div>
+      </section>
+
+      <section class="admin-panel personnel-panel config-section person-editor-page" data-person-panel="editor" id="personModal" aria-hidden="true">
+      <div class="person-editor-panel" aria-labelledby="personFormTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Ficha de persona</p>
+            <h2 id="personFormTitle">Nueva persona</h2>
+          </div>
+          <button class="ghost-button small" id="closePersonModal" type="button">Volver al listado</button>
+        </div>
+        <form class="person-form" id="personForm">
+          <input id="personId" type="hidden" />
+          <div class="person-editor-layout">
+            <div class="person-editor-main">
+              <section class="person-editor-section">
+                <div class="form-section-head">
+                  <div>
+                    <p class="muted">Datos base</p>
+                    <h3>Identidad y rol</h3>
+                  </div>
+                  <label class="check-line"><input id="personActiveInput" type="checkbox" checked /> Activo</label>
+                </div>
+                <div class="person-form-grid">
+                  <label>Nombre<input id="personNameInput" required type="text" /></label>
+                  <label>ID privado<input id="personPrivateIdInput" inputmode="numeric" maxlength="3" pattern="[0-9]{3}" placeholder="3 cifras" type="text" /></label>
+                  <label>Mail<input id="personEmailInput" type="email" placeholder="nombre@dominio.com" /></label>
+                  <label>Rol operativo<select id="personTypeInput"></select></label>
+                </div>
+              </section>
+
+              <section class="person-editor-section">
+                <div class="form-section-head">
+                  <div>
+                    <p class="muted">Turnos</p>
+                    <h3>Modalidad horaria</h3>
+                  </div>
+                </div>
+                <div class="person-form-grid compact-form-grid">
+                  <label>Modalidad
+                    <select id="scheduleModeInput">
+                      <option value="variable">Horario variable</option>
+                      <option value="fixed">Horario fijo</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="fixed-schedule-editor" id="fixedScheduleEditor">
+                  <div class="fixed-schedule-head">
+                    <strong>Horario fijo por día</strong>
+                    <span>Se usa al crear semanas nuevas.</span>
+                  </div>
+                  <div id="fixedScheduleRows"></div>
+                </div>
+              </section>
+            </div>
+
+            <div class="person-editor-side">
+              <section class="person-editor-section">
+                <div class="form-section-head">
+                  <div>
+                    <p class="muted">Costos</p>
+                    <h3>Valores de referencia</h3>
+                  </div>
+                </div>
+                <div class="person-form-grid single-form-grid">
+                  <label>Valor hora<input id="hourlyRateInput" min="0" step="1" type="number" /></label>
+                </div>
+              </section>
+
+              <section class="person-editor-section">
+                <div class="form-section-head">
+                  <div>
+                    <p class="muted">Operaciones</p>
+                    <h3>Habilitaciones</h3>
+                  </div>
+                  <label class="check-line"><input id="personIsOperatorInput" type="checkbox" /> Es operador</label>
+                </div>
+                <div class="operator-category-field" id="operatorCategoryField">
+                  <span>Categorías disponibles para cargar operaciones</span>
+                  <div class="operation-category-selector" id="operatorCategoryInput"></div>
+                </div>
+              </section>
+
+              <section class="person-editor-section">
+                <div class="form-section-head">
+                  <div>
+                    <p class="muted">Documentación</p>
+                    <h3>Vencimientos</h3>
+                  </div>
+                </div>
+                <div class="person-form-grid single-form-grid">
+                  <label>Tipo de libreta
+                    <select id="driverLicenseTypeInput">
+                      <option value="NO TIENE">NO TIENE</option>
+                      <option value="AUTO A">AUTO A</option>
+                      <option value="AUTO B">AUTO B</option>
+                      <option value="CAMION C">CAMION C</option>
+                      <option value="CAMION D">CAMION D</option>
+                      <option value="CAMION E">CAMION E</option>
+                      <option value="CAMION F">CAMION F</option>
+                    </select>
+                  </label>
+                  <label>Vencimiento libreta<input id="driverLicenseExpiryInput" type="date" disabled /></label>
+                  <label>Carné de salud<input id="healthCardExpiryInput" type="date" /></label>
+                </div>
+              </section>
+
+              <section class="person-editor-section person-access-editor">
+                <div class="form-section-head">
+                  <div>
+                    <p class="muted">Acceso al sistema</p>
+                    <h3>Usuario y permisos</h3>
+                  </div>
+                  <label class="check-line"><input id="accessEnabledInput" type="checkbox" /> Tiene acceso</label>
+                </div>
+                <div class="person-form-grid single-form-grid" id="accessFields">
+                  <label>Contraseña temporal<input id="accessPasswordInput" type="text" placeholder="Solo si se crea o cambia" /></label>
+                  <label>Rol de aplicación<select id="accessRoleInput"></select></label>
+                  <label class="check-line"><input id="accessActiveInput" type="checkbox" checked /> Acceso activo</label>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="ghost-button" id="cancelPersonButton" type="button">Cancelar</button>
+            <button class="primary-button" type="submit">Guardar persona</button>
+          </div>
+        </form>
+      </div>
+      </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./personal.js?v=20260611-operation-tariff-table1"></script>
+  </body>
+</html>

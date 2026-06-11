@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mis marcas</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/mis-marcas.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Mis marcas</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel own-history-panel">
+        <div class="admin-view-as hidden" id="adminViewAs">
+          <label>Ver como<select id="viewAsPerson"></select></label>
+        </div>
+        <div class="own-history-head">
+          <div class="month-nav" aria-label="Navegar marcas por mes">
+            <button class="ghost-button small" id="previousMonth" type="button" aria-label="Mes anterior">&lt;</button>
+            <button class="ghost-button small" id="currentMonth" type="button">Mes actual</button>
+            <button class="ghost-button small" id="nextMonth" type="button" aria-label="Mes siguiente">&gt;</button>
+            <span class="day-summary-separator" aria-hidden="true"></span>
+            <p class="current-date" id="monthLabel">Mes de año</p>
+          </div>
+          <div class="own-hours-summary" id="ownHoursSummary">
+            <span><small>Planificadas</small><strong>0 h</strong></span>
+            <span><small>Trabajadas</small><strong>0 h</strong></span>
+            <span><small>Diferencia</small><strong>0 h</strong></span>
+            <span><small>Operaciones</small><strong>0 · $ 0</strong></span>
+          </div>
+        </div>
+        <div class="own-history-tabs">
+          <button class="tab active" data-own-tab="marcas" type="button">Marcas</button>
+          <button class="tab" data-own-tab="operaciones" id="ownOperationsTab" type="button">Operaciones</button>
+        </div>
+        <div class="own-mark-list" id="ownMarkList"></div>
+        <div class="own-mark-list hidden" id="ownOperationList"></div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./mis-marcas.js?v=20260609-operation-matrix1"></script>
+  </body>
+</html>

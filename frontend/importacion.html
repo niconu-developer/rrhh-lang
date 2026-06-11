@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Importación de datos</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/importacion.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Importación de datos</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Marcas históricas</p>
+            <h2>Cargar CSV</h2>
+          </div>
+          <span class="kiosk-badge" id="importRowCount">0 filas</span>
+        </div>
+        <div class="report-filters import-grid">
+          <label>Archivo CSV<input id="importFile" type="file" accept=".csv,text/csv" /></label>
+          <label>Separador<select id="importSeparator">
+            <option value=",">Coma</option>
+            <option value=";">Punto y coma</option>
+            <option value="tab">Tab</option>
+          </select></label>
+        </div>
+        <label class="import-paste-label">
+          Pegar CSV
+          <textarea id="importCsvText" rows="8" placeholder="persona,fecha,hora,tipo,tipo_marca,actividad_ubicacion,ubicacion_detectada,genera_incidencia"></textarea>
+        </label>
+        <div class="import-help">
+          Columnas aceptadas: persona, fecha, hora, fecha_hora, tipo, tipo_marca, actividad_ubicacion, ubicacion_detectada, genera_incidencia.
+        </div>
+        <div class="report-actions">
+          <button class="ghost-button" id="previewImport" type="button">Vista previa</button>
+          <button class="primary-button" id="runImport" type="button" disabled>Importar marcas</button>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <p class="muted">Control previo</p>
+            <h2>Vista previa</h2>
+          </div>
+        </div>
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table">
+            <thead id="importPreviewHead"></thead>
+            <tbody id="importPreviewBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./importacion.js?v=20260603-importacion1"></script>
+  </body>
+</html>

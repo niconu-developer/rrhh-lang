@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plan semanal</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260611-density-pass1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+        <p class="eyebrow">Sistema de gestión de personal</p>
+        <h1>Plan semanal</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="shell plan-shell" id="planShell">
+      <section class="planner-panel" aria-label="Plan semanal">
+        <div class="toolbar">
+          <div class="toolbar-week">
+            <label for="weekSelect">Semana</label>
+            <select id="weekSelect"></select>
+          </div>
+          <div class="toolbar-search">
+            <label for="searchInput">Buscar persona o rol</label>
+            <input id="searchInput" type="search" placeholder="Nombre o rol: lucas, brai" />
+          </div>
+          <div class="toolbar-compact">
+            <label for="summaryFromSelect">Resumen desde</label>
+            <select id="summaryFromSelect"></select>
+          </div>
+          <div class="toolbar-compact">
+            <label for="summaryToSelect">Resumen hasta</label>
+            <select id="summaryToSelect"></select>
+          </div>
+          <div class="toolbar-action">
+            <label>&nbsp;</label>
+            <button class="primary-button full" id="exportButton" type="button">Exportar resumen</button>
+          </div>
+        </div>
+
+        <div class="grid-frame">
+          <table class="schedule" id="scheduleTable">
+            <thead id="scheduleHead"></thead>
+            <tbody id="scheduleBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="panel-resizer" id="panelResizer" role="separator" aria-label="Redimensionar panel lateral" aria-orientation="vertical" tabindex="0"></div>
+
+      <aside class="side-panel" aria-label="Detalle del turno">
+        <nav class="tabs" aria-label="Vistas">
+          <button class="tab active" data-tab="operador" type="button">Operador</button>
+          <button class="tab" data-tab="dia" type="button">Día</button>
+          <button class="tab" data-tab="lotes" type="button">Lotes</button>
+        </nav>
+
+        <section class="tab-panel" id="diaPanel">
+          <div class="person-card">
+            <div class="avatar" id="dayAvatar">D</div>
+            <div>
+              <h2 id="daySummaryTitle">Lunes 18</h2>
+              <p id="daySummaryCount">0 personas planificadas</p>
+              <div class="publish-day-actions">
+                <span class="publish-status not-published" id="publishDayStatus">No publicado</span>
+                <button class="ghost-button small" id="publishDayButton" type="button">Publicar día</button>
+              </div>
+            </div>
+          </div>
+          <div class="day-summary-list" id="daySummaryList"></div>
+          <button class="primary-button full" id="exportDayButton" type="button">Exportar día</button>
+        </section>
+
+        <section class="tab-panel active" id="operadorPanel">
+          <div class="person-card">
+            <div class="avatar" id="operatorAvatar">LU</div>
+            <div>
+              <h2 id="operatorName">Lucas</h2>
+              <p id="operatorRole">Operación</p>
+            </div>
+          </div>
+
+          <div class="operator-stats">
+            <article>
+              <span>Días trabajados</span>
+              <strong id="operatorShiftCount">0</strong>
+            </article>
+            <article>
+              <span>Horas trabajadas</span>
+              <strong id="operatorHours">0</strong>
+            </article>
+            <article>
+              <span>Horas pendientes</span>
+              <strong id="operatorPendingHours">190</strong>
+            </article>
+            <article id="operatorBaseSalaryCard">
+              <span>Sueldo base</span>
+              <strong id="operatorBaseSalary">$0</strong>
+            </article>
+            <article id="operatorOperationsCountCard" class="operator-only-metric hidden">
+              <span>Operaciones</span>
+              <strong id="operatorOperationsCount">0</strong>
+            </article>
+            <article id="operatorOperationsTotalCard" class="operator-only-metric hidden">
+              <span>Total<br />operaciones</span>
+              <strong id="operatorOperationsTotal">$0</strong>
+            </article>
+            <article id="operatorMonthTotalCard">
+              <span>Total mes</span>
+              <strong id="operatorMonthTotal">$0</strong>
+            </article>
+          </div>
+
+          <div class="operator-week" id="operatorWeek"></div>
+        </section>
+
+        <section class="tab-panel" id="lotesPanel">
+          <div class="person-card">
+            <div class="avatar">M</div>
+            <div>
+              <p class="muted">Edición por lotes</p>
+              <h2 id="bulkWeekTitle">Semana</h2>
+              <p>Aplicá un turno a un rol operativo en varios días.</p>
+            </div>
+          </div>
+
+          <form class="edit-form bulk-form" id="bulkEditForm">
+            <div>
+              <p class="muted">Roles operativos</p>
+              <div class="bulk-role-grid" id="bulkRoleInput"></div>
+            </div>
+            <div>
+              <p class="muted">Días</p>
+              <div class="bulk-day-grid" id="bulkDayInputs"></div>
+            </div>
+            <label class="check-line bulk-free-check">
+              <input id="bulkFreeInput" type="checkbox" />
+              Marcar como libre
+            </label>
+            <div class="form-row">
+              <label>
+                Entrada
+                <input id="bulkStartInput" type="text" inputmode="numeric" maxlength="5" placeholder="9:00" />
+              </label>
+              <label>
+                Salida
+                <input id="bulkEndInput" type="text" inputmode="numeric" maxlength="5" placeholder="18:00" />
+              </label>
+            </div>
+            <label>
+              Actividad / ubicación
+              <input id="bulkActivityInput" type="text" placeholder="LATU, DEPO, LOGISTICA..." />
+            </label>
+            <button class="primary-button full" type="submit">Aplicar a rol</button>
+          </form>
+
+          <div class="comparison" id="bulkPreviewBox">
+            <p>Seleccioná rol y días para ver cuántos turnos se van a modificar.</p>
+          </div>
+        </section>
+
+      </aside>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="shift-context-menu" id="shiftContextMenu" aria-hidden="true">
+      <button type="button" data-context-action="status" data-status="LIBRE">Libre</button>
+      <button type="button" id="copyShiftButton">Copiar</button>
+      <button type="button" id="pasteShiftButton">Pegar</button>
+      <button type="button" data-context-action="status" data-status="LICENCIA">Licencia</button>
+      <button type="button" data-context-action="status" data-status="SUSPENDIDO">Suspendido</button>
+      <button type="button" data-context-action="status" data-status="AUSENTE">Ausente</button>
+      <button type="button" data-context-action="normal">Jornada normal</button>
+    </div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./app.js?v=20260611-no-demo-shifts1"></script>
+  </body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ayuda y documentación</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/ayuda.css?v=20260610-css-split1" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Ayuda y documentación</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="help-shell">
+      <aside class="help-sidebar">
+        <label>Buscar función
+          <input id="helpSearch" type="search" placeholder="Ej: marcas, incidencias, plan" autocomplete="off" />
+        </label>
+        <nav id="helpNav"></nav>
+      </aside>
+
+      <section class="help-content">
+        <div class="section-head">
+          <div>
+            <p class="muted">Documentación operativa</p>
+            <h2 id="helpTitle">Guía del sistema</h2>
+          </div>
+          <span class="kiosk-badge" id="helpCount">0 secciones</span>
+        </div>
+        <div id="helpArticles" class="help-articles"></div>
+      </section>
+    </main>
+
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./ayuda.js?v=20260610-pass-to-plan-flow1"></script>
+  </body>
+</html>

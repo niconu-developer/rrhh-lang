@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Validación de operaciones</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/operaciones.css?v=20260610-ops-jornales-format2" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-heading">
+        <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+          <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+        </a>
+        <div>
+          <p class="eyebrow">Sistema de gestión de personal</p>
+          <h1>Validación de operaciones</h1>
+        </div>
+      </div>
+      <div class="top-actions"></div>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="report-panel">
+        <div class="section-head">
+          <div>
+            <h2>Cierre de operaciones</h2>
+          </div>
+          <span class="kiosk-badge operation-total-badge" id="operationCount">0 operaciones · $0</span>
+        </div>
+        <div class="report-filters operation-validation-filters">
+          <label>Desde<input id="operationFrom" type="date" /></label>
+          <label>Hasta<input id="operationTo" type="date" /></label>
+          <label>Persona<input id="operationPerson" type="search" placeholder="Buscar personas: lucas, brai" autocomplete="off" /></label>
+          <label>Estado
+            <select id="operationStatus">
+              <option value="pending">Pendientes</option>
+              <option value="approved">Aprobadas</option>
+              <option value="rejected">Rechazadas</option>
+              <option value="todos">Todas</option>
+            </select>
+          </label>
+          <div class="approval-inline-actions operation-selection-actions">
+            <button class="ghost-button" id="rejectOperations" type="button" disabled>Rechazar selección</button>
+            <button class="primary-button" id="approveOperations" type="button" disabled>Aprobar selección</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="report-panel">
+        <div class="dashboard-table-wrap">
+          <table class="dashboard-table report-preview-table operations-validation-table">
+            <thead>
+              <tr>
+                <th class="select-column">
+                  <input id="selectAllOperations" type="checkbox" aria-label="Seleccionar todas las operaciones visibles" />
+                </th>
+                <th>Fecha</th>
+                <th>Persona</th>
+                <th>Operación</th>
+                <th>Referencia</th>
+                <th>Valor</th>
+                <th>Estado</th>
+                <th>Motivo rechazo</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="operationTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="operationDetailModal" aria-hidden="true">
+      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="operationModalTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Operación</p>
+            <h2 id="operationModalTitle">Detalle de operación</h2>
+          </div>
+          <button class="ghost-button small" id="closeOperationModal" type="button">Cerrar</button>
+        </div>
+        <div class="incident-detail-grid" id="operationDetailBody"></div>
+        <div class="modal-actions">
+          <button class="ghost-button" id="editOperationDetail" type="button">Editar tipo/franja</button>
+          <button class="ghost-button" id="rejectOperationDetail" type="button">Rechazar</button>
+          <button class="primary-button" id="approveOperationDetail" type="button">Aprobar</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="operationEditModal" aria-hidden="true">
+      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="operationEditTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Corrección</p>
+            <h2 id="operationEditTitle">Editar tipo y franja</h2>
+          </div>
+        </div>
+        <form class="edit-form" id="operationEditForm">
+          <label>Categoría<select id="operationEditType"></select></label>
+          <label>Franja<select id="operationEditBand"></select></label>
+          <div class="comparison" id="operationEditValue">Valor estimado: $0</div>
+          <div class="modal-actions">
+            <button class="ghost-button" id="cancelOperationEdit" type="button">Cancelar</button>
+            <button class="primary-button" type="submit">Guardar cambios</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="operationRejectModal" aria-hidden="true">
+      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="operationRejectTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Rechazo</p>
+            <h2 id="operationRejectTitle">Motivo de rechazo</h2>
+          </div>
+        </div>
+        <label>Motivo<textarea id="operationRejectReason" rows="4" placeholder="Explicá el motivo para que el operador pueda verlo"></textarea></label>
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelOperationReject" type="button">Cancelar</button>
+          <button class="primary-button" id="confirmOperationReject" type="button">Rechazar</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./operaciones.js?v=20260610-operation-tariffs1"></script>
+  </body>
+</html>

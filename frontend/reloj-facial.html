@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reloj facial</title>
+    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/pages/reloj-facial.css?v=20260610-css-split1" />
+  </head>
+  <body class="kiosk-body">
+    <main class="kiosk-shell">
+      <section class="kiosk-card">
+        <div class="kiosk-head">
+          <div class="brand-heading">
+            <a class="brand-home" href="./index.html" aria-label="Ir al Home">
+              <img class="brand-logo" src="./assets/logo-lang-white.png" alt="LANG" />
+            </a>
+            <div>
+            <p class="eyebrow">Reloj público</p>
+            <h1>Marca facial</h1>
+            </div>
+          </div>
+          <span class="kiosk-badge">Sin correo y contraseña</span>
+        </div>
+
+        <section class="face-panel active" aria-label="Validación facial">
+          <div class="section-head">
+            <div>
+              <p class="muted">Reconocimiento facial</p>
+              <h2 id="clockFaceStatus">Validación pendiente</h2>
+            </div>
+            <span class="face-score" id="clockFaceScore">--%</span>
+          </div>
+          <div class="camera-box">
+            <video id="clockCameraPreview" autoplay muted playsinline></video>
+            <canvas id="clockFaceCanvas" width="640" height="480"></canvas>
+            <div class="face-frame" aria-hidden="true"></div>
+          </div>
+          <div class="face-actions">
+            <button class="ghost-button" id="clockStartCamera" type="button">Abrir cámara</button>
+            <button class="primary-button" id="clockValidateFace" type="button">Validar rostro</button>
+            <button class="ghost-button" id="clockCancelFace" type="button">Cancelar</button>
+          </div>
+        </section>
+
+        <section class="mark-actions">
+          <button class="mark-button in" id="clockEntryButton" disabled type="button">Marcar entrada</button>
+          <button class="mark-button out" id="clockExitButton" disabled type="button">Marcar salida</button>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./api-client.js?v=20260610-arch1"></script>
+    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./auth-session.js?v=20260610-arch1"></script>
+    <script src="./reloj-facial.js?v=20260602-stability1"></script>
+  </body>
+</html>
