@@ -93,6 +93,12 @@ En Docker, SQLite vive dentro del volumen `rrhh_data` como:
 /data/planner.db
 ```
 
+Para crear o actualizar la estructura de base:
+
+```bash
+docker compose -f docker-compose.example.yml exec rrhh python3 scripts/update_database.py
+```
+
 Para backup:
 
 ```bash
