@@ -10,5 +10,6 @@ backend/*.sqbpro
 backend/*.db
 backups/
 OLD/
+RESPALDO/
 data/
 logs/

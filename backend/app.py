@@ -1386,5 +1386,5 @@ if __name__ == "__main__":
     ensure_database()
     server = ThreadingHTTPServer((HOST, PORT), PlannerHandler)
     print(f"Backend local: http://{HOST}:{PORT}")
-    print(f"Base de datos: {DB_PATH}")
+    print("Base de datos: PostgreSQL" if IS_POSTGRES else f"Base de datos: {DB_PATH}")
     server.serve_forever()

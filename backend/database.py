@@ -99,6 +99,9 @@ class CursorAdapter:
             return self.rows_data
         return self.cursor.fetchall()
 
+    def __iter__(self):
+        return iter(self.fetchall())
+
 
 class PostgresConnection:
     def __init__(self, raw):
