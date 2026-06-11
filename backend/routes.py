@@ -17,6 +17,8 @@ def route_get(handler, path, query):
             "ok": True,
             "status": "ready",
         }
+    if path == "/api/session":
+        return handler.session()
     if path == "/api/personas":
         return repo.list_personas()
     if path == "/api/usuarios":

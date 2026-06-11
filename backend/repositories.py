@@ -280,6 +280,26 @@ def user_for_login(identifier):
     """, (identifier, identifier))
 
 
+def user_by_email(email):
+    clean_email = str(email or "").strip().lower()
+    if not clean_email:
+        return None
+    return one("""
+        SELECT
+          usuarios.id,
+          usuarios.usuario,
+          usuarios.email,
+          usuarios.activo,
+          personas.nombre AS persona,
+          roles_app.nombre AS rol_app
+        FROM usuarios
+        LEFT JOIN personas ON personas.id = usuarios.persona_id
+        JOIN roles_app ON roles_app.id = usuarios.rol_app_id
+        WHERE lower(coalesce(usuarios.email, '')) = ?
+          AND usuarios.activo = 1
+    """, (clean_email,))
+
+
 def authenticate_login(identifier, password):
     user = user_for_login(identifier)
     if not user or not user["activo"] or not verify_password(password, user["password_hash"]):

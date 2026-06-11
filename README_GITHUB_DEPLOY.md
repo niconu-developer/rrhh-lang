@@ -154,3 +154,25 @@ Antes de exponerlo:
 - Usar HTTPS si se usan camara/geolocalizacion.
 - Poner Nginx delante.
 - Mantener `PLANNER_PUBLIC_FACE_CLOCK=0` salvo kiosco protegido por red/VPN/Nginx.
+
+## SSO por cookie de la app principal
+
+RRHH puede validar usuarios contra la sesion de la plataforma principal sin compartir `SESSION_SECRET` ni conectarse a la base de Depósito.
+
+Configurar en `.env`:
+
+```text
+PLANNER_EXTERNAL_AUTH_ME_URL=https://app.lang.uy/api/auth/me
+PLANNER_EXTERNAL_AUTH_COOKIE_NAME=connect.sid
+PLANNER_EXTERNAL_AUTH_TIMEOUT_SECONDS=3
+```
+
+Flujo:
+
+1. El navegador entra a RRHH con la cookie `connect.sid`.
+2. RRHH reenvia el header `Cookie` a `PLANNER_EXTERNAL_AUTH_ME_URL`.
+3. Depósito responde `200` con `{ id, email, name, avatar_url, role }` o `401`.
+4. RRHH busca ese `email` en `usuarios.email`.
+5. Si existe y esta activo, usa el rol local de RRHH (`admin`, `rrhh`, `usuario`).
+
+El rol que devuelve Depósito no reemplaza el rol local de RRHH. El matching es por email.

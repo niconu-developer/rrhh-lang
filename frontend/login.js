@@ -36,6 +36,7 @@ async function loginWithBackend(email, password) {
       expiresAt: payload.expiresAt,
       startedAt: new Date().toISOString(),
     }));
+    sessionStorage.removeItem(EXTERNAL_AUTH_SKIP_KEY);
     return currentUser();
   } catch (error) {
     return null;

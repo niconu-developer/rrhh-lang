@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 import xml.etree.ElementTree as ET
 
 if __package__ in {None, ""}:
@@ -25,6 +27,9 @@ from backend.settings import (
     ADMIN_BOOTSTRAP_PASSWORD,
     BACKEND_DIR,
     DB_PATH,
+    EXTERNAL_AUTH_COOKIE_NAME,
+    EXTERNAL_AUTH_ME_URL,
+    EXTERNAL_AUTH_TIMEOUT_SECONDS,
     FRONTEND_DIR,
     HOST,
     PORT,
@@ -857,6 +862,13 @@ def public_face_clock_request(method, path, payload=None):
     return False
 
 
+def cookie_header_contains(cookie_header, cookie_name):
+    if not cookie_header or not cookie_name:
+        return False
+    prefix = f"{cookie_name}="
+    return any(part.strip().startswith(prefix) for part in str(cookie_header).split(";"))
+
+
 class PlannerHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(FRONTEND_DIR), **kwargs)
@@ -864,7 +876,7 @@ class PlannerHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Cookie")
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -925,14 +937,50 @@ class PlannerHandler(SimpleHTTPRequestHandler):
 
     def authenticate_user(self):
         auth_header = self.headers.get("Authorization", "")
-        if not auth_header.lower().startswith("bearer "):
+        if auth_header.lower().startswith("bearer "):
+            raw_token = auth_header.split(" ", 1)[1].strip()
+            if raw_token:
+                user = repo.user_by_session_token(raw_token)
+                if user:
+                    return user
+        return self.authenticate_external_cookie()
+
+    def authenticate_external_cookie(self):
+        if not EXTERNAL_AUTH_ME_URL:
             return None
-        raw_token = auth_header.split(" ", 1)[1].strip()
-        if not raw_token:
+        cookie_header = self.headers.get("Cookie", "")
+        if not cookie_header_contains(cookie_header, EXTERNAL_AUTH_COOKIE_NAME):
             return None
-        return repo.user_by_session_token(raw_token)
+        try:
+            request = Request(
+                EXTERNAL_AUTH_ME_URL,
+                headers={
+                    "Accept": "application/json",
+                    "Cookie": cookie_header,
+                },
+            )
+            with urlopen(request, timeout=EXTERNAL_AUTH_TIMEOUT_SECONDS) as response:
+                if response.status != 200:
+                    return None
+                external_user = json.loads(response.read().decode("utf-8"))
+        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+            return None
+
+        email = str(external_user.get("email") or "").strip().lower()
+        if not email:
+            return None
+        user = repo.user_by_email(email)
+        if not user:
+            return None
+        user["external_auth"] = True
+        user["external_user_id"] = external_user.get("id")
+        user["external_role"] = external_user.get("role")
+        user["external_name"] = external_user.get("name")
+        return user
 
     def user_can_access(self, user, method, path):
+        if path == "/api/session":
+            return True
         role = str(user.get("rol_app") or "").lower()
         if role == "usuario":
             if method == "GET" and path in {
@@ -982,6 +1030,23 @@ class PlannerHandler(SimpleHTTPRequestHandler):
                 "roleId": user["rol_app"],
                 "personName": user["persona"] or "",
                 "active": True,
+            },
+        }
+
+    def session(self):
+        user = self.current_user
+        if not user:
+            return {"ok": False}
+        return {
+            "ok": True,
+            "user": {
+                "id": f"db-{user['id']}",
+                "username": user["email"] or user["usuario"],
+                "email": user["email"] or "",
+                "roleId": user["rol_app"],
+                "personName": user.get("persona") or user.get("external_name") or "",
+                "active": True,
+                "externalAuth": bool(user.get("external_auth")),
             },
         }
 

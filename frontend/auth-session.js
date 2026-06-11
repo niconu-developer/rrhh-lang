@@ -2,10 +2,43 @@ function currentSession() {
   return JSON.parse(localStorage.getItem(APP_SESSION_KEY) || "null");
 }
 
+let backendSessionChecked = false;
+const EXTERNAL_AUTH_SKIP_KEY = "plannerSkipExternalAuth";
+
+function loadBackendSessionSync() {
+  if (backendSessionChecked) return null;
+  if (sessionStorage.getItem(EXTERNAL_AUTH_SKIP_KEY) === "1") return null;
+  backendSessionChecked = true;
+  if (currentSession()?.user) return currentSession();
+  try {
+    const request = new XMLHttpRequest();
+    request.open("GET", `${apiBase()}/session`, false);
+    request.setRequestHeader("Accept", "application/json");
+    request.send();
+    if (request.status !== 200) return null;
+    const payload = JSON.parse(request.responseText || "null");
+    if (!payload?.ok || !payload.user) return null;
+    const user = {
+      ...payload.user,
+      roleId: normalizeApplicationRole(payload.user.roleId),
+    };
+    const session = {
+      user,
+      token: payload.token || "",
+      externalAuth: Boolean(payload.user.externalAuth),
+      startedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session));
+    return session;
+  } catch (error) {
+    return null;
+  }
+}
+
 function currentUser() {
-  const session = currentSession();
+  const session = currentSession() || loadBackendSessionSync();
   if (session?.user) {
-    if (!session.token) return null;
+    if (!session.token && !session.externalAuth) return null;
     const user = {
       ...session.user,
       roleId: normalizeApplicationRole(session.user.roleId),
@@ -33,6 +66,7 @@ function loginUser(email, password) {
 
 function logoutUser() {
   localStorage.removeItem(APP_SESSION_KEY);
+  sessionStorage.setItem(EXTERNAL_AUTH_SKIP_KEY, "1");
   window.location.href = "./login.html";
 }
 
