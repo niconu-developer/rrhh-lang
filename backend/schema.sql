@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS marcas (
   ubicacion_detectada TEXT,
   latitud REAL,
   longitud REAL,
+  reloj_facial_id INTEGER,
   genera_incidencia INTEGER NOT NULL DEFAULT 0,
   estado_aprobacion TEXT NOT NULL DEFAULT 'PENDIENTE',
   fecha_aprobacion TEXT,

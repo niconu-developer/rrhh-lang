@@ -332,6 +332,7 @@ def ensure_marcas_approval_schema(connection):
     ensure_column(connection, "marcas", "fecha_anulacion", "TEXT")
     ensure_column(connection, "marcas", "anulada_por_usuario_id", "INTEGER")
     ensure_column(connection, "marcas", "observacion_anulacion", "TEXT")
+    ensure_column(connection, "marcas", "reloj_facial_id", "INTEGER")
     connection.execute("""
         UPDATE marcas
         SET tipo_marca = 'Marca manual admin'
@@ -1265,6 +1266,8 @@ class PlannerHandler(SimpleHTTPRequestHandler):
 
     def create_marca(self, payload):
         with connect() as connection:
+            if self.current_user and self.current_user.get("reloj_facial_id"):
+                payload["reloj_facial_id"] = self.current_user["reloj_facial_id"]
             created = repo.create_marca(connection, payload)
             mark_day = date_from_db_datetime(payload["fecha_hora"])
             if payload.get("registrada_por_admin"):

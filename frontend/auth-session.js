@@ -47,21 +47,11 @@ function currentUser() {
     const role = DEFAULT_AUTH.roles.find((item) => item.id === user.roleId);
     return role ? { ...user, role } : null;
   }
-  if (!session?.userId) return null;
-  const auth = loadAuthConfig();
-  const user = auth.users.find((item) => item.id === session.userId && item.active);
-  if (!user) return null;
-  const role = auth.roles.find((item) => item.id === user.roleId);
-  return { ...user, role };
+  return null;
 }
 
 function loginUser(email, password) {
-  const auth = loadAuthConfig();
-  const user = auth.users.find((item) => (item.email === email || item.username === email) && item.password === password && item.active);
-  if (!user) return null;
-  const session = { userId: user.id, startedAt: new Date().toISOString() };
-  localStorage.setItem(APP_SESSION_KEY, JSON.stringify(session));
-  return currentUser();
+  return null;
 }
 
 function logoutUser() {

@@ -1112,6 +1112,7 @@ def create_marca(connection, payload):
           ubicacion_detectada,
           latitud,
           longitud,
+          reloj_facial_id,
           genera_incidencia,
           estado_aprobacion,
           fecha_aprobacion,
@@ -1120,7 +1121,7 @@ def create_marca(connection, payload):
           fecha_modificacion,
           modificado_por_usuario_id,
           observacion_modificacion
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'APROBADA' THEN CURRENT_TIMESTAMP ELSE NULL END, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'APROBADA' THEN CURRENT_TIMESTAMP ELSE NULL END, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END, ?, ?)
     """, (
         persona_id,
         payload["fecha_hora"],
@@ -1130,6 +1131,7 @@ def create_marca(connection, payload):
         payload.get("ubicacion_detectada"),
         payload.get("latitud"),
         payload.get("longitud"),
+        normalize_user_id(payload.get("reloj_facial_id")),
         int(bool(payload.get("genera_incidencia", False))),
         "APROBADA" if manual_admin_note else "PENDIENTE",
         "APROBADA" if manual_admin_note else "PENDIENTE",

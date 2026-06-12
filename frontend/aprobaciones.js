@@ -10,7 +10,6 @@ const approvalElements = {
   status: document.querySelector("#approvalStatus"),
   sort: document.querySelector("#approvalSort"),
   count: document.querySelector("#approvalCount"),
-  refresh: document.querySelector("#approvalRefresh"),
   selectAll: document.querySelector("#selectAllApprovals"),
   approveSelection: document.querySelector("#approveSelection"),
   body: document.querySelector("#approvalTableBody"),
@@ -613,7 +612,6 @@ function showApprovalToast(message) {
 [approvalElements.person, approvalElements.status, approvalElements.sort].forEach((element) => {
   element.addEventListener(element.type === "search" ? "input" : "change", renderApprovals);
 });
-approvalElements.refresh.addEventListener("click", refreshApprovals);
 approvalElements.selectAll.addEventListener("change", () => toggleAllVisibleApprovals(approvalElements.selectAll.checked));
 approvalElements.approveSelection.addEventListener("click", () => approveSelectedRows().catch((error) => showApprovalToast(error.message)));
 approvalElements.body.addEventListener("click", (event) => {

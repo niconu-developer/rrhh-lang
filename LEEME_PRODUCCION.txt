@@ -4,18 +4,18 @@ Paquete para produccion / despliegue
 Contenido principal
 - Frontend: carpeta frontend/ con archivos .html, .js, css/ y assets/
 - Backend: backend/app.py
-- Base de datos SQLite actual: backend/planner.db
-- Estructura de base: backend/schema.sql
-- Datos base/semillas: backend/seed.sql
+- Base de datos actual recomendada: PostgreSQL
+- Estructura de base: backend/schema.postgres.sql
+- Datos base/semillas: backend/seed.postgres.sql
 - Docker: Dockerfile, docker-compose.example.yml, .dockerignore
 - Variables de entorno ejemplo: .env.example
 
 Como levantarlo localmente
 1. Abrir una terminal en esta carpeta.
 2. Ejecutar:
-   python3 backend/app.py
+   docker compose -f docker-compose.example.yml up -d --build
 3. Abrir en el navegador:
-   http://127.0.0.1:8765/
+   http://127.0.0.1:8766/
 
 Usuario de contingencia
 - Usuario: admin
@@ -39,17 +39,19 @@ Seguridad incluida en esta version
 - Reloj facial publico desactivado por defecto.
 
 Notas para produccion
-- No subir backend/planner.db a GitHub. En Docker, la base vive en /data/planner.db.
+- No subir bases locales, respaldos ni .env a GitHub.
+- En la version actual de testing, la base recomendada es PostgreSQL.
+- En Docker, PostgreSQL vive en un volumen persistente y se configura con DATABASE_URL.
 - El backend sirve tanto la API como los archivos web.
 - En desarrollo, el backend sirve frontend/ automaticamente.
 - En produccion, Nginx puede servir frontend/ y dejar Python solo para /api usando PLANNER_SERVE_STATIC=0.
 - Si se despliega en un servidor, configurar HTTPS antes de usar camara, geolocalizacion o reconocimiento facial.
-- La variable PLANNER_DB permite apuntar a otra ruta de base de datos si se quiere separar datos de codigo.
+- La variable PLANNER_DB queda como soporte legacy para SQLite local.
 - La variable PLANNER_HOST permite definir la interfaz de escucha.
 - La variable PLANNER_PORT permite cambiar el puerto.
 - La variable PLANNER_FRONTEND_DIR permite indicar la carpeta estatica del frontend.
 - La variable PLANNER_SERVE_STATIC permite prender/apagar el servido de frontend desde Python.
-- La variable PLANNER_PUBLIC_FACE_CLOCK habilita el reloj facial sin login. Usar solo atras de Nginx/VPN/IP allowlist.
+- El reloj facial se habilita con links unicos generados desde Configuracion. No hay reloj facial publico abierto.
 
 Comando ejemplo en servidor
 PLANNER_HOST=0.0.0.0 PLANNER_PORT=8765 python3 backend/app.py
