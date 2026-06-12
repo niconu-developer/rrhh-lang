@@ -37,6 +37,8 @@ def route_get(handler, path, query):
         return repo.list_facturacion(query_value(query, "desde", "from"), query_value(query, "hasta", "to"))
     if path == "/api/configuracion":
         return repo.list_configuracion()
+    if path == "/api/relojes-faciales":
+        return repo.list_relojes_faciales()
     if path == "/api/turnos":
         return repo.list_turnos(query_value(query, "desde", "from"), query_value(query, "hasta", "to"))
     if path == "/api/jornales":
@@ -86,6 +88,8 @@ def route_post(handler, path, payload):
         return handler.save_ubicacion(payload)
     if path == "/api/configuracion":
         return handler.save_configuracion(payload)
+    if path == "/api/relojes-faciales":
+        return handler.create_reloj_facial(payload)
     if path == "/api/usuarios":
         return handler.save_usuario(payload)
     if len(parts) == 3 and parts[:2] == ["api", "personas"]:
@@ -102,6 +106,8 @@ def route_post(handler, path, payload):
         return handler.delete_ubicacion(int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "usuarios"] and parts[3] == "toggle":
         return handler.toggle_usuario(int(parts[2]))
+    if len(parts) == 4 and parts[:2] == ["api", "relojes-faciales"] and parts[3] == "toggle":
+        return handler.toggle_reloj_facial(int(parts[2]))
     if len(parts) == 3 and parts[:2] == ["api", "usuarios"]:
         return handler.save_usuario(payload, int(parts[2]))
     if path == "/api/turnos":

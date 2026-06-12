@@ -30,6 +30,9 @@ window.fetch = (resource, options = {}) => {
 };
 
 function handleUnauthorizedApiResponse(response, target) {
+  if (response.status === 401 && window.location.pathname.endsWith("/reloj-facial.html")) {
+    return response;
+  }
   if (response.status === 401 && target.origin === apiOrigin() && target.pathname.startsWith("/api/") && !target.pathname.endsWith("/login")) {
     localStorage.removeItem(APP_SESSION_KEY);
     const next = window.location.pathname.split("/").pop() || "index.html";

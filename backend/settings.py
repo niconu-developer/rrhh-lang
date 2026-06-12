@@ -11,7 +11,6 @@ PORT = int(os.environ.get("PLANNER_PORT", "8765"))
 SERVE_STATIC = os.environ.get("PLANNER_SERVE_STATIC", "1").lower() in {"1", "true", "yes", "si"}
 SESSION_TTL_HOURS = int(os.environ.get("PLANNER_SESSION_TTL_HOURS", "12"))
 ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("PLANNER_ADMIN_PASSWORD")
-PUBLIC_FACE_CLOCK = os.environ.get("PLANNER_PUBLIC_FACE_CLOCK", "0").lower() in {"1", "true", "yes", "si"}
 PASSWORD_ITERATIONS = int(os.environ.get("PLANNER_PASSWORD_ITERATIONS", "260000"))
 EXTERNAL_AUTH_ME_URL = os.environ.get("PLANNER_EXTERNAL_AUTH_ME_URL", "").strip()
 EXTERNAL_AUTH_COOKIE_NAME = os.environ.get("PLANNER_EXTERNAL_AUTH_COOKIE_NAME", "connect.sid").strip()

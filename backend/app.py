@@ -34,7 +34,6 @@ from backend.settings import (
     FRONTEND_DIR,
     HOST,
     PORT,
-    PUBLIC_FACE_CLOCK,
     SERVE_STATIC,
 )
 
@@ -864,16 +863,23 @@ def module_from_path(path):
     return parts[1] if len(parts) >= 2 and parts[0] == "api" else ""
 
 
-def public_face_clock_request(method, path, payload=None):
-    if not PUBLIC_FACE_CLOCK:
-        return False
+def public_face_clock_request(method, path, query=None, payload=None):
+    raw_token = ""
+    if query:
+        raw_token = (query.get("token") or [""])[0]
+    if not raw_token and payload:
+        raw_token = str(payload.get("reloj_token") or payload.get("token") or "")
+    link = repo.validate_reloj_facial_token(raw_token, touch=method == "POST" and path == "/api/marcas")
+    if not link:
+        return None
     if method == "GET" and path in {"/api/personas", "/api/ubicaciones"}:
-        return True
+        return link
     if method == "GET" and path == "/api/turnos":
-        return True
+        return link
     if method == "POST" and path == "/api/marcas":
-        return str((payload or {}).get("tipo_marca") or "").lower() == "por reloj facial"
-    return False
+        if str((payload or {}).get("tipo_marca") or "").lower() == "por reloj facial":
+            return link
+    return None
 
 
 def cookie_header_contains(cookie_header, cookie_name):
@@ -909,9 +915,10 @@ class PlannerHandler(SimpleHTTPRequestHandler):
                 return self.send_error_json("Frontend no servido por este proceso", 404)
             return super().do_GET()
         try:
-            if not self.authorize_request("GET", parsed.path):
+            query = parse_qs(parsed.query)
+            if not self.authorize_request("GET", parsed.path, query=query):
                 return
-            payload = self.route_get(parsed.path, parse_qs(parsed.query))
+            payload = self.route_get(parsed.path, query)
             self.send_json(payload)
         except Exception as error:
             self.send_error_json(str(error), 500)
@@ -937,12 +944,19 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         except Exception as error:
             self.send_error_json(str(error), 500)
 
-    def authorize_request(self, method, path, payload=None):
+    def authorize_request(self, method, path, query=None, payload=None):
         if (method == "GET" and path in PUBLIC_GET_PATHS) or (method == "POST" and path in PUBLIC_POST_PATHS):
             self.current_user = None
             return True
-        if public_face_clock_request(method, path, payload):
-            self.current_user = {"id": None, "usuario": "reloj-facial", "rol_app": "public"}
+        face_clock_link = public_face_clock_request(method, path, query=query, payload=payload)
+        if face_clock_link:
+            self.current_user = {
+                "id": None,
+                "usuario": f"reloj-facial:{face_clock_link['id']}",
+                "rol_app": "public",
+                "reloj_facial_id": face_clock_link["id"],
+                "reloj_facial_nombre": face_clock_link["nombre"],
+            }
             return True
         user = self.authenticate_user()
         if not user:
@@ -1130,6 +1144,13 @@ class PlannerHandler(SimpleHTTPRequestHandler):
 
     def toggle_usuario(self, user_id):
         return repo.toggle_usuario(user_id)
+
+    def create_reloj_facial(self, payload):
+        raw_token = secrets.token_urlsafe(32)
+        return repo.create_reloj_facial(payload, raw_token)
+
+    def toggle_reloj_facial(self, link_id):
+        return repo.toggle_reloj_facial(link_id)
 
     def approval_tolerance_minutes(self, connection):
         return AprobacionesService.approval_tolerance_minutes(connection)

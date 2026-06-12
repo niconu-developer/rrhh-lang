@@ -15,6 +15,11 @@ const configElements = {
   saveGeneralParams: document.querySelector("#saveGeneralParams"),
   newLocationButton: document.querySelector("#newLocationButton"),
   locationList: document.querySelector("#locationList"),
+  faceClockForm: document.querySelector("#faceClockForm"),
+  faceClockNameInput: document.querySelector("#faceClockNameInput"),
+  faceClockExpiryInput: document.querySelector("#faceClockExpiryInput"),
+  faceClockGeneratedLink: document.querySelector("#faceClockGeneratedLink"),
+  faceClockList: document.querySelector("#faceClockList"),
   locationModal: document.querySelector("#locationModal"),
   locationModalTitle: document.querySelector("#locationModalTitle"),
   closeLocationModal: document.querySelector("#closeLocationModal"),
@@ -43,6 +48,7 @@ function defaultConfigSnapshot() {
     alertTolerance: { ...DEFAULT_ALERT_TOLERANCE },
     approvalTolerance: { ...DEFAULT_APPROVAL_TOLERANCE },
     locations: [],
+    faceClocks: [],
   };
 }
 
@@ -57,12 +63,13 @@ async function configApi(path, options = {}) {
 }
 
 async function loadConfigFromBackend() {
-  const [roles, locations, configRows, appRoles, operationTariffs] = await Promise.all([
+  const [roles, locations, configRows, appRoles, operationTariffs, faceClocks] = await Promise.all([
     configApi("/roles-operativos"),
     configApi("/ubicaciones"),
     configApi("/configuracion"),
     configApi("/roles-app"),
     configApi("/operacion-tarifas"),
+    configApi("/relojes-faciales"),
   ]);
   const values = Object.fromEntries(configRows.map((row) => [row.clave, parseConfigValue(row.valor)]));
   appConfig = {
@@ -73,6 +80,7 @@ async function loadConfigFromBackend() {
     approvalTolerance: values.approval_tolerance || { ...DEFAULT_APPROVAL_TOLERANCE },
     operationTariffs: operationTariffs.map(apiOperationTariffToConfig),
     locations: locations.map(apiLocationToConfig),
+    faceClocks: faceClocks.map(apiFaceClockToConfig),
   };
   authConfig = {
     roles: appRoles.map((role) => {
@@ -122,6 +130,17 @@ function apiOperationTariffToConfig(tariff) {
   };
 }
 
+function apiFaceClockToConfig(link) {
+  return {
+    id: String(link.id),
+    name: link.nombre || "",
+    active: Number(link.activo) !== 0,
+    createdAt: link.fecha_creacion || "",
+    expiresAt: link.fecha_expiracion || "",
+    lastUsedAt: link.ultimo_uso || "",
+  };
+}
+
 function openConfigSection(section) {
   document.querySelectorAll("[data-config-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.configTab === section);
@@ -135,6 +154,7 @@ function renderConfig() {
   renderOperationalRoleList();
   renderGeneralParams();
   renderLocationList();
+  renderFaceClockList();
   renderAccessConfig();
 }
 
@@ -223,6 +243,76 @@ function renderLocationList() {
       </tbody>
     </table>
   </div>`;
+}
+
+function renderFaceClockList() {
+  if (!configElements.faceClockList) return;
+  if (!appConfig.faceClocks.length) {
+    configElements.faceClockList.innerHTML = `<article class="admin-list-item"><strong>Sin links generados</strong><span>Generá un acceso para cada reloj facial físico o punto de ingreso.</span></article>`;
+    return;
+  }
+
+  configElements.faceClockList.innerHTML = appConfig.faceClocks
+    .map((link) => `<article class="admin-list-item">
+      <div>
+        <strong>${escapeConfigText(link.name)}</strong>
+        <span>${link.active ? "Activo" : "Inactivo"} · Último uso: ${escapeConfigText(formatConfigDateTime(link.lastUsedAt) || "sin uso")}${link.expiresAt ? ` · Vence: ${escapeConfigText(formatConfigDate(link.expiresAt))}` : ""}</span>
+      </div>
+      <button class="ghost-button small" data-face-clock-toggle="${link.id}" type="button">${link.active ? "Desactivar" : "Activar"}</button>
+    </article>`)
+    .join("");
+}
+
+function formatConfigDate(value) {
+  if (!value) return "";
+  const [datePart] = String(value).split(" ");
+  const [year, month, day] = datePart.split("-");
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+function formatConfigDateTime(value) {
+  if (!value) return "";
+  const [datePart, timePart = ""] = String(value).split(" ");
+  return `${formatConfigDate(datePart)}${timePart ? ` ${timePart.slice(0, 5)}` : ""}`.trim();
+}
+
+function faceClockUrl(token) {
+  const path = window.location.pathname.replace(/configuracion\.html$/, "reloj-facial.html");
+  return `${window.location.origin}${path}?token=${encodeURIComponent(token)}`;
+}
+
+async function createFaceClockLink() {
+  const name = configElements.faceClockNameInput.value.trim();
+  if (!name) {
+    showConfigToast("Ingresá un nombre para el reloj");
+    return;
+  }
+  const response = await configApi("/relojes-faciales", {
+    method: "POST",
+    body: JSON.stringify({
+      nombre: name,
+      fecha_expiracion: configElements.faceClockExpiryInput.value || null,
+    }),
+  });
+  const url = faceClockUrl(response.token);
+  configElements.faceClockGeneratedLink.hidden = false;
+  configElements.faceClockGeneratedLink.innerHTML = `
+    <span>Link generado</span>
+    <input readonly value="${escapeConfigText(url)}" />
+    <button class="ghost-button small" data-copy-face-clock-link="${escapeConfigText(url)}" type="button">Copiar</button>
+  `;
+  configElements.faceClockNameInput.value = "";
+  configElements.faceClockExpiryInput.value = "";
+  await loadConfigFromBackend();
+  renderConfig();
+  showConfigToast("Link generado");
+}
+
+async function toggleFaceClockLink(id) {
+  await configApi(`/relojes-faciales/${id}/toggle`, { method: "POST", body: "{}" });
+  await loadConfigFromBackend();
+  renderConfig();
+  showConfigToast("Reloj facial actualizado");
 }
 
 async function addConfigItem(key, value) {
@@ -465,16 +555,27 @@ configElements.locationModal.addEventListener("click", (event) => {
 configElements.saveGeneralParams.addEventListener("click", () => {
   saveGeneralParams().catch((error) => showConfigToast(error.message));
 });
+configElements.faceClockForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  createFaceClockLink().catch((error) => showConfigToast(error.message));
+});
 
 document.addEventListener("click", (event) => {
   const configTab = event.target.closest("[data-config-tab]");
   const button = event.target.closest("[data-key]");
   const locationButton = event.target.closest("[data-location]");
   const editLocationButton = event.target.closest("[data-edit-location]");
+  const faceClockToggle = event.target.closest("[data-face-clock-toggle]");
+  const copyFaceClockLink = event.target.closest("[data-copy-face-clock-link]");
   if (configTab) openConfigSection(configTab.dataset.configTab);
   if (button) removeConfigItem(button.dataset.key, button.dataset.value).catch((error) => showConfigToast(error.message));
   if (locationButton) removeLocation(locationButton.dataset.location).catch((error) => showConfigToast(error.message));
   if (editLocationButton) openLocationModal(editLocationButton.dataset.editLocation);
+  if (faceClockToggle) toggleFaceClockLink(faceClockToggle.dataset.faceClockToggle).catch((error) => showConfigToast(error.message));
+  if (copyFaceClockLink) {
+    navigator.clipboard?.writeText(copyFaceClockLink.dataset.copyFaceClockLink);
+    showConfigToast("Link copiado");
+  }
 });
 
 document.addEventListener("change", (event) => {

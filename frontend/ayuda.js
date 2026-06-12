@@ -11,7 +11,7 @@ const helpDocs = [
     steps: [
       "Planificá turnos en Plan semanal.",
       "Publicá el día cuando esté listo para que pueda verse desde el Reloj.",
-      "Los operadores registran entrada/salida desde Reloj, Reloj facial o luego desde carga manual admin.",
+      "Los operadores registran entrada/salida desde Reloj, desde un link de Reloj facial generado por admin, o luego desde carga manual admin.",
       "Cada persona puede revisar su histórico en Mis marcas.",
       "RRHH trabaja el día desde Dashboard: KPIs, operaciones, marcas, previsiones e incidencias.",
       "Las incidencias se corrigen editando marcas, pasando a plan semanal, marcando ausente o aprobando con comentario.",
@@ -162,7 +162,7 @@ const helpDocs = [
       "El operador logueado usa Reloj para marcar entrada o salida.",
       "El Reloj muestra el resumen del día publicado para que el operador vea horarios y actividades.",
       "Solo se puede ver mañana si ese día fue publicado desde Plan semanal.",
-      "El reloj facial permite marcar sin correo y contraseña.",
+      "El reloj facial permite marcar sin correo y contraseña únicamente desde links únicos generados en Configuración.",
       "El sistema registra fecha, hora, origen de marca y ubicación detectada.",
       "Las marcas pueden quedar como RELOJ WEB, RELOJ FACIAL o MARCA MANUAL ADMIN.",
       "Si no se detecta ubicación admitida, el sistema informa UBICACIÓN NO DETECTADA - GENERA NOTIFICACIÓN.",

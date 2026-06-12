@@ -13,7 +13,7 @@ async function renderHome() {
     { title: "Gestión", modules: ["plan", "incidencias", "aprobaciones", "operaciones"] },
     { title: "Datos", modules: ["dashboard", "reportes", "analisis", "facturacion", "importacion", "liquidacion"] },
     { title: "Parámetros", modules: ["config", "personal"] },
-    { title: "Recursos", modules: ["marcas", "mis-marcas", "reloj"] },
+    { title: "Recursos", modules: ["marcas", "mis-marcas"] },
   ];
 
   homeGrid.innerHTML = groups

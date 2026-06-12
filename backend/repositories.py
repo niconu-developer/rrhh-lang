@@ -115,6 +115,72 @@ def list_configuracion():
     return rows("SELECT * FROM configuracion ORDER BY clave")
 
 
+def list_relojes_faciales():
+    return rows("""
+        SELECT
+          id,
+          nombre,
+          activo,
+          fecha_creacion,
+          fecha_expiracion,
+          ultimo_uso
+        FROM relojes_faciales
+        ORDER BY activo DESC, fecha_creacion DESC, nombre
+    """)
+
+
+def create_reloj_facial(payload, raw_token):
+    name = str(payload.get("nombre") or "").strip()
+    if not name:
+        raise ValueError("Nombre del reloj requerido")
+    expires_at = str(payload.get("fecha_expiracion") or "").strip() or None
+    if expires_at and len(expires_at) == 10:
+        expires_at = f"{expires_at} 23:59:59"
+    with connect() as connection:
+        cursor = connection.execute("""
+            INSERT INTO relojes_faciales (nombre, token_hash, activo, fecha_expiracion)
+            VALUES (?, ?, 1, ?)
+        """, (name, token_hash(raw_token), expires_at))
+        link_id = cursor.lastrowid
+        if not link_id:
+            row = connection.execute("SELECT id FROM relojes_faciales WHERE token_hash = ?", (token_hash(raw_token),)).fetchone()
+            link_id = row["id"] if row else None
+        connection.commit()
+    return {"ok": True, "id": link_id, "token": raw_token}
+
+
+def toggle_reloj_facial(link_id):
+    with connect() as connection:
+        current = connection.execute("SELECT activo FROM relojes_faciales WHERE id = ?", (link_id,)).fetchone()
+        if not current:
+            raise ValueError("Reloj facial no encontrado")
+        active = 0 if int(current["activo"] or 0) else 1
+        connection.execute("UPDATE relojes_faciales SET activo = ? WHERE id = ?", (active, link_id))
+        connection.commit()
+        return {"ok": True, "activo": active}
+
+
+def validate_reloj_facial_token(raw_token, touch=False):
+    clean = str(raw_token or "").strip()
+    if not clean:
+        return None
+    now_value = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    with connect() as connection:
+        row = connection.execute("""
+            SELECT id, nombre, activo, fecha_expiracion
+            FROM relojes_faciales
+            WHERE token_hash = ?
+              AND activo = 1
+              AND (fecha_expiracion IS NULL OR fecha_expiracion = '' OR fecha_expiracion >= ?)
+        """, (token_hash(clean), now_value)).fetchone()
+        if not row:
+            return None
+        if touch:
+            connection.execute("UPDATE relojes_faciales SET ultimo_uso = ? WHERE id = ?", (now_value, row["id"]))
+            connection.commit()
+        return dict(row)
+
+
 def list_turnos(date_from=None, date_to=None):
     if date_from and date_to:
         return rows("""

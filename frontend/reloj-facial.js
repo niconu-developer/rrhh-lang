@@ -1,4 +1,5 @@
 const CLOCK_API_BASE = apiBase();
+const FACE_CLOCK_TOKEN = new URLSearchParams(window.location.search).get("token") || "";
 
 const clockStatuses = ["LIBRE", "LICENCIA", "SUSPENDIDO", "LIC. MEDICA", "AUSENTE", "VACIO"];
 let clockPersonnel = [];
@@ -23,9 +24,15 @@ const clock = {
 };
 
 async function clockApi(path, options = {}) {
-  const response = await fetch(`${CLOCK_API_BASE}${path}`, {
+  const separator = path.includes("?") ? "&" : "?";
+  const url = FACE_CLOCK_TOKEN ? `${CLOCK_API_BASE}${path}${separator}token=${encodeURIComponent(FACE_CLOCK_TOKEN)}` : `${CLOCK_API_BASE}${path}`;
+  const body = options.body && FACE_CLOCK_TOKEN
+    ? JSON.stringify({ ...JSON.parse(options.body), reloj_token: FACE_CLOCK_TOKEN })
+    : options.body;
+  const response = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
+    body,
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "No se pudo conectar con la base");
@@ -57,6 +64,9 @@ function normalizeClockLocations(rows) {
 }
 
 async function loadClockData() {
+  if (!FACE_CLOCK_TOKEN) {
+    throw new Error("Link de reloj facial requerido");
+  }
   const today = clockInputDate(new Date());
   const [people, turns, locations] = await Promise.all([
     clockApi("/personas"),

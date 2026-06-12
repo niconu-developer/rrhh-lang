@@ -213,3 +213,16 @@ CREATE TABLE IF NOT EXISTS configuracion (
   clave TEXT PRIMARY KEY,
   valor TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS relojes_faciales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  activo INTEGER NOT NULL DEFAULT 1,
+  fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_expiracion TEXT,
+  ultimo_uso TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_relojes_faciales_token_hash
+ON relojes_faciales(token_hash);

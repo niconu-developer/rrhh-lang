@@ -29,7 +29,6 @@ const SYSTEM_MODULES = [
   { id: "config", title: "Configuración", href: "./configuracion.html", text: "Definir permisos, ubicaciones, tolerancias y parámetros generales." },
   { id: "marcas", title: "Reloj", href: "./marcas.html", text: "Registrar entrada o salida y ver el plan publicado del día." },
   { id: "mis-marcas", title: "Mis marcas", href: "./mis-marcas.html", text: "Consultar marcas, horas trabajadas y operaciones del mes." },
-  { id: "reloj", title: "Reloj facial", href: "./reloj-facial.html", text: "Registrar marcas con cámara sin ingresar correo y contraseña." },
 ];
 const DASHBOARD_PERMISSIONS = [
   { id: "dashboardAllPersonnel", label: "Ver todo el personal" },
@@ -41,13 +40,13 @@ const DEFAULT_AUTH = {
     {
       id: "admin",
       name: "Admin",
-      modules: ["plan", "dashboard", "incidencias", "aprobaciones", "operaciones", "reportes", "analisis", "facturacion", "importacion", "liquidacion", "personal", "config", "marcas", "mis-marcas", "reloj"],
+      modules: ["plan", "dashboard", "incidencias", "aprobaciones", "operaciones", "reportes", "analisis", "facturacion", "importacion", "liquidacion", "personal", "config", "marcas", "mis-marcas"],
       dashboard: ["dashboardAllPersonnel", "dashboardCosts", "dashboardOperations"],
     },
     {
       id: "rrhh",
       name: "RRHH",
-      modules: ["plan", "dashboard", "incidencias", "aprobaciones", "operaciones", "reportes", "analisis", "facturacion", "importacion", "liquidacion", "personal", "marcas", "mis-marcas", "reloj"],
+      modules: ["plan", "dashboard", "incidencias", "aprobaciones", "operaciones", "reportes", "analisis", "facturacion", "importacion", "liquidacion", "personal", "marcas", "mis-marcas"],
       dashboard: ["dashboardAllPersonnel", "dashboardCosts", "dashboardOperations"],
     },
     {

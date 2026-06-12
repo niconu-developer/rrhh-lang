@@ -157,7 +157,7 @@ Antes de exponerlo:
 - Cambiar `PLANNER_ADMIN_PASSWORD`.
 - Usar HTTPS si se usan camara/geolocalizacion.
 - Poner Nginx delante.
-- Mantener `PLANNER_PUBLIC_FACE_CLOCK=0` salvo kiosco protegido por red/VPN/Nginx.
+- Generar relojes faciales solo desde Configuracion; cada link tiene token unico y se puede desactivar.
 
 ## SSO por cookie de la app principal
 

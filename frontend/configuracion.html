@@ -26,6 +26,7 @@
         <button class="config-nav active" data-config-tab="roles" type="button">Roles operativos</button>
         <button class="config-nav" data-config-tab="parametros" type="button">Parámetros</button>
         <button class="config-nav" data-config-tab="ubicaciones" type="button">Ubicaciones</button>
+        <button class="config-nav" data-config-tab="relojes" type="button">Relojes faciales</button>
         <button class="config-nav" data-config-tab="permisos" type="button">Roles y permisos</button>
       </aside>
 
@@ -94,6 +95,22 @@
         <div class="admin-list" id="locationList"></div>
       </section>
 
+      <section class="admin-panel config-section" data-config-panel="relojes">
+        <div class="section-head">
+          <div>
+            <p class="muted">Accesos directos</p>
+            <h2>Links de reloj facial</h2>
+          </div>
+        </div>
+        <form class="inline-form" id="faceClockForm">
+          <input id="faceClockNameInput" type="text" placeholder="Ej: Entrada depósito" />
+          <input id="faceClockExpiryInput" type="date" aria-label="Vencimiento opcional" />
+          <button class="primary-button" type="submit">Generar link</button>
+        </form>
+        <div class="generated-link-box" id="faceClockGeneratedLink" hidden></div>
+        <div class="admin-list" id="faceClockList"></div>
+      </section>
+
       <section class="admin-panel config-section access-panel" data-config-panel="permisos">
         <div class="section-head">
           <div>
@@ -145,6 +162,6 @@
     <script src="./api-client.js?v=20260610-arch1"></script>
     <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./configuracion.js?v=20260611-general-params1"></script>
+    <script src="./configuracion.js?v=20260611-face-clock-links1"></script>
   </body>
 </html>
