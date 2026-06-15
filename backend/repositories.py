@@ -588,10 +588,16 @@ def save_persona(payload, persona_id=None):
         rol_operativo_id = role_id_for(connection, rol_operativo)
         current_person = connection.execute("SELECT codigo_privado FROM personas WHERE id = ?", (persona_id,)).fetchone() if persona_id else None
         private_code = normalize_private_code(payload.get("codigo_privado")) or (current_person["codigo_privado"] if current_person else next_private_code(connection))
-        duplicate_code = connection.execute(
-            "SELECT id FROM personas WHERE codigo_privado = ? AND (? IS NULL OR id <> ?)",
-            (private_code, persona_id, persona_id),
-        ).fetchone()
+        if persona_id:
+            duplicate_code = connection.execute(
+                "SELECT id FROM personas WHERE codigo_privado = ? AND id <> ?",
+                (private_code, persona_id),
+            ).fetchone()
+        else:
+            duplicate_code = connection.execute(
+                "SELECT id FROM personas WHERE codigo_privado = ?",
+                (private_code,),
+            ).fetchone()
         if duplicate_code:
             raise ValueError("Ese ID privado ya está asignado")
         values = (
