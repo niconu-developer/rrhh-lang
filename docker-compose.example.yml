@@ -24,6 +24,8 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      PLANNER_BASE_PATH: ${PLANNER_BASE_PATH:-}
     ports:
       - "${PLANNER_PUBLIC_PORT:-8766}:8765"
     volumes:

@@ -9,6 +9,9 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 HOST = os.environ.get("PLANNER_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PLANNER_PORT", "8765"))
 SERVE_STATIC = os.environ.get("PLANNER_SERVE_STATIC", "1").lower() in {"1", "true", "yes", "si"}
+BASE_PATH = "/" + os.environ.get("PLANNER_BASE_PATH", "").strip().strip("/")
+if BASE_PATH == "/":
+    BASE_PATH = ""
 SESSION_TTL_HOURS = int(os.environ.get("PLANNER_SESSION_TTL_HOURS", "12"))
 ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("PLANNER_ADMIN_PASSWORD")
 PASSWORD_ITERATIONS = int(os.environ.get("PLANNER_PASSWORD_ITERATIONS", "260000"))

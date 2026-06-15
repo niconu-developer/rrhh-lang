@@ -3,7 +3,7 @@ renderSessionActions(document.querySelector(".top-actions"));
 
 const dashboardStatuses = ["LIBRE", "LICENCIA", "SUSPENDIDO", "LIC. MEDICA", "AUSENTE", "VACIO"];
 const dashboardUser = currentUser();
-const DASHBOARD_API_BASE = apiOrigin();
+const DASHBOARD_API_BASE = apiBase();
 const DASHBOARD_SELECTED_DAY_KEY = "dashboardSelectedDay";
 let dashboardConfig = { alertTolerance: { greenMinutes: 15, yellowMinutes: 30 } };
 let dashboardPersonnel = [];
@@ -173,37 +173,37 @@ async function refreshDashboardData() {
   const from = monthStart;
   const to = addDays(monthEnd, 1);
   const query = `desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}`;
-  await dashboardApiPost("/api/incidencias/generar", {
+  await dashboardApiPost("/incidencias/generar", {
     desde: inputDateValue(from),
     hasta: inputDateValue(to),
   }).catch((error) => console.warn("No se pudieron recalcular incidencias", error));
-  const personas = await dashboardApiGet("/api/personas");
+  const personas = await dashboardApiGet("/personas");
   const [configRows, operationTariffs, turnos, marcas, operaciones, incidencias, aprobaciones] = await Promise.all([
-    dashboardApiGet("/api/configuracion").catch((error) => {
+    dashboardApiGet("/configuracion").catch((error) => {
       console.warn("No se pudo cargar configuración del dashboard", error);
       return [];
     }),
-    dashboardApiGet("/api/operacion-tarifas?activas=1").catch((error) => {
+    dashboardApiGet("/operacion-tarifas?activas=1").catch((error) => {
       console.warn("No se pudieron cargar tarifas de operaciones del dashboard", error);
       return [];
     }),
-    dashboardApiGet(`/api/turnos?${query}`).catch((error) => {
+    dashboardApiGet(`/turnos?${query}`).catch((error) => {
       console.warn("No se pudieron cargar turnos del dashboard", error);
       return [];
     }),
-    dashboardApiGet(`/api/marcas?${query}`).catch((error) => {
+    dashboardApiGet(`/marcas?${query}`).catch((error) => {
       console.warn("No se pudieron cargar marcas del dashboard", error);
       return [];
     }),
-    dashboardApiGet("/api/operaciones").catch((error) => {
+    dashboardApiGet("/operaciones").catch((error) => {
       console.warn("No se pudieron cargar operaciones del dashboard", error);
       return [];
     }),
-    dashboardApiGet(`/api/incidencias?${query}&estado=pendientes`).catch((error) => {
+    dashboardApiGet(`/incidencias?${query}&estado=pendientes`).catch((error) => {
       console.warn("No se pudieron cargar incidencias del dashboard", error);
       return [];
     }),
-    dashboardApiGet(`/api/aprobaciones?${query}`).catch((error) => {
+    dashboardApiGet(`/aprobaciones?${query}`).catch((error) => {
       console.warn("No se pudieron cargar aprobaciones del dashboard", error);
       return [];
     }),
@@ -714,9 +714,9 @@ async function saveMarkEdit(event) {
     usuario_nombre: dashboardUser?.username,
   };
   if (dash.markEditId.value) {
-    await dashboardApiPost(`/api/marcas/${dash.markEditId.value}`, payload);
+    await dashboardApiPost(`/marcas/${dash.markEditId.value}`, payload);
   } else {
-    await dashboardApiPost("/api/marcas", {
+    await dashboardApiPost("/marcas", {
       ...payload,
       persona_id: dash.markEditPersonId.value,
       fecha_hora: `${dash.markEditDate.value} ${rawTime}:00`,
@@ -754,12 +754,12 @@ async function saveManualMarkPair() {
     usuario_id: dashboardUser?.id,
     usuario_nombre: dashboardUser?.username,
   };
-  await dashboardApiPost("/api/marcas", {
+  await dashboardApiPost("/marcas", {
     ...basePayload,
     tipo: "Entrada",
     fecha_hora: `${dash.markEntryDate.value} ${entryTime}:00`,
   });
-  await dashboardApiPost("/api/marcas", {
+  await dashboardApiPost("/marcas", {
     ...basePayload,
     tipo: "Salida",
     fecha_hora: `${dash.markExitDate.value} ${exitTime}:00`,
@@ -827,7 +827,7 @@ function incidentCanMarkAbsent(item) {
 }
 
 async function passIncidentToPlan(id) {
-  await dashboardApiPost("/api/incidencias/pasar-a-plan", {
+  await dashboardApiPost("/incidencias/pasar-a-plan", {
     ids: [Number(id)],
   });
   await refreshDashboard();
@@ -835,7 +835,7 @@ async function passIncidentToPlan(id) {
 }
 
 async function markIncidentAbsent(id) {
-  await dashboardApiPost("/api/incidencias/marcar-ausente", {
+  await dashboardApiPost("/incidencias/marcar-ausente", {
     ids: [Number(id)],
   });
   await refreshDashboard();
@@ -850,7 +850,7 @@ async function resolveIncident(id) {
   }
   const comment = approvalCommentPrompt();
   if (comment === null) return;
-  await dashboardApiPost("/api/incidencias/resolver", {
+  await dashboardApiPost("/incidencias/resolver", {
     ids: [Number(id)],
     usuario_id: dashboardUser?.id,
     observacion_aprobacion: comment,
@@ -912,7 +912,7 @@ async function resolveSelectedIncidents() {
   }
   const comment = approvalCommentPrompt();
   if (comment === null) return;
-  await dashboardApiPost("/api/incidencias/resolver", {
+  await dashboardApiPost("/incidencias/resolver", {
     ids: ids.map(Number),
     usuario_id: dashboardUser?.id,
     observacion_aprobacion: comment,
@@ -1064,7 +1064,7 @@ async function validateDashboardJornal(button) {
     .filter(Boolean);
   if (!markIds.length) return;
   const date = button.dataset.jornalDate || inputDateValue(selectedDashboardDay);
-  await dashboardApiPost("/api/aprobaciones", {
+  await dashboardApiPost("/aprobaciones", {
     marca_ids: markIds,
     estado: button.dataset.jornalIncident === "true" ? "VALIDADA_CON_INCIDENCIA" : "APROBADA",
     usuario_id: dashboardUser?.id,
@@ -1561,7 +1561,7 @@ dash.operationEditForm?.addEventListener("submit", async (event) => {
   const tariffId = dash.operationEditType.value;
   const band = dash.operationEditBand.value;
   const value = dashboardOperationEditValue();
-  await dashboardApiPost(`/api/operaciones/${selectedDashboardOperation.id}`, {
+  await dashboardApiPost(`/operaciones/${selectedDashboardOperation.id}`, {
     operacion_tarifa_id: tariffId ? Number(tariffId) : null,
     franja: band,
     valor: value,
@@ -1591,7 +1591,7 @@ dash.operationsAdminList.addEventListener("click", async (event) => {
     estado: button.dataset.action,
     motivo_rechazo: button.dataset.action === "rejected" ? rejectionReason.trim() : "",
   };
-  await dashboardApiPost(`/api/operaciones/${button.dataset.operation}`, payload);
+  await dashboardApiPost(`/operaciones/${button.dataset.operation}`, payload);
   await refreshDashboard();
 });
 
@@ -1632,7 +1632,7 @@ async function deleteMark(markId) {
   const mark = loadDashboardMarks().find((item) => String(item.id) === String(markId));
   const label = mark ? `${mark.type} ${mark.time} de ${mark.operator}` : "esta marca";
   if (!window.confirm(`¿Anular ${label}? La marca queda guardada como anulada y no se puede desanular.`)) return;
-  await dashboardApiPost(`/api/marcas/${markId}/delete`, {
+  await dashboardApiPost(`/marcas/${markId}/delete`, {
     usuario_id: currentUser()?.id,
     usuario_nombre: currentUser()?.username,
   });

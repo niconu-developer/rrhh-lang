@@ -51,6 +51,7 @@ cp .env.example .env
 
 ```text
 PLANNER_PUBLIC_PORT=8766
+PLANNER_BASE_PATH=/rrhh
 PLANNER_ADMIN_PASSWORD=una-clave-segura
 POSTGRES_PASSWORD=una-clave-segura-de-base
 DATABASE_URL=postgresql://lang_rrhh:una-clave-segura-de-base@rrhh-db:5432/lang_rrhh
@@ -65,30 +66,62 @@ docker compose -f docker-compose.example.yml up -d --build
 La app queda publicada en el puerto externo configurado:
 
 ```text
-http://SERVIDOR:8766
+http://SERVIDOR:8766/rrhh
 ```
 
-## Convivencia con otra aplicacion
+## Convivencia con la app principal
 
-Este sistema debe correr como servicio separado:
+Este sistema debe correr como servicio separado, pero publicado debajo de la app principal:
+
+```text
+https://app.lang.uy/rrhh
+```
+
+La app principal conserva su API en:
+
+```text
+https://app.lang.uy/api
+```
+
+RRHH usa su propia API bajo el subpath:
+
+```text
+https://app.lang.uy/rrhh/api
+```
+
+Para eso, configurar:
+
+```text
+PLANNER_BASE_PATH=/rrhh
+```
+
+Servicio sugerido:
 
 - contenedor app: `lang-rrhh`
 - contenedor base: `lang-rrhh-db`
 - puerto interno: `8765`
-- puerto externo sugerido: `8766`
+- puerto externo local del servicio: `8766`
 - volumen Docker app: `rrhh_data`
 - volumen Docker PostgreSQL: `rrhh_postgres_data`
 
-Si en el mismo servidor ya existe otra app, no usar su mismo puerto publico ni su mismo path `/api` en Nginx.
+Ejemplo conceptual de Nginx:
 
-Opciones recomendadas:
+```nginx
+location /rrhh/ {
+    proxy_pass http://127.0.0.1:8766/rrhh/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Cookie $http_cookie;
+}
+```
 
-- Subdominio: `rrhh.tudominio.com` apuntando a `127.0.0.1:8766`
-- Puerto dedicado de testing: `https://tudominio.com:8766`
+Importante:
 
-Evitar al principio:
-
-- Montarlo como subpath tipo `/rrhh`, porque el frontend llama a `/api` desde el mismo origen y puede chocar con la otra aplicacion.
+- No rutear RRHH a `/api`, porque ese path pertenece a la app principal.
+- No compartir `SESSION_SECRET` con RRHH.
+- Mantener HTTPS, porque reloj facial y geolocalizacion lo necesitan.
+- Generar relojes faciales solo desde Configuracion; cada link tiene token unico y se puede desactivar.
 
 ## Base de datos
 

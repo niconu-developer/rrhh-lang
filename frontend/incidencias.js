@@ -1,7 +1,7 @@
 if (!requireModuleAccess("incidencias")) throw new Error("Acceso no autorizado");
 renderSessionActions(document.querySelector(".top-actions"));
 
-const INCIDENT_API_BASE = apiOrigin();
+const INCIDENT_API_BASE = apiBase();
 
 const incidentElements = {
   from: document.querySelector("#incidentFrom"),
@@ -64,7 +64,7 @@ async function refreshIncidents() {
     const { from, to } = selectedIncidentRange();
     const status = incidentElements.status.value || "pendientes";
     const statusQuery = status === "todos" ? "" : `&estado=${encodeURIComponent(status)}`;
-    incidents = await incidentApiGet(`/api/incidencias?desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}${statusQuery}`);
+    incidents = await incidentApiGet(`/incidencias?desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}${statusQuery}`);
     renderIncidentTypeOptions();
     renderIncidents();
   } catch (error) {
@@ -171,7 +171,7 @@ async function resolveIncident(id) {
   }
   const comment = approvalCommentPrompt();
   if (comment === null) return;
-  await incidentApiPost("/api/incidencias/resolver", {
+  await incidentApiPost("/incidencias/resolver", {
     ids: [Number(id)],
     usuario_id: currentUser()?.id,
     observacion_aprobacion: comment,
@@ -207,7 +207,7 @@ function plannedShiftText(incident) {
 }
 
 async function passIncidentToPlan(id) {
-  await incidentApiPost("/api/incidencias/pasar-a-plan", {
+  await incidentApiPost("/incidencias/pasar-a-plan", {
     ids: [Number(id)],
   });
   showIncidentToast("Turno cargado en plan semanal");
@@ -216,7 +216,7 @@ async function passIncidentToPlan(id) {
 }
 
 async function markIncidentAbsent(id) {
-  await incidentApiPost("/api/incidencias/marcar-ausente", {
+  await incidentApiPost("/incidencias/marcar-ausente", {
     ids: [Number(id)],
   });
   showIncidentToast("Turno marcado como AUSENTE");
@@ -266,7 +266,7 @@ async function saveIncidentMarkEdit(event) {
     incidentElements.markObservation.focus();
     return;
   }
-  await incidentApiPost(`/api/marcas/${incidentElements.markId.value}`, {
+  await incidentApiPost(`/marcas/${incidentElements.markId.value}`, {
     tipo: incidentElements.markType.value,
     fecha: incidentElements.markDate.value,
     hora: rawTime,

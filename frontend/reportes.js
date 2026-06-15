@@ -4,7 +4,7 @@ renderSessionActions(document.querySelector(".top-actions"));
 const REPORT_STATUSES = ["LIBRE", "LICENCIA", "SUSPENDIDO", "LIC. MEDICA", "AUSENTE", "VACIO"];
 const REPORT_FILTERS_KEY = "plannerReportFilters";
 const reportUser = currentUser();
-const REPORT_API_BASE = apiOrigin();
+const REPORT_API_BASE = apiBase();
 const reportCanSeeAllPersonnel = ["admin", "rrhh"].includes(reportUser?.roleId) || hasDashboardPermission("dashboardAllPersonnel");
 let allReportPersonnel = [];
 let reportPersonnel = [];
@@ -108,14 +108,14 @@ async function reportApiPost(path, payload) {
 async function refreshReportData() {
   const { from, to } = selectedRange();
   const query = `desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}`;
-  await reportApiPost("/api/incidencias/generar", { desde: inputDateValue(from), hasta: inputDateValue(to) });
+  await reportApiPost("/incidencias/generar", { desde: inputDateValue(from), hasta: inputDateValue(to) });
   const [personas, turnos, jornales, marcas, operaciones, incidencias] = await Promise.all([
-    reportApiGet("/api/personas"),
-    reportApiGet(`/api/turnos?${query}`),
-    reportApiGet(`/api/jornales?${query}`),
-    reportApiGet(`/api/marcas?${query}`),
-    reportApiGet("/api/operaciones"),
-    reportApiGet(`/api/incidencias?${query}`),
+    reportApiGet("/personas"),
+    reportApiGet(`/turnos?${query}`),
+    reportApiGet(`/jornales?${query}`),
+    reportApiGet(`/marcas?${query}`),
+    reportApiGet("/operaciones"),
+    reportApiGet(`/incidencias?${query}`),
   ]);
   allReportPersonnel = normalizeReportPersonnel(personas);
   const ownReportPersonnel = allReportPersonnel.filter((person) => person.name === reportUser?.personName);

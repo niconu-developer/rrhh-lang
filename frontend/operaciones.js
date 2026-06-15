@@ -1,7 +1,7 @@
 if (!requireModuleAccess("operaciones")) throw new Error("Acceso no autorizado");
 renderSessionActions(document.querySelector(".top-actions"));
 
-const OPERATION_API_BASE = apiOrigin();
+const OPERATION_API_BASE = apiBase();
 
 const operationElements = {
   from: document.querySelector("#operationFrom"),
@@ -73,7 +73,7 @@ async function operationApiPost(path, payload) {
 
 async function refreshOperations() {
   try {
-    const rows = await operationApiGet("/api/operaciones");
+    const rows = await operationApiGet("/operaciones");
     operationRows = rows.map(normalizeOperation);
     selectedOperationIds.clear();
     renderOperations();
@@ -87,8 +87,8 @@ async function refreshOperations() {
 async function loadOperationConfig() {
   try {
     const [rows, tariffs] = await Promise.all([
-      operationApiGet("/api/configuracion"),
-      operationApiGet("/api/operacion-tarifas?activas=1"),
+      operationApiGet("/configuracion"),
+      operationApiGet("/operacion-tarifas?activas=1"),
     ]);
     const values = Object.fromEntries(rows.map((row) => [row.clave, parseConfigValue(row.valor)]));
     operationConfig = {
@@ -310,7 +310,7 @@ function closeRejectModal() {
 }
 
 async function updateOperation(id, payload) {
-  await operationApiPost(`/api/operaciones/${id}`, payload);
+  await operationApiPost(`/operaciones/${id}`, payload);
 }
 
 async function approveOperations(ids) {

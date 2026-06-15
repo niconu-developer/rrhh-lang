@@ -34,6 +34,7 @@ from backend.settings import (
     FRONTEND_DIR,
     HOST,
     PORT,
+    BASE_PATH,
     SERVE_STATIC,
 )
 
@@ -909,41 +910,84 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
+    def do_HEAD(self):
+        parsed = urlparse(self.path)
+        if BASE_PATH and parsed.path == BASE_PATH:
+            return self.redirect_to_base_path(parsed.query)
+        route_path = self.normalize_request_path(parsed.path)
+        if route_path.startswith("/api/"):
+            return self.send_error_json("Endpoint no encontrado", 404)
+        if not SERVE_STATIC:
+            return self.send_error_json("Frontend no servido por este proceso", 404)
+        return self.serve_static_with_base_path(parsed, head=True)
+
     def do_GET(self):
         parsed = urlparse(self.path)
-        if not parsed.path.startswith("/api/"):
+        if BASE_PATH and parsed.path == BASE_PATH:
+            return self.redirect_to_base_path(parsed.query)
+        route_path = self.normalize_request_path(parsed.path)
+        if not route_path.startswith("/api/"):
             if not SERVE_STATIC:
                 return self.send_error_json("Frontend no servido por este proceso", 404)
-            return super().do_GET()
+            return self.serve_static_with_base_path(parsed)
         try:
             query = parse_qs(parsed.query)
-            if not self.authorize_request("GET", parsed.path, query=query):
+            if not self.authorize_request("GET", route_path, query=query):
                 return
-            payload = self.route_get(parsed.path, query)
+            payload = self.route_get(route_path, query)
             self.send_json(payload)
         except Exception as error:
             self.send_error_json(str(error), 500)
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        if not parsed.path.startswith("/api/"):
+        route_path = self.normalize_request_path(parsed.path)
+        if not route_path.startswith("/api/"):
             return self.send_error_json("Endpoint no encontrado", 404)
         payload = {}
         try:
-            if parsed.path == "/api/facturacion/importar":
-                if not self.authorize_request("POST", parsed.path, payload):
+            if route_path == "/api/facturacion/importar":
+                if not self.authorize_request("POST", route_path, payload):
                     return
                 filename, raw_file = parse_multipart_file(self.headers.get("Content-Type", ""), read_raw_body(self))
                 rows_to_import = parse_facturacion_file(filename, raw_file)
                 self.send_json(repo.import_facturacion(rows_to_import))
                 return
             payload = read_body(self)
-            if not self.authorize_request("POST", parsed.path, payload):
+            if not self.authorize_request("POST", route_path, payload):
                 return
-            response_payload = self.route_post(parsed.path, payload)
+            response_payload = self.route_post(route_path, payload)
             self.send_json(response_payload)
         except Exception as error:
             self.send_error_json(str(error), 500)
+
+    def normalize_request_path(self, path):
+        if BASE_PATH and path == BASE_PATH:
+            return "/"
+        if BASE_PATH and path.startswith(f"{BASE_PATH}/"):
+            return path[len(BASE_PATH):] or "/"
+        return path
+
+    def serve_static_with_base_path(self, parsed, head=False):
+        if not BASE_PATH:
+            return super().do_HEAD() if head else super().do_GET()
+        stripped_path = self.normalize_request_path(parsed.path)
+        if stripped_path == "/":
+            stripped_path = "/index.html"
+        original_path = self.path
+        self.path = stripped_path + (f"?{parsed.query}" if parsed.query else "")
+        try:
+            return super().do_HEAD() if head else super().do_GET()
+        finally:
+            self.path = original_path
+
+    def redirect_to_base_path(self, query):
+        location = f"{BASE_PATH}/"
+        if query:
+            location = f"{location}?{query}"
+        self.send_response(301)
+        self.send_header("Location", location)
+        self.end_headers()
 
     def authorize_request(self, method, path, query=None, payload=None):
         if (method == "GET" and path in PUBLIC_GET_PATHS) or (method == "POST" and path in PUBLIC_POST_PATHS):
@@ -1410,5 +1454,7 @@ if __name__ == "__main__":
     ensure_database()
     server = ThreadingHTTPServer((HOST, PORT), PlannerHandler)
     print(f"Backend local: http://{HOST}:{PORT}")
+    if BASE_PATH:
+        print(f"Base path: {BASE_PATH}")
     print("Base de datos: PostgreSQL" if IS_POSTGRES else f"Base de datos: {DB_PATH}")
     server.serve_forever()

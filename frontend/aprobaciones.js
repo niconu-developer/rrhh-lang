@@ -1,7 +1,7 @@
 if (!requireModuleAccess("aprobaciones")) throw new Error("Acceso no autorizado");
 renderSessionActions(document.querySelector(".top-actions"));
 
-const APPROVAL_API_BASE = apiOrigin();
+const APPROVAL_API_BASE = apiBase();
 
 const approvalElements = {
   from: document.querySelector("#approvalFrom"),
@@ -69,8 +69,8 @@ async function refreshApprovals() {
     const fromValue = inputDateValue(from);
     const toValue = inputDateValue(to);
     const [rows, incidents] = await Promise.all([
-      approvalApiGet(`/api/aprobaciones?desde=${fromValue}&hasta=${toValue}`),
-      approvalApiGet(`/api/incidencias?desde=${fromValue}&hasta=${toValue}&estado=pendientes`),
+      approvalApiGet(`/aprobaciones?desde=${fromValue}&hasta=${toValue}`),
+      approvalApiGet(`/incidencias?desde=${fromValue}&hasta=${toValue}&estado=pendientes`),
     ]);
     approvalRows = rows;
     approvalIncidents = incidents;
@@ -215,7 +215,7 @@ async function approveRow(turnoId, estado = "APROBADA", observation = "") {
   if (estado === "APROBADA" && approvalHasPendingIncidents(row)) {
     estado = "VALIDADA_CON_INCIDENCIA";
   }
-  await approvalApiPost("/api/aprobaciones", {
+  await approvalApiPost("/aprobaciones", {
     marca_ids: row.marcas_ids,
     estado,
     observacion: observation,
@@ -239,14 +239,14 @@ async function approveSelectedRows() {
     return;
   }
   if (cleanMarkIds.length) {
-    await approvalApiPost("/api/aprobaciones", {
+    await approvalApiPost("/aprobaciones", {
       marca_ids: cleanMarkIds,
       estado: "APROBADA",
       usuario_id: currentUser()?.id,
     });
   }
   if (incidentMarkIds.length) {
-    await approvalApiPost("/api/aprobaciones", {
+    await approvalApiPost("/aprobaciones", {
       marca_ids: incidentMarkIds,
       estado: "VALIDADA_CON_INCIDENCIA",
       usuario_id: currentUser()?.id,
@@ -305,7 +305,7 @@ async function passApprovalToPlan(turnoId) {
   const row = approvalRows.find((item) => String(item.turno_id) === String(turnoId));
   const ids = approvalIncidentsForRow(row).filter(incidentRequiresPlanning).map((incident) => Number(incident.id));
   if (!ids.length) return;
-  await approvalApiPost("/api/incidencias/pasar-a-plan", { ids });
+  await approvalApiPost("/incidencias/pasar-a-plan", { ids });
   showApprovalToast("Turno cargado en plan semanal");
   await refreshApprovals();
 }
@@ -314,7 +314,7 @@ async function markApprovalAbsent(turnoId) {
   const row = approvalRows.find((item) => String(item.turno_id) === String(turnoId));
   const ids = approvalIncidentsForRow(row).filter(incidentCanMarkAbsent).map((incident) => Number(incident.id));
   if (!ids.length) return;
-  await approvalApiPost("/api/incidencias/marcar-ausente", { ids });
+  await approvalApiPost("/incidencias/marcar-ausente", { ids });
   showApprovalToast("Turno marcado como AUSENTE");
   await refreshApprovals();
 }
@@ -368,9 +368,9 @@ async function saveApprovalMark(event) {
     usuario_nombre: currentUser()?.username,
   };
   if (approvalElements.markId.value) {
-    await approvalApiPost(`/api/marcas/${approvalElements.markId.value}`, payload);
+    await approvalApiPost(`/marcas/${approvalElements.markId.value}`, payload);
   } else {
-    await approvalApiPost("/api/marcas", {
+    await approvalApiPost("/marcas", {
       ...payload,
       persona_id: approvalElements.markPersonId.value,
       fecha_hora: `${approvalElements.markDate.value} ${rawTime}:00`,
