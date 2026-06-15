@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reloj facial</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/global.css?v=20260615-projects1" />
     <link rel="stylesheet" href="./css/pages/reloj-facial.css?v=20260610-css-split1" />
   </head>
   <body class="kiosk-body">
@@ -43,6 +43,10 @@
         </section>
 
         <section class="mark-actions">
+          <label class="mark-project-panel">
+            <span>Proyecto</span>
+            <select id="clockProjectSelect" required></select>
+          </label>
           <button class="mark-button in" id="clockEntryButton" disabled type="button">Marcar entrada</button>
           <button class="mark-button out" id="clockExitButton" disabled type="button">Marcar salida</button>
         </section>
@@ -60,6 +64,6 @@
     <script src="./shared-data.js?v=20260610-opcats1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
     <script src="./face-descriptor.js?v=20260615-face-mvp1"></script>
-    <script src="./reloj-facial.js?v=20260615-face-mvp1"></script>
+    <script src="./reloj-facial.js?v=20260615-projects1"></script>
   </body>
 </html>

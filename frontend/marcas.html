@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reloj</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/global.css?v=20260615-projects1" />
     <link rel="stylesheet" href="./css/pages/marcas.css?v=20260610-css-split1" />
   </head>
   <body class="kiosk-body">
@@ -49,6 +49,10 @@
         </section>
 
         <section class="mark-actions" aria-label="Registrar marcas">
+          <label class="mark-project-panel">
+            <span>Proyecto</span>
+            <select id="markProjectSelect" required></select>
+          </label>
           <button class="mark-button in" id="entryButton" type="button">Marcar entrada</button>
           <button class="mark-button out" id="exitButton" type="button">Marcar salida</button>
         </section>
@@ -79,12 +83,12 @@
               <select id="operationBand" required></select>
             </label>
             <label>
-              Referencia
-              <input id="operationReference" type="text" placeholder="Evento, cliente o lugar" />
+              Proyecto
+              <select id="operationProject" required></select>
             </label>
-            <label>
+            <label class="full-row">
               Observación
-              <input id="operationNote" type="text" placeholder="Detalle breve" />
+              <textarea id="operationNote" rows="3" placeholder="Detalle breve"></textarea>
             </label>
             <button class="primary-button full" type="submit">Enviar operación</button>
           </form>
@@ -111,6 +115,6 @@
     <script src="./api-client.js?v=20260610-arch1"></script>
     <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./marcas.js?v=20260610-operation-tariffs1"></script>
+    <script src="./marcas.js?v=20260615-projects1"></script>
   </body>
 </html>

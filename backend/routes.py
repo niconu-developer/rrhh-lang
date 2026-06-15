@@ -29,6 +29,8 @@ def route_get(handler, path, query):
         return repo.list_roles_operativos()
     if path == "/api/ubicaciones":
         return repo.list_ubicaciones()
+    if path == "/api/proyectos":
+        return repo.list_proyectos(query_value(query, "activos", "activas") in {"1", "true", "si"})
     if path == "/api/operaciones":
         return repo.list_operaciones()
     if path == "/api/operacion-tarifas":
@@ -89,6 +91,8 @@ def route_post(handler, path, payload):
         return handler.save_rol_operativo(payload)
     if path == "/api/ubicaciones":
         return handler.save_ubicacion(payload)
+    if path == "/api/proyectos":
+        return repo.save_proyecto(payload)
     if path == "/api/configuracion":
         return handler.save_configuracion(payload)
     if path == "/api/relojes-faciales":
@@ -113,6 +117,10 @@ def route_post(handler, path, payload):
         return handler.save_ubicacion(payload, int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "ubicaciones"] and parts[3] == "delete":
         return handler.delete_ubicacion(int(parts[2]))
+    if len(parts) == 3 and parts[:2] == ["api", "proyectos"]:
+        return repo.save_proyecto(payload, int(parts[2]))
+    if len(parts) == 4 and parts[:2] == ["api", "proyectos"] and parts[3] == "delete":
+        return repo.delete_proyecto(int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "usuarios"] and parts[3] == "toggle":
         return handler.toggle_usuario(int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "relojes-faciales"] and parts[3] == "toggle":

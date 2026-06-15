@@ -5,6 +5,7 @@ const clockStatuses = ["LIBRE", "LICENCIA", "SUSPENDIDO", "LIC. MEDICA", "AUSENT
 let clockPersonnel = [];
 let clockTurns = [];
 let clockLocations = [];
+let clockProjects = [];
 let clockValidated = false;
 let clockDetectedPerson = null;
 let clockStream = null;
@@ -15,6 +16,7 @@ const clock = {
   video: document.querySelector("#clockCameraPreview"),
   canvas: document.querySelector("#clockFaceCanvas"),
   cameraBox: document.querySelector(".camera-box"),
+  project: document.querySelector("#clockProjectSelect"),
   validate: document.querySelector("#clockValidateFace"),
   cancel: document.querySelector("#clockCancelFace"),
   entry: document.querySelector("#clockEntryButton"),
@@ -72,27 +74,51 @@ function normalizeClockLocations(rows) {
     }));
 }
 
+function escapeClockMarkup(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 async function loadClockData() {
   if (!FACE_CLOCK_TOKEN) {
     throw new Error("Link de reloj facial requerido");
   }
   const today = clockInputDate(new Date());
-  const [people, turns, locations] = await Promise.all([
+  const [people, turns, locations, projects] = await Promise.all([
     clockApi("/personas"),
     clockApi(`/turnos?desde=${today}&hasta=${today}`),
     clockApi("/ubicaciones"),
+    clockApi("/proyectos?activos=1"),
   ]);
   clockPersonnel = people.filter((person) => Number(person.activo) !== 0);
   clockTurns = turns;
   clockLocations = normalizeClockLocations(locations);
+  clockProjects = projects;
+  renderClockProjects();
   renderValidation();
 }
 
 function renderValidation() {
+  const hasProject = Boolean(clock.project?.value);
   clock.status.textContent = clockValidated && clockDetectedPerson ? `HOLA ${clockDetectedPerson.nombre.toUpperCase()}` : "Validación pendiente";
-  clock.entry.disabled = !clockValidated;
-  clock.exit.disabled = !clockValidated;
+  clock.entry.disabled = !clockValidated || !hasProject;
+  clock.exit.disabled = !clockValidated || !hasProject;
   clock.validate.disabled = !clockStream;
+}
+
+function renderClockProjects() {
+  if (!clock.project) return;
+  const current = clock.project.value;
+  clock.project.innerHTML = `<option value="">Seleccionar proyecto</option>${clockProjects
+    .map((project) => `<option value="${escapeClockMarkup(project.nombre)}">${escapeClockMarkup(project.nombre)}</option>`)
+    .join("")}`;
+  if ([...clock.project.options].some((option) => option.value === current)) {
+    clock.project.value = current;
+  }
 }
 
 async function startClockCamera() {
@@ -175,8 +201,12 @@ async function registerClockMark(type) {
     showClockToast("Primero validá el rostro");
     return;
   }
+  const project = clock.project.value.trim();
+  if (!project) {
+    showClockToast("Elegí un proyecto antes de marcar");
+    return;
+  }
 
-  const shift = clockShiftForPerson(clockDetectedPerson);
   const locationStatus = await resolveClockLocation();
   await clockApi("/marcas", {
     method: "POST",
@@ -185,7 +215,7 @@ async function registerClockMark(type) {
       fecha_hora: clockDbDateTime(),
       tipo: type,
       tipo_marca: "Por reloj facial",
-      actividad_ubicacion: shift.activity,
+      actividad_ubicacion: project,
       ubicacion_detectada: locationStatus.label,
       latitud: locationStatus.coords?.latitude ?? null,
       longitud: locationStatus.coords?.longitude ?? null,
@@ -240,6 +270,7 @@ function showClockToast(message) {
 
 clock.validate.addEventListener("click", () => validateClockFace());
 clock.cancel.addEventListener("click", resetClockFace);
+clock.project?.addEventListener("change", renderValidation);
 clock.entry.addEventListener("click", () => registerClockMark("Entrada"));
 clock.exit.addEventListener("click", () => registerClockMark("Salida"));
 

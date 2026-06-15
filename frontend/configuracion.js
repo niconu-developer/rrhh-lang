@@ -15,6 +15,9 @@ const configElements = {
   saveGeneralParams: document.querySelector("#saveGeneralParams"),
   newLocationButton: document.querySelector("#newLocationButton"),
   locationList: document.querySelector("#locationList"),
+  projectForm: document.querySelector("#projectForm"),
+  projectInput: document.querySelector("#projectInput"),
+  projectList: document.querySelector("#projectList"),
   faceClockForm: document.querySelector("#faceClockForm"),
   faceClockNameInput: document.querySelector("#faceClockNameInput"),
   faceClockGeneratedLink: document.querySelector("#faceClockGeneratedLink"),
@@ -47,6 +50,7 @@ function defaultConfigSnapshot() {
     alertTolerance: { ...DEFAULT_ALERT_TOLERANCE },
     approvalTolerance: { ...DEFAULT_APPROVAL_TOLERANCE },
     locations: [],
+    projects: [],
     faceClocks: [],
   };
 }
@@ -62,9 +66,10 @@ async function configApi(path, options = {}) {
 }
 
 async function loadConfigFromBackend() {
-  const [roles, locations, configRows, appRoles, operationTariffs, faceClocks] = await Promise.all([
+  const [roles, locations, projects, configRows, appRoles, operationTariffs, faceClocks] = await Promise.all([
     configApi("/roles-operativos"),
     configApi("/ubicaciones"),
+    configApi("/proyectos"),
     configApi("/configuracion"),
     configApi("/roles-app"),
     configApi("/operacion-tarifas"),
@@ -79,6 +84,7 @@ async function loadConfigFromBackend() {
     approvalTolerance: values.approval_tolerance || { ...DEFAULT_APPROVAL_TOLERANCE },
     operationTariffs: operationTariffs.map(apiOperationTariffToConfig),
     locations: locations.map(apiLocationToConfig),
+    projects: projects.map(apiProjectToConfig),
     faceClocks: faceClocks.map(apiFaceClockToConfig),
   };
   authConfig = {
@@ -129,6 +135,14 @@ function apiOperationTariffToConfig(tariff) {
   };
 }
 
+function apiProjectToConfig(project) {
+  return {
+    id: String(project.id),
+    name: project.nombre || "",
+    active: Number(project.activo) !== 0,
+  };
+}
+
 function apiFaceClockToConfig(link) {
   return {
     id: String(link.id),
@@ -154,6 +168,7 @@ function renderConfig() {
   renderOperationalRoleList();
   renderGeneralParams();
   renderLocationList();
+  renderProjectList();
   renderFaceClockList();
   renderAccessConfig();
 }
@@ -272,6 +287,26 @@ function renderFaceClockList() {
     .join("");
 }
 
+function renderProjectList() {
+  if (!configElements.projectList) return;
+  if (!appConfig.projects.length) {
+    configElements.projectList.innerHTML = `<article class="admin-list-item"><strong>Sin proyectos cargados</strong><span>Agregá los proyectos disponibles para reloj y operaciones.</span></article>`;
+    return;
+  }
+
+  configElements.projectList.innerHTML = appConfig.projects
+    .map((project) => `<article class="admin-list-item">
+      <div>
+        <strong>${escapeConfigText(project.name)}</strong>
+        <span>${project.active ? "Activo" : "Inactivo"}</span>
+      </div>
+      <div class="table-actions">
+        <button class="ghost-button small" data-project-delete="${project.id}" type="button">${project.active ? "Desactivar" : "Eliminar"}</button>
+      </div>
+    </article>`)
+    .join("");
+}
+
 function formatConfigDate(value) {
   if (!value) return "";
   const [datePart] = String(value).split(" ");
@@ -329,6 +364,29 @@ async function deleteFaceClockLink(id) {
   await loadConfigFromBackend();
   renderConfig();
   showConfigToast("Reloj facial eliminado");
+}
+
+async function createProject() {
+  const name = configElements.projectInput.value.trim();
+  if (!name) {
+    showConfigToast("Ingresá un proyecto");
+    return;
+  }
+  await configApi("/proyectos", {
+    method: "POST",
+    body: JSON.stringify({ nombre: name, activo: true }),
+  });
+  configElements.projectInput.value = "";
+  await loadConfigFromBackend();
+  renderConfig();
+  showConfigToast("Proyecto guardado");
+}
+
+async function deleteProject(id) {
+  await configApi(`/proyectos/${id}/delete`, { method: "POST", body: "{}" });
+  await loadConfigFromBackend();
+  renderConfig();
+  showConfigToast("Proyecto desactivado");
 }
 
 async function addConfigItem(key, value) {
@@ -575,6 +633,10 @@ configElements.faceClockForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   createFaceClockLink().catch((error) => showConfigToast(error.message));
 });
+configElements.projectForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  createProject().catch((error) => showConfigToast(error.message));
+});
 
 document.addEventListener("click", (event) => {
   const configTab = event.target.closest("[data-config-tab]");
@@ -584,12 +646,14 @@ document.addEventListener("click", (event) => {
   const faceClockToggle = event.target.closest("[data-face-clock-toggle]");
   const faceClockDelete = event.target.closest("[data-face-clock-delete]");
   const copyFaceClockLink = event.target.closest("[data-copy-face-clock-link]");
+  const projectDelete = event.target.closest("[data-project-delete]");
   if (configTab) openConfigSection(configTab.dataset.configTab);
   if (button) removeConfigItem(button.dataset.key, button.dataset.value).catch((error) => showConfigToast(error.message));
   if (locationButton) removeLocation(locationButton.dataset.location).catch((error) => showConfigToast(error.message));
   if (editLocationButton) openLocationModal(editLocationButton.dataset.editLocation);
   if (faceClockToggle) toggleFaceClockLink(faceClockToggle.dataset.faceClockToggle).catch((error) => showConfigToast(error.message));
   if (faceClockDelete) deleteFaceClockLink(faceClockDelete.dataset.faceClockDelete).catch((error) => showConfigToast(error.message));
+  if (projectDelete) deleteProject(projectDelete.dataset.projectDelete).catch((error) => showConfigToast(error.message));
   if (copyFaceClockLink) {
     navigator.clipboard?.writeText(copyFaceClockLink.dataset.copyFaceClockLink);
     showConfigToast("Link copiado");

@@ -15,12 +15,13 @@ const elements = {
   time: document.querySelector("#kioskTime"),
   activityLocation: document.querySelector("#kioskActivityLocation"),
   detectedLocation: document.querySelector("#kioskDetectedLocation"),
+  markProject: document.querySelector("#markProjectSelect"),
   operationsPanel: document.querySelector("#operationsPanel"),
   operationForm: document.querySelector("#operationForm"),
   operationDate: document.querySelector("#operationDate"),
   operationTariff: document.querySelector("#operationTariff"),
   operationBand: document.querySelector("#operationBand"),
-  operationReference: document.querySelector("#operationReference"),
+  operationProject: document.querySelector("#operationProject"),
   operationNote: document.querySelector("#operationNote"),
   visiblePlanDate: document.querySelector("#visiblePlanDate"),
   previousPlanDay: document.querySelector("#previousPlanDay"),
@@ -54,6 +55,7 @@ let confirmationTimeout = null;
 let visiblePlanDate = currentIsoDate();
 let appDbConfig = {};
 let operationTariffs = [];
+let projects = [];
 let dbLocations = [];
 let currentLocationStatus = {
   label: "Ubicación pendiente",
@@ -159,19 +161,30 @@ function normalizeStatus(value) {
     .replace(/\s+/g, " ");
 }
 
+function escapeMarkup(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 async function loadInitialData() {
   const user = currentUser();
   if (!user?.personName) throw new Error("Tu usuario no tiene una persona asociada");
-  const [people, configRows, locationRows, tariffRows] = await Promise.all([
+  const [people, configRows, locationRows, projectRows, tariffRows] = await Promise.all([
     api("/personas"),
     api("/configuracion"),
     api("/ubicaciones"),
+    api("/proyectos?activos=1"),
     api("/operacion-tarifas?activas=1"),
   ]);
   operator = people.find((person) => person.nombre === user.personName);
   if (!operator) throw new Error("No encontré tu persona en la base");
   appDbConfig = normalizeDbConfig(configRows);
   dbLocations = normalizeDbLocations(locationRows);
+  projects = projectRows;
   operationTariffs = tariffRows;
   visiblePlanDate = currentIsoDate();
   elements.operationDate.value = currentIsoDate();
@@ -204,11 +217,35 @@ async function refreshDbData() {
 }
 
 function render() {
+  renderProjectSelectors();
+  renderMarkAccess();
   renderOperationBands();
   refreshCurrentLocation();
   renderShift();
   renderDaySummary();
   renderOperationAccess();
+}
+
+function renderMarkAccess() {
+  const hasProject = Boolean(elements.markProject?.value);
+  elements.entryButton.disabled = !hasProject;
+  elements.exitButton.disabled = !hasProject;
+}
+
+function renderProjectSelectors() {
+  const renderSelect = (select) => {
+    if (!select) return;
+    const current = select.value;
+    select.innerHTML = `<option value="">Seleccionar proyecto</option>${projects
+      .map((project) => `<option value="${escapeMarkup(project.nombre)}">${escapeMarkup(project.nombre)}</option>`)
+      .join("")}`;
+    if ([...select.options].some((option) => option.value === current)) {
+      select.value = current;
+    }
+  };
+  renderSelect(elements.markProject);
+  renderSelect(elements.operationProject);
+  renderMarkAccess();
 }
 
 function renderShift() {
@@ -378,6 +415,11 @@ async function resolveCurrentLocation() {
 }
 
 async function registerMark(type) {
+  const project = elements.markProject.value.trim();
+  if (!project) {
+    showToast("Elegí un proyecto antes de marcar");
+    return;
+  }
   const locationStatus = await resolveCurrentLocation();
   await api("/marcas", {
     method: "POST",
@@ -387,7 +429,7 @@ async function registerMark(type) {
       fecha_hora: formatDbDateTime(),
       tipo: type,
       tipo_marca: "Por usuario",
-      actividad_ubicacion: todayShift.activity,
+      actividad_ubicacion: project,
       ubicacion_detectada: locationStatus.label,
       latitud: locationStatus.coords?.latitude ?? null,
       longitud: locationStatus.coords?.longitude ?? null,
@@ -422,6 +464,11 @@ async function submitOperation(event) {
     showToast("Este empleado no está habilitado como operador");
     return;
   }
+  const project = elements.operationProject.value.trim();
+  if (!project) {
+    showToast("Elegí un proyecto");
+    return;
+  }
 
   await api("/operaciones", {
     method: "POST",
@@ -431,13 +478,13 @@ async function submitOperation(event) {
       fecha_hora: `${elements.operationDate.value || currentIsoDate()} 00:00:00`,
       franja: elements.operationBand.value,
       valor: operationValueForBand(elements.operationBand.value),
-      referencia: elements.operationReference.value.trim(),
+      referencia: project,
       observacion: elements.operationNote.value.trim(),
       estado: "pending",
     }),
   });
   elements.operationDate.value = currentIsoDate();
-  elements.operationReference.value = "";
+  elements.operationProject.value = "";
   elements.operationNote.value = "";
   await refreshDbData();
   showToast("Operación enviada");
@@ -451,6 +498,7 @@ function showToast(message) {
 
 elements.entryButton.addEventListener("click", () => registerMark("Entrada"));
 elements.exitButton.addEventListener("click", () => registerMark("Salida"));
+elements.markProject?.addEventListener("change", renderMarkAccess);
 elements.operationForm.addEventListener("submit", submitOperation);
 elements.previousPlanDay.addEventListener("click", () => moveVisiblePlanDate(-1));
 elements.todayPlanDay.addEventListener("click", goTodayPlanDate);

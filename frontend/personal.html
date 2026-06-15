@@ -46,13 +46,13 @@
           <table class="person-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Persona</th>
-                <th>Mail</th>
-                <th>Rol</th>
-                <th>Operador</th>
-                <th>Documentación</th>
-                <th>Estado</th>
+                <th><button class="table-sort-button" data-person-sort="id" type="button">ID <span aria-hidden="true"></span></button></th>
+                <th><button class="table-sort-button" data-person-sort="name" type="button">Persona <span aria-hidden="true"></span></button></th>
+                <th><button class="table-sort-button" data-person-sort="email" type="button">Mail <span aria-hidden="true"></span></button></th>
+                <th><button class="table-sort-button" data-person-sort="role" type="button">Rol <span aria-hidden="true"></span></button></th>
+                <th><button class="table-sort-button" data-person-sort="operator" type="button">Operador <span aria-hidden="true"></span></button></th>
+                <th><button class="table-sort-button" data-person-sort="documentation" type="button">Documentación <span aria-hidden="true"></span></button></th>
+                <th><button class="table-sort-button" data-person-sort="status" type="button">Estado <span aria-hidden="true"></span></button></th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -127,7 +127,7 @@
               </div>
               <div class="person-form-grid">
                 <label>Nombre<input id="personNameInput" required type="text" /></label>
-                <label>ID privado<input id="personPrivateIdInput" inputmode="numeric" maxlength="3" pattern="[0-9]{3}" placeholder="3 cifras" type="text" /></label>
+                <label>ID interno<input id="personPrivateIdInput" placeholder="Lo genera el sistema" readonly type="text" /></label>
                 <label>Mail<input id="personEmailInput" type="email" placeholder="nombre@dominio.com" /></label>
                 <label>Rol operativo<select id="personTypeInput"></select></label>
                 <label>Valor hora<input id="hourlyRateInput" min="0" step="1" type="number" /></label>
@@ -142,7 +142,7 @@
                 </div>
               </div>
               <div class="person-form-grid" id="accessFields">
-                <label>Contraseña temporal<input id="accessPasswordInput" type="text" placeholder="Solo si se crea o cambia" /></label>
+                <label>Contraseña temporal<input id="accessPasswordInput" type="text" placeholder="Opcional: si queda vacío, la define la persona" /></label>
                 <label>Rol de aplicación<select id="accessRoleInput"></select></label>
               </div>
             </section>

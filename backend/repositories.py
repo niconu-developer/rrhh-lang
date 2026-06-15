@@ -1,5 +1,6 @@
 import json
 import math
+import secrets
 from datetime import datetime, timedelta
 
 from .database import IS_POSTGRES, connect, rows, one
@@ -68,6 +69,47 @@ def list_roles_operativos():
 
 def list_ubicaciones():
     return rows("SELECT * FROM ubicaciones ORDER BY nombre")
+
+
+def list_proyectos(active_only=False):
+    where = "WHERE activo = 1" if active_only else ""
+    return rows(f"SELECT * FROM proyectos {where} ORDER BY activo DESC, nombre")
+
+
+def save_proyecto(payload, project_id=None):
+    name = str(payload.get("nombre") or payload.get("name") or "").strip().upper()
+    if not name:
+        raise ValueError("El nombre del proyecto es obligatorio")
+    active = int(bool(payload.get("activo", True)))
+    with connect() as connection:
+        if project_id:
+            existing = connection.execute("SELECT id FROM proyectos WHERE id = ?", (project_id,)).fetchone()
+            if not existing:
+                raise ValueError("Proyecto no encontrado")
+            connection.execute("""
+                UPDATE proyectos
+                SET nombre = ?, activo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (name, active, project_id))
+        else:
+            connection.execute("""
+                INSERT INTO proyectos (nombre, activo)
+                VALUES (?, ?)
+                ON CONFLICT(nombre) DO UPDATE SET activo = excluded.activo, fecha_actualizacion = CURRENT_TIMESTAMP
+            """, (name, active))
+        connection.commit()
+    return {"ok": True, "proyectos": list_proyectos()}
+
+
+def delete_proyecto(project_id):
+    with connect() as connection:
+        connection.execute("""
+            UPDATE proyectos
+            SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (project_id,))
+        connection.commit()
+    return {"ok": True, "proyectos": list_proyectos()}
 
 
 def list_operaciones():
@@ -695,25 +737,15 @@ def read_persona(connection, persona_id):
     return dict(row)
 
 
-def normalize_private_code(value):
-    clean = str(value or "").strip()
-    if not clean:
-        return None
-    if not clean.isdigit() or len(clean) > 3:
-        raise ValueError("El ID privado debe ser numérico de hasta 3 cifras")
-    return clean.zfill(3)
-
-
 def next_private_code(connection):
     used = {
         row["codigo_privado"]
         for row in connection.execute("SELECT codigo_privado FROM personas WHERE codigo_privado IS NOT NULL").fetchall()
         if row["codigo_privado"]
     }
-    for number in range(100, 1000):
-        code = f"{number:03d}"
-        if code not in used:
-            return code
+    available = [f"{number:03d}" for number in range(100, 1000) if f"{number:03d}" not in used]
+    if available:
+        return secrets.choice(available)
     raise ValueError("No hay IDs privados disponibles")
 
 
@@ -745,7 +777,7 @@ def save_usuario_for_persona(connection, persona_id, access_payload):
 
     password = str(access_payload.get("password", "")).strip()
     if not existing and not password:
-        raise ValueError("La contraseña temporal es obligatoria para crear acceso")
+        password = secrets.token_urlsafe(24)
 
     rol_app_id = app_role_id_for(connection, access_payload.get("rol_app") or "usuario")
     active = int(bool(access_payload.get("activo", True)))
@@ -781,19 +813,7 @@ def save_persona(payload, persona_id=None):
     with connect() as connection:
         rol_operativo_id = role_id_for(connection, rol_operativo)
         current_person = connection.execute("SELECT codigo_privado FROM personas WHERE id = ?", (persona_id,)).fetchone() if persona_id else None
-        private_code = normalize_private_code(payload.get("codigo_privado")) or (current_person["codigo_privado"] if current_person else next_private_code(connection))
-        if persona_id:
-            duplicate_code = connection.execute(
-                "SELECT id FROM personas WHERE codigo_privado = ? AND id <> ?",
-                (private_code, persona_id),
-            ).fetchone()
-        else:
-            duplicate_code = connection.execute(
-                "SELECT id FROM personas WHERE codigo_privado = ?",
-                (private_code,),
-            ).fetchone()
-        if duplicate_code:
-            raise ValueError("Ese ID privado ya está asignado")
+        private_code = current_person["codigo_privado"] if current_person else next_private_code(connection)
         values = (
             nombre,
             private_code,
@@ -1302,6 +1322,9 @@ def create_marca(connection, payload):
     mark_source = payload.get("tipo_marca", "Por usuario")
     if payload.get("registrada_por_admin"):
         mark_source = "Marca manual admin"
+    activity_location = str(payload.get("actividad_ubicacion") or "").strip().upper()
+    if mark_source in {"Por usuario", "Por reloj facial"} and not activity_location:
+        raise ValueError("Elegí un proyecto antes de marcar")
     cursor = connection.execute("""
         INSERT INTO marcas (
           persona_id,
@@ -1327,7 +1350,7 @@ def create_marca(connection, payload):
         payload["fecha_hora"],
         payload["tipo"],
         mark_source,
-        payload.get("actividad_ubicacion"),
+        activity_location or payload.get("actividad_ubicacion"),
         payload.get("ubicacion_detectada"),
         payload.get("latitud"),
         payload.get("longitud"),
@@ -1445,6 +1468,9 @@ def create_operacion(payload):
     with connect() as connection:
         tarifa_id = payload.get("operacion_tarifa_id")
         tipo_operacion = str(payload.get("tipo_operacion") or "").strip()
+        referencia = str(payload.get("referencia") or "").strip().upper()
+        if not referencia:
+            raise ValueError("Elegí un proyecto")
         valor = float(payload.get("valor", 0) or 0)
         if tarifa_id:
             tarifa = read_person_tariff(connection, payload["persona_id"], int(tarifa_id), require_permission=True)
@@ -1472,7 +1498,7 @@ def create_operacion(payload):
             tipo_operacion,
             payload["franja"],
             valor,
-            payload.get("referencia"),
+            referencia,
             payload.get("observacion"),
             payload.get("estado", "pending"),
             payload.get("motivo_rechazo"),

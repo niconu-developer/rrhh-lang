@@ -12,6 +12,7 @@ IDENTITY_TABLES = {
     "personas",
     "usuarios",
     "ubicaciones",
+    "proyectos",
     "operacion_tarifas",
     "turnos",
     "marcas",
@@ -138,8 +139,11 @@ class PostgresConnection:
             return self.table_info(table)
 
         translated = add_returning_id(translated)
+        params = normalize_params(params)
+        if not params:
+            translated = translated.replace("%", "%%")
         cursor = self.raw.cursor()
-        cursor.execute(translated, normalize_params(params))
+        cursor.execute(translated, params)
         self._last_rowcount = cursor.rowcount if cursor.rowcount is not None else 0
         return CursorAdapter(cursor=cursor, rowcount=self._last_rowcount)
 

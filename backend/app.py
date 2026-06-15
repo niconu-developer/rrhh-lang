@@ -51,39 +51,34 @@ def ensure_database():
             if seed_path.exists():
                 execute_script(connection, seed_path.read_text(encoding="utf-8"))
             ensure_required_role_permissions(connection)
-            ensure_private_person_codes(connection)
             ensure_identity_model(connection)
-            ensure_email_identifiers(connection)
-            migrate_passwords_to_hash(connection)
-            ensure_bootstrap_admin(connection)
-            seed_default_operation_tarifas(connection)
-            seed_default_persona_operation_tarifas(connection)
-            return
-        ensure_column(connection, "personas", "codigo_privado", "TEXT")
-        ensure_column(connection, "personas", "email", "TEXT")
-        ensure_private_person_codes(connection)
-        ensure_column(connection, "personas", "horario_fijo_json", "TEXT")
-        ensure_column(connection, "personas", "horas_acordadas", "REAL NOT NULL DEFAULT 190")
-        connection.execute("UPDATE personas SET horas_acordadas = 190 WHERE horas_acordadas IS NULL OR horas_acordadas <= 0")
-        ensure_marcas_approval_schema(connection)
-        ensure_sessions_schema(connection)
-        ensure_incidencias_schema(connection)
-        ensure_jornales_schema(connection)
-        ensure_facturacion_schema(connection)
-        ensure_operation_tarifas_schema(connection)
-        ensure_column(connection, "relojes_faciales", "token_visible", "TEXT")
-        ensure_column(connection, "relojes_faciales", "eliminado", "INTEGER NOT NULL DEFAULT 0")
-        ensure_column(connection, "relojes_faciales", "fecha_eliminacion", "TEXT")
-        ensure_turnos_unique_index(connection)
-        ensure_required_role_permissions(connection)
-        if seed_path.exists():
-            execute_script(connection, seed_path.read_text(encoding="utf-8"))
-        ensure_required_role_permissions(connection)
-        ensure_private_person_codes(connection)
-        ensure_identity_model(connection)
+        else:
+            ensure_column(connection, "personas", "codigo_privado", "TEXT")
+            ensure_column(connection, "personas", "email", "TEXT")
+            ensure_column(connection, "personas", "horario_fijo_json", "TEXT")
+            ensure_column(connection, "personas", "horas_acordadas", "REAL NOT NULL DEFAULT 190")
+            connection.execute("UPDATE personas SET horas_acordadas = 190 WHERE horas_acordadas IS NULL OR horas_acordadas <= 0")
+            ensure_marcas_approval_schema(connection)
+            ensure_sessions_schema(connection)
+            ensure_incidencias_schema(connection)
+            ensure_jornales_schema(connection)
+            ensure_facturacion_schema(connection)
+            ensure_operation_tarifas_schema(connection)
+            ensure_column(connection, "relojes_faciales", "token_visible", "TEXT")
+            ensure_column(connection, "relojes_faciales", "eliminado", "INTEGER NOT NULL DEFAULT 0")
+            ensure_column(connection, "relojes_faciales", "fecha_eliminacion", "TEXT")
+            ensure_turnos_unique_index(connection)
+            if seed_path.exists():
+                execute_script(connection, seed_path.read_text(encoding="utf-8"))
+            ensure_required_role_permissions(connection)
+            ensure_identity_model(connection)
         ensure_email_identifiers(connection)
         migrate_passwords_to_hash(connection)
         ensure_bootstrap_admin(connection)
+        ensure_seed_named_admin(connection)
+        ensure_private_person_codes(connection)
+        seed_default_operation_tarifas(connection)
+        seed_default_persona_operation_tarifas(connection)
 
 
 def ensure_column(connection, table, column, definition):
@@ -98,7 +93,6 @@ def ensure_private_person_codes(connection):
         for row in connection.execute("SELECT codigo_privado FROM personas WHERE codigo_privado IS NOT NULL")
         if row["codigo_privado"]
     }
-    next_code = 100
     people = connection.execute("""
         SELECT id
         FROM personas
@@ -106,14 +100,12 @@ def ensure_private_person_codes(connection):
         ORDER BY id
     """).fetchall()
     for person in people:
-        while f"{next_code:03d}" in used:
-            next_code += 1
-        if next_code > 999:
+        available = [f"{number:03d}" for number in range(100, 1000) if f"{number:03d}" not in used]
+        if not available:
             raise ValueError("No hay IDs privados disponibles")
-        code = f"{next_code:03d}"
+        code = secrets.choice(available)
         connection.execute("UPDATE personas SET codigo_privado = ? WHERE id = ?", (code, person["id"]))
         used.add(code)
-        next_code += 1
     connection.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_personas_codigo_privado_unique
         ON personas(codigo_privado)
@@ -208,6 +200,51 @@ def ensure_bootstrap_admin(connection):
             INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo)
             VALUES ('admin', ?, 'admin@empresa.local', NULL, ?, 1)
         """, (password, role_id))
+
+
+def ensure_seed_named_admin(connection):
+    if not ADMIN_BOOTSTRAP_PASSWORD:
+        return
+    app_role = connection.execute("SELECT id FROM roles_app WHERE nombre = 'admin'").fetchone()
+    app_role_id = app_role["id"] if app_role else connection.execute("INSERT INTO roles_app (nombre) VALUES ('admin')").lastrowid
+    op_role = connection.execute("SELECT id FROM roles_operativos WHERE nombre = 'Admin'").fetchone()
+    op_role_id = op_role["id"] if op_role else connection.execute("INSERT INTO roles_operativos (nombre, aparece_plan_semanal) VALUES ('Admin', 0)").lastrowid
+
+    person = connection.execute("SELECT id FROM personas WHERE lower(coalesce(email, '')) = 'niconu@lang.uy' OR nombre = 'niconu-admin'").fetchone()
+    if person:
+        persona_id = person["id"]
+        connection.execute("""
+            UPDATE personas
+            SET nombre = 'niconu-admin',
+                email = 'niconu@lang.uy',
+                rol_operativo_id = ?,
+                activo = 1
+            WHERE id = ?
+        """, (op_role_id, persona_id))
+    else:
+        persona_id = connection.execute("""
+            INSERT INTO personas (nombre, email, rol_operativo_id, activo, horario_tipo)
+            VALUES ('niconu-admin', 'niconu@lang.uy', ?, 1, 'variable')
+        """, (op_role_id,)).lastrowid
+
+    user = connection.execute("SELECT id FROM usuarios WHERE lower(coalesce(email, '')) = 'niconu@lang.uy' OR usuario = 'niconu@lang.uy'").fetchone()
+    password = hash_password(ADMIN_BOOTSTRAP_PASSWORD)
+    if user:
+        connection.execute("""
+            UPDATE usuarios
+            SET usuario = 'niconu@lang.uy',
+                password_hash = ?,
+                email = 'niconu@lang.uy',
+                persona_id = ?,
+                rol_app_id = ?,
+                activo = 1
+            WHERE id = ?
+        """, (password, persona_id, app_role_id, user["id"]))
+    else:
+        connection.execute("""
+            INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo)
+            VALUES ('niconu@lang.uy', ?, 'niconu@lang.uy', ?, ?, 1)
+        """, (password, persona_id, app_role_id))
 
 
 def ensure_turnos_unique_index(connection):
@@ -854,8 +891,8 @@ def ensure_persona_id(connection, name, role_name="Operador"):
 
 ROLE_MODULES = {
     "admin": {"*"},
-    "rrhh": {"personas", "roles-operativos", "ubicaciones", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion"},
-    "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "configuracion"},
+    "rrhh": {"personas", "roles-operativos", "ubicaciones", "proyectos", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion"},
+    "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "proyectos", "configuracion"},
 }
 
 
@@ -877,7 +914,7 @@ def public_face_clock_request(method, path, query=None, payload=None):
     link = repo.validate_reloj_facial_token(raw_token, touch=method == "POST" and path in {"/api/marcas", "/api/reloj-facial/validar"})
     if not link:
         return None
-    if method == "GET" and path in {"/api/personas", "/api/ubicaciones"}:
+    if method == "GET" and path in {"/api/personas", "/api/ubicaciones", "/api/proyectos"}:
         return link
     if method == "GET" and path == "/api/turnos":
         return link
@@ -1087,6 +1124,7 @@ class PlannerHandler(SimpleHTTPRequestHandler):
                 "/api/turnos",
                 "/api/configuracion",
                 "/api/ubicaciones",
+                "/api/proyectos",
                 "/api/marcas",
                 "/api/operaciones",
                 "/api/operacion-tarifas",

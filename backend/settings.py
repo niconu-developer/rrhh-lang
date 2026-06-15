@@ -13,7 +13,7 @@ BASE_PATH = "/" + os.environ.get("PLANNER_BASE_PATH", "").strip().strip("/")
 if BASE_PATH == "/":
     BASE_PATH = ""
 SESSION_TTL_HOURS = int(os.environ.get("PLANNER_SESSION_TTL_HOURS", "12"))
-ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("PLANNER_ADMIN_PASSWORD")
+ADMIN_BOOTSTRAP_PASSWORD = os.environ.get("PLANNER_ADMIN_PASSWORD", "LANG1234")
 PASSWORD_ITERATIONS = int(os.environ.get("PLANNER_PASSWORD_ITERATIONS", "260000"))
 EXTERNAL_AUTH_ME_URL = os.environ.get("PLANNER_EXTERNAL_AUTH_ME_URL", "").strip()
 EXTERNAL_AUTH_COOKIE_NAME = os.environ.get("PLANNER_EXTERNAL_AUTH_COOKIE_NAME", "connect.sid").strip()

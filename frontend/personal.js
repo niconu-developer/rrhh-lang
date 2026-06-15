@@ -56,6 +56,7 @@ let appConfig = defaultPersonConfigSnapshot();
 let hourlyEditMode = false;
 let personFaceStream = null;
 let selectedPersonFaces = [];
+let personListSort = { key: "name", direction: "asc" };
 
 const API_BASE = apiBase();
 
@@ -108,7 +109,6 @@ function apiPersonToLocal(person) {
 function localPersonToApi(person) {
   return {
     nombre: person.name,
-    codigo_privado: person.privateId,
     email: person.email,
     rol_operativo: person.operatorType,
     activo: person.active,
@@ -461,8 +461,9 @@ function readFixedSchedule() {
 
 function renderPersonList() {
   const query = personElements.filter.value;
-  const rows = personnel.filter((person) => matchesPersonFilter(person, query));
+  const rows = sortPersonRows(personnel.filter((person) => matchesPersonFilter(person, query)));
   personElements.count.textContent = `${rows.length} personas`;
+  renderPersonSortHeaders();
   if (!rows.length) {
     personElements.list.innerHTML = `<tr><td colspan="8">Sin personas para el filtro ingresado.</td></tr>`;
     return;
@@ -488,6 +489,52 @@ function renderPersonList() {
     </tr>`;
     })
     .join("");
+}
+
+function sortPersonRows(rows) {
+  return [...rows].sort((left, right) => {
+    const result = comparePersonSortValues(personSortValue(left, personListSort.key), personSortValue(right, personListSort.key));
+    return personListSort.direction === "asc" ? result : -result;
+  });
+}
+
+function personSortValue(person, key) {
+  if (key === "id") return person.privateId || "";
+  if (key === "name") return person.name || "";
+  if (key === "email") return person.email || "";
+  if (key === "role") return person.operatorType || "";
+  if (key === "operator") return person.operatorType === "Operador" ? formatOperatorCategory(person.operationTariffIds) : "No";
+  if (key === "documentation") return documentationText(person);
+  if (key === "status") return person.active ? "Activo" : "Inactivo";
+  return "";
+}
+
+function comparePersonSortValues(left, right) {
+  const leftNumber = Number(left);
+  const rightNumber = Number(right);
+  if (String(left).trim() && String(right).trim() && Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+    return leftNumber - rightNumber;
+  }
+  return normalizePersonFilter(left).localeCompare(normalizePersonFilter(right), "es", { numeric: true });
+}
+
+function renderPersonSortHeaders() {
+  document.querySelectorAll("[data-person-sort]").forEach((button) => {
+    const active = button.dataset.personSort === personListSort.key;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-sort", active ? (personListSort.direction === "asc" ? "ascending" : "descending") : "none");
+    const indicator = button.querySelector("span");
+    if (indicator) indicator.textContent = active ? (personListSort.direction === "asc" ? "↑" : "↓") : "↕";
+  });
+}
+
+function updatePersonListSort(key) {
+  if (personListSort.key === key) {
+    personListSort = { key, direction: personListSort.direction === "asc" ? "desc" : "asc" };
+  } else {
+    personListSort = { key, direction: "asc" };
+  }
+  renderPersonList();
 }
 
 function formatOperatorCategory(value) {
@@ -606,7 +653,7 @@ function resetPersonForm() {
   personElements.title.textContent = "Nueva persona";
   personElements.id.value = "";
   personElements.name.value = "";
-  personElements.privateId.value = "";
+  personElements.privateId.value = "Se asigna al guardar";
   personElements.email.value = "";
   personElements.type.value = availableOperatorTypes[0] || "Operador";
   personElements.isOperator.checked = false;
@@ -849,6 +896,11 @@ personElements.isOperator.addEventListener("change", toggleOperatorFlag);
 personElements.driverLicenseType.addEventListener("change", updateDriverLicenseExpiryState);
 personElements.active.addEventListener("change", updateAccessFieldsState);
 personElements.filter.addEventListener("input", renderPersonList);
+document.querySelector(".person-table thead")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-person-sort]");
+  if (!button) return;
+  updatePersonListSort(button.dataset.personSort);
+});
 personElements.hourlyRateFilter.addEventListener("input", renderHourlyRateList);
 personElements.toggleHourlyEdit.addEventListener("click", toggleHourlyEditMode);
 personElements.saveHourlyRates.addEventListener("click", saveHourlyRates);

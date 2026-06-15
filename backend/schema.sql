@@ -121,6 +121,9 @@ CREATE TABLE IF NOT EXISTS operacion_tarifas (
   fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_operacion_tarifas_tipo_categoria_unique
+ON operacion_tarifas(tipo, categoria);
+
 CREATE TABLE IF NOT EXISTS persona_operacion_tarifas (
   persona_id INTEGER NOT NULL,
   tarifa_id INTEGER NOT NULL,
@@ -151,6 +154,17 @@ CREATE TABLE IF NOT EXISTS ubicaciones (
   genera_incidencia INTEGER NOT NULL DEFAULT 0,
   direccion TEXT
 );
+
+CREATE TABLE IF NOT EXISTS proyectos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL UNIQUE,
+  activo INTEGER NOT NULL DEFAULT 1,
+  fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_proyectos_activo
+ON proyectos(activo);
 
 CREATE TABLE IF NOT EXISTS incidencias (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
