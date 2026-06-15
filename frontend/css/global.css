@@ -5035,3 +5035,147 @@ label {
   min-height: 60px;
   font-size: 18px;
 }
+
+/* Mobile touch pass: Home and clock screens need roomier controls than dense admin tables. */
+@media (max-width: 680px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    padding: 14px 16px;
+  }
+
+  .brand-heading {
+    width: 100%;
+    min-width: 0;
+    gap: 10px;
+  }
+
+  .brand-heading > div {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 10px;
+  }
+
+  .brand-heading > div::before {
+    height: 28px;
+  }
+
+  .brand-logo {
+    width: 92px;
+  }
+
+  .brand-heading .eyebrow {
+    max-width: 100%;
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-heading h1 {
+    min-width: 0;
+    font-size: clamp(20px, 7vw, 28px);
+    line-height: 1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .top-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .top-actions > * {
+    width: 100%;
+  }
+
+  .primary-button,
+  .ghost-button,
+  .ghost-link,
+  .session-chip,
+  .tab,
+  .day-nav-button,
+  .month-nav .ghost-button,
+  .day-summary-nav .ghost-button {
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+
+  select,
+  input,
+  textarea {
+    min-height: 44px;
+  }
+
+  .kiosk-shell {
+    align-items: start;
+    padding: 12px;
+  }
+
+  .kiosk-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .kiosk-head {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .kiosk-head .brand-heading {
+    flex: 1 1 220px;
+  }
+
+  .kiosk-head .kiosk-badge {
+    flex: 0 1 auto;
+    max-width: 100%;
+  }
+
+  .kiosk-logo-only .brand-logo {
+    width: 108px;
+  }
+
+  .kiosk-badge {
+    min-height: 30px;
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+
+  .today-shift {
+    padding: 14px 0;
+  }
+
+  .face-panel,
+  .section-head {
+    min-width: 0;
+  }
+
+  .section-head {
+    flex-wrap: wrap;
+  }
+
+  .mark-button {
+    min-height: 58px;
+    font-size: 16px;
+  }
+
+  .operation-form button,
+  .face-actions button,
+  .mark-project-panel select {
+    min-height: 44px;
+  }
+}

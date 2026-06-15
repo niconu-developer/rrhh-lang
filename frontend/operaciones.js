@@ -156,7 +156,7 @@ function renderOperations() {
       <td>${formatOperationDate(row.timestamp)}</td>
       <td>${escapeHtml(row.person)}</td>
       <td><strong>${escapeHtml(row.type)}</strong><br><span class="muted">${escapeHtml(row.band || "Sin franja")}</span></td>
-      <td>${escapeHtml(row.reference || "Sin referencia")}<br><span class="muted">${escapeHtml(row.note || "")}</span></td>
+      <td>${escapeHtml(row.reference || "Sin proyecto")}<br><span class="muted">${escapeHtml(row.note || "")}</span></td>
       <td>${formatMoney(row.value)}</td>
       <td><span class="mark-pill ${row.status}">${operationStatusLabel(row.status)}</span></td>
       <td>${escapeHtml(row.rejectionReason || "-")}</td>
@@ -203,7 +203,7 @@ function openOperationDetail(id) {
     ${detailItem("Tipo", selectedOperation.type)}
     ${detailItem("Franja", selectedOperation.band || "-")}
     ${detailItem("Valor", formatMoney(selectedOperation.value))}
-    ${detailItem("Referencia", selectedOperation.reference || "-")}
+    ${detailItem("Proyecto", selectedOperation.reference || "-")}
     ${detailItem("Observación", selectedOperation.note || "-")}
     ${detailItem("Estado", operationStatusLabel(selectedOperation.status))}
     ${selectedOperation.rejectionReason ? detailItem("Motivo rechazo", selectedOperation.rejectionReason) : ""}

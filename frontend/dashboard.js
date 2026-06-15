@@ -456,7 +456,7 @@ function renderOperationsAdmin(operations) {
     .map((operation) => `<tr>
       <td>${operation.operator}</td>
       <td>${operation.type} · ${operation.band || "Sin franja"} · ${formatOperationMoney(operation)}</td>
-      <td>${operation.reference || "Sin referencia"}<br>${operation.note || ""}</td>
+      <td>${operation.reference || "Sin proyecto"}<br>${operation.note || ""}</td>
       <td>${operation.date}</td>
       <td><span class="mark-pill ${operation.status}">${operationStatusLabel(operation.status)}</span></td>
       <td>${operation.rejectionReason || "-"}</td>

@@ -27,7 +27,7 @@ const reportTypes = [
 const REPORT_COLUMNS = {
   nomina: ["Persona", "Rol", "Fecha", "Prevision", "Entrada", "Salida", "Horas previstas", "Horas trabajadas", "Estado validación", "Incidencia", "Operaciones aprobadas", "Costo operaciones", "Costo horas trabajadas"],
   marcas: ["Persona", "Fecha", "Tipo marca", "Hora", "Registro", "Estado validación", "Validado por", "Fecha validación", "Actividad / ubicación", "Ubicación detectada", "Genera incidencia", "Motivo incidencia"],
-  operaciones: ["Operador", "Fecha", "Tipo operación", "Franja", "Valor", "Referencia", "Observacion", "Estado", "Motivo rechazo"],
+  operaciones: ["Operador", "Fecha", "Tipo operación", "Franja", "Valor", "Proyecto", "Observacion", "Estado", "Motivo rechazo"],
   incidencias: ["Persona", "Fecha", "Tipo", "Severidad", "Detalle", "Minutos desfasaje", "Estado", "Origen"],
   control: ["Persona", "Fecha", "Horario previsto", "Actividad / ubicación", "Entrada real", "Salida real", "Horas trabajadas", "Estado validación", "Tipo entrada", "Tipo salida", "Incidencia"],
   documentacion: ["Persona", "Rol", "Libreta conducir", "Vencimiento libreta", "Estado libreta", "Vencimiento carné salud", "Estado carné salud"],
@@ -315,7 +315,7 @@ function buildOperationsReport() {
       "Tipo operación": operation.type,
       Franja: operation.band || "",
       Valor: Number(operation.value ?? operation.amount ?? 0),
-      Referencia: operation.reference || "",
+      Proyecto: operation.reference || "",
       Observacion: operation.note || "",
       Estado: operationStatusLabel(operation.status),
       "Motivo rechazo": operation.rejectionReason || "",

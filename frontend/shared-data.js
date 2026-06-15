@@ -1,19 +1,4 @@
-const APP_CONFIG_KEY = "plannerConfig";
-const APP_PERSONNEL_KEY = "plannerPersonnel";
-const APP_AUTH_KEY = "plannerAuth";
-
-const DEFAULT_OPERATOR_TYPES = ["Logistico", "Referente", "Operador", "Depo y Mant.", "Admin"];
-const DEFAULT_PLAN_ROLE_VISIBILITY = {
-  Logistico: true,
-  Referente: true,
-  Operador: true,
-  "Depo y Mant.": true,
-  Admin: false,
-};
 const DEFAULT_OPERATION_BANDS = ["Hasta 4 horas", "4 a 8 horas", "8 a 12 horas"];
-const DEFAULT_LOCATIONS = [];
-const DEFAULT_ALERT_TOLERANCE = { greenMinutes: 15, yellowMinutes: 30 };
-const DEFAULT_APPROVAL_TOLERANCE = { minutes: 15 };
 const SYSTEM_MODULES = [
   { id: "plan", title: "Plan semanal", href: "./plan-semanal.html", text: "Asignar turnos, estados, horarios y actividad por persona y día." },
   { id: "dashboard", title: "Dashboard", href: "./dashboard.html", text: "Ver desvíos, costos, alertas y detalle mensual por persona." },
@@ -59,99 +44,6 @@ const DEFAULT_AUTH = {
   users: [],
 };
 const WEEKDAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-const DEFAULT_PERSONNEL_SEED = [
-  ["Lucas", "eventos", "Logistico"],
-  ["Martin", "eventos", "Logistico"],
-  ["Nacho", "eventos", "Logistico"],
-  ["Moña", "eventos", "Logistico"],
-  ["Cat", "eventos", "Logistico"],
-  ["Iñaki", "eventos", "Logistico"],
-  ["Mateo", "eventos", "Logistico"],
-  ["Oliva", "eventos", "Logistico"],
-  ["Gonda", "eventos", "Logistico"],
-  ["Thiago", "eventos", "Logistico"],
-  ["Ford", "eventos", "Logistico"],
-  ["Brai", "eventos", "Logistico"],
-  ["Alallon", "operacion", "Referente"],
-  ["Emilio", "operacion", "Referente"],
-  ["Alejandro", "operacion", "Referente"],
-  ["Guille", "operacion", "Referente"],
-  ["Jaunsolo", "operacion", "Referente"],
-  ["Viera", "operacion", "Referente"],
-  ["Cuba", "operacion", "Operador"],
-  ["Grillo", "operacion", "Operador"],
-  ["Angelina", "operacion", "Operador"],
-  ["Corso", "operacion", "Operador"],
-  ["Alex", "operacion", "Operador"],
-  ["Chiappe", "operacion", "Operador"],
-  ["Marce", "operacion", "Operador"],
-  ["Said", "operacion", "Operador"],
-  ["Mati", "operacion", "Operador"],
-  ["Prieto", "deposito", "Depósito"],
-  ["Anzed", "operacion", "Operador"],
-  ["Vitto", "operacion", "Operador"],
-  ["Diego", "deposito", "Depósito"],
-  ["Dario", "deposito", "Depósito"],
-  ["Andrés", "deposito", "Depósito"],
-  ["Richard", "deposito", "Depósito"],
-  ["Furtado", "deposito", "Depósito"],
-  ["Eze", "deposito", "Depósito"],
-];
-const DEMO_PERSONNEL_ROLE_OVERRIDES = {
-  lucas: "Logistico",
-  martin: "Logistico",
-  nacho: "Logistico",
-  "moña": "Logistico",
-  cat: "Logistico",
-  "iñaki": "Logistico",
-  mateo: "Logistico",
-  oliva: "Logistico",
-  gonda: "Logistico",
-  thiago: "Logistico",
-  ford: "Logistico",
-  brai: "Logistico",
-  alallon: "Referente",
-  emilio: "Referente",
-  alejandro: "Referente",
-  guille: "Referente",
-  jaunsolo: "Referente",
-  viera: "Referente",
-  grillo: "Operador",
-  cuba: "Operador",
-  angelina: "Operador",
-  corso: "Operador",
-  alex: "Operador",
-  chiappe: "Operador",
-  marce: "Operador",
-  said: "Operador",
-  anzed: "Operador",
-  mati: "Operador",
-  vitto: "Operador",
-  dario: "Depo y Mant.",
-  "andrés": "Depo y Mant.",
-  andres: "Depo y Mant.",
-  richard: "Depo y Mant.",
-  furtado: "Depo y Mant.",
-  eze: "Depo y Mant.",
-};
-
-function loadAppConfig() {
-  const stored = JSON.parse(localStorage.getItem(APP_CONFIG_KEY) || "null");
-  const storedOperatorTypes = Array.isArray(stored?.operatorTypes) ? stored.operatorTypes.map((type) => normalizeOperationalRole(type)) : [];
-  const operatorTypes = [...new Set([...DEFAULT_OPERATOR_TYPES, ...storedOperatorTypes])]
-    .filter((type) => DEFAULT_OPERATOR_TYPES.includes(type));
-  const planRoleVisibility = Object.fromEntries(
-    operatorTypes.map((type) => [type, stored?.planRoleVisibility?.[type] ?? DEFAULT_PLAN_ROLE_VISIBILITY[type] ?? true])
-  );
-  return {
-    operatorTypes: operatorTypes.length ? operatorTypes : DEFAULT_OPERATOR_TYPES,
-    planRoleVisibility,
-    operationBands: DEFAULT_OPERATION_BANDS,
-    locations: normalizeLocations(stored?.locations),
-    alertTolerance: normalizeAlertTolerance(stored?.alertTolerance),
-    approvalTolerance: normalizeApprovalTolerance(stored?.approvalTolerance),
-  };
-}
 
 function operationTariffValueForBand(tariff, band) {
   if (!tariff) return 0;
@@ -162,31 +54,7 @@ function operationTariffValueForBand(tariff, band) {
   return 0;
 }
 
-function normalizeLocations(storedLocations) {
-  if (!Array.isArray(storedLocations)) return DEFAULT_LOCATIONS;
-  return storedLocations.map((location) => ({
-    ...location,
-    locationType: location.locationType || (location.generatesIncident ? "incident" : "admitted"),
-    generatesIncident: Boolean(location.generatesIncident || location.locationType === "incident"),
-    address: location.address || "",
-  }));
-}
-
-function normalizeAlertTolerance(storedTolerance) {
-  const greenMinutes = Number(storedTolerance?.greenMinutes || DEFAULT_ALERT_TOLERANCE.greenMinutes);
-  const yellowMinutes = Number(storedTolerance?.yellowMinutes || DEFAULT_ALERT_TOLERANCE.yellowMinutes);
-  return {
-    greenMinutes,
-    yellowMinutes: Math.max(yellowMinutes, greenMinutes),
-  };
-}
-
-function normalizeApprovalTolerance(storedTolerance) {
-  const minutes = Number(storedTolerance?.minutes || DEFAULT_APPROVAL_TOLERANCE.minutes);
-  return { minutes: Math.max(0, minutes) };
-}
-
-function roleVisibleInPlan(role, config = loadAppConfig()) {
+function roleVisibleInPlan(role, config = {}) {
   const normalizedRole = normalizeOperationalRole(role);
   return config.planRoleVisibility?.[normalizedRole] !== false;
 }
@@ -291,44 +159,11 @@ function shortLocationAddress(address) {
     .join(", ");
 }
 
-function saveAppConfig(config) {
-  localStorage.setItem(APP_CONFIG_KEY, JSON.stringify(config));
-}
-
-function loadAuthConfig() {
-  const stored = JSON.parse(localStorage.getItem(APP_AUTH_KEY) || "null");
-  const roles = DEFAULT_AUTH.roles;
-  const users = Array.isArray(stored?.users) && stored.users.length ? stored.users : DEFAULT_AUTH.users;
-  const auth = {
-    roles: roles.map((role) => ({
-      id: role.id,
-      name: role.name,
-      modules: Array.isArray(role.modules) ? role.modules : [],
-      dashboard: Array.isArray(role.dashboard) ? role.dashboard : [],
-    })),
-    users: users.map((user) => ({
-      id: user.id,
-      username: user.username,
-      password: user.password,
-      email: user.email || "",
-      roleId: normalizeApplicationRole(user.roleId),
-      personName: user.personName || "",
-      active: user.active !== false,
-    })),
-  };
-  localStorage.setItem(APP_AUTH_KEY, JSON.stringify(auth));
-  return auth;
-}
-
 function normalizeApplicationRole(roleId) {
   if (roleId === "supervisor") return "rrhh";
   if (roleId === "operador") return "usuario";
   if (["admin", "rrhh", "usuario"].includes(roleId)) return roleId;
   return "usuario";
-}
-
-function saveAuthConfig(auth) {
-  localStorage.setItem(APP_AUTH_KEY, JSON.stringify(auth));
 }
 
 function defaultFixedSchedule() {
@@ -353,70 +188,4 @@ function compactSharedTime(value) {
   if (!value) return "";
   const [hour, minute = "00"] = value.split(":");
   return minute === "00" ? String(Number(hour)) : `${Number(hour)}:${minute}`;
-}
-
-function seedPersonnelFromPeople(sourcePeople) {
-  return sourcePeople.map((person, index) => ({
-    id: `person-${index + 1}`,
-    name: person.name,
-    team: teamFromSeedRole(demoRoleForPerson(person.name, person.role, person.team)),
-    role: demoRoleForPerson(person.name, person.role, person.team),
-    operatorType: demoRoleForPerson(person.name, person.role, person.team),
-    hourlyRate: Number(person.hourlyRate || 0),
-    driverLicenseType: "NO TIENE",
-    driverLicenseExpiry: "",
-    healthCardExpiry: "",
-    active: true,
-    scheduleMode: "variable",
-    fixedSchedule: defaultFixedSchedule(),
-  }));
-}
-
-function loadPersonnel(fallbackPeople) {
-  const source = fallbackPeople?.length
-    ? fallbackPeople
-    : DEFAULT_PERSONNEL_SEED.map(([name, team, role]) => ({ name, team, role }));
-  const stored = JSON.parse(localStorage.getItem(APP_PERSONNEL_KEY) || "null");
-  if (Array.isArray(stored) && stored.length) {
-    const normalized = stored.map((person, index) => ({
-      id: person.id || `person-${index + 1}`,
-      name: person.name,
-      team: teamFromSeedRole(demoRoleForPerson(person.name, person.operatorType || person.role, person.team)),
-      role: demoRoleForPerson(person.name, person.operatorType || person.role, person.team),
-      operatorType: demoRoleForPerson(person.name, person.operatorType || person.role, person.team),
-      hourlyRate: Number(person.hourlyRate || 0),
-      driverLicenseType: person.driverLicenseType || "NO TIENE",
-      driverLicenseExpiry: person.driverLicenseType && person.driverLicenseType !== "NO TIENE" ? person.driverLicenseExpiry || "" : "",
-      healthCardExpiry: person.healthCardExpiry || "",
-      active: person.active !== false,
-      scheduleMode: person.scheduleMode || "variable",
-      fixedSchedule: person.fixedSchedule?.length ? person.fixedSchedule : defaultFixedSchedule(),
-    }));
-    const missing = source
-      .filter((person) => !normalized.some((storedPerson) => storedPerson.name === person.name))
-      .map((person, index) => ({
-        ...seedPersonnelFromPeople([person])[0],
-        id: `person-${Date.now()}-${index}`,
-      }));
-    const merged = [...normalized, ...missing];
-    localStorage.setItem(APP_PERSONNEL_KEY, JSON.stringify(merged));
-    return merged;
-  }
-  const seeded = seedPersonnelFromPeople(source);
-  localStorage.setItem(APP_PERSONNEL_KEY, JSON.stringify(seeded));
-  return seeded;
-}
-
-function demoRoleForPerson(name, fallbackRole, fallbackTeam = "") {
-  return DEMO_PERSONNEL_ROLE_OVERRIDES[String(name || "").trim().toLowerCase()] || normalizeOperationalRole(fallbackRole, fallbackTeam);
-}
-
-function teamFromSeedRole(role) {
-  if (role === "Logistico") return "eventos";
-  if (role === "Depo y Mant.") return "deposito";
-  return "operacion";
-}
-
-function savePersonnel(personnel) {
-  localStorage.setItem(APP_PERSONNEL_KEY, JSON.stringify(personnel));
 }

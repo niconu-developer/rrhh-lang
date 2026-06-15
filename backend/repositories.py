@@ -1540,7 +1540,7 @@ def update_operacion(operacion_id, payload):
         tipo_operacion = str(payload.get("tipo_operacion", current["tipo_operacion"]) or "").strip()
         franja = str(payload.get("franja", current["franja"]) or "").strip()
         if not tipo_operacion:
-            raise ValueError("El tipo de operación es obligatorio")
+            raise ValueError("La categoría/tipo de operación es obligatoria")
         if not franja:
             raise ValueError("La franja es obligatoria")
         valor = float(payload.get("valor", current["valor"]) or 0)

@@ -199,7 +199,7 @@ function renderOperations() {
     .map((operation) => `<article class="own-mark-item">
       <div>
         <strong>${operation.tipo_operacion} · ${operation.franja || "Sin franja"}</strong>
-        <span>${operation.referencia || "Sin referencia"} · ${formatDbDate(operation.fecha_hora)} ${formatDbTime(operation.fecha_hora)}</span>
+        <span>${operation.referencia || "Sin proyecto"} · ${formatDbDate(operation.fecha_hora)} ${formatDbTime(operation.fecha_hora)}</span>
         <span>${operation.observacion || "Sin observación"}</span>
         ${operation.estado === "rejected" && operation.motivo_rechazo ? `<span>Motivo rechazo: ${operation.motivo_rechazo}</span>` : ""}
       </div>
