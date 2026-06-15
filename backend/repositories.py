@@ -8,6 +8,22 @@ from .security import hash_password, token_hash, verify_password
 from .settings import SESSION_TTL_HOURS
 
 
+def parse_decimal_value(value, default=0):
+    if value is None or value == "":
+        return float(default)
+    if isinstance(value, (int, float)):
+        if not math.isfinite(float(value)):
+            raise ValueError("Valor numérico inválido")
+        return round(float(value), 2)
+    text = str(value).strip().replace(" ", "").replace("$", "")
+    if "," in text:
+        text = text.replace(".", "").replace(",", ".")
+    number = float(text)
+    if not math.isfinite(number):
+        raise ValueError("Valor numérico inválido")
+    return round(number, 2)
+
+
 def list_personas():
     tariff_ids_sql = "string_agg(CAST(tarifa_id AS TEXT), ',')" if IS_POSTGRES else "group_concat(tarifa_id)"
     return rows("""
@@ -822,8 +838,8 @@ def save_persona(payload, persona_id=None):
             int(bool(payload.get("activo", True))),
             payload.get("horario_tipo") or "variable",
             json.dumps(payload.get("horario_fijo") or [], ensure_ascii=False),
-            float(payload.get("valor_hora") or 0),
-            float(payload.get("horas_acordadas") or 190),
+            parse_decimal_value(payload.get("valor_hora"), 0),
+            parse_decimal_value(payload.get("horas_acordadas"), 190),
             payload.get("tipo_libreta") or "NO TIENE",
             payload.get("vencimiento_libreta") or None,
             payload.get("vencimiento_carne_salud") or None,

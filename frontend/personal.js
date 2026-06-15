@@ -594,7 +594,7 @@ function renderHourlyRateList() {
     .map((person) => `<tr>
       <td><strong>${person.name}</strong></td>
       <td>${person.operatorType}</td>
-      <td><input data-hourly-person="${person.id}" type="number" min="0" step="0.01" value="${formatRateInput(person.hourlyRate)}" ${hourlyEditMode ? "" : "disabled"} /></td>
+      <td><input data-hourly-person="${person.id}" inputmode="decimal" type="text" value="${formatRateInput(person.hourlyRate)}" ${hourlyEditMode ? "" : "disabled"} /></td>
       <td><input data-agreed-hours-person="${person.id}" type="number" min="0" step="1" value="${formatHoursInput(person.agreedHours || 190)}" ${hourlyEditMode ? "" : "disabled"} /></td>
     </tr>`)
     .join("");
@@ -602,12 +602,28 @@ function renderHourlyRateList() {
 
 function formatRateInput(value) {
   const number = Number(value || 0);
-  return Number.isInteger(number) ? String(number) : number.toFixed(2);
+  return number.toFixed(2).replace(".", ",");
 }
 
 function formatHoursInput(value) {
   const number = Number(value || 0);
   return Number.isInteger(number) ? String(number) : number.toFixed(2);
+}
+
+function parseDecimalInput(value, fallback = 0) {
+  const rawValue = String(value ?? "").trim();
+  if (!rawValue) return fallback;
+  const compactValue = rawValue
+    .replace(/\s/g, "")
+    .replace(/\$/g, "");
+  const normalized = compactValue.includes(",")
+    ? compactValue.replace(/\./g, "").replace(",", ".")
+    : compactValue;
+  const number = Number(normalized);
+  if (!Number.isFinite(number)) {
+    throw new Error("El valor hora debe ser un número con hasta 2 decimales");
+  }
+  return Number(number.toFixed(2));
 }
 
 function matchesHourlyRateFilter(person, query) {
@@ -633,7 +649,7 @@ async function saveHourlyRates() {
       const agreedInput = personElements.hourlyRateList.querySelector(`[data-agreed-hours-person="${CSS.escape(person.id)}"]`);
       const nextPerson = {
         ...person,
-        hourlyRate: Number(input.value || 0),
+        hourlyRate: parseDecimalInput(input.value),
         agreedHours: Number(agreedInput?.value || 190),
       };
       await apiRequest(`/personas/${encodeURIComponent(person.id)}`, {
@@ -685,7 +701,7 @@ async function editPerson(id) {
   personElements.isOperator.checked = person.operatorType === "Operador";
   setOperatorCategoryInputs(person.operationTariffIds);
   personElements.mode.value = person.scheduleMode;
-  personElements.hourlyRate.value = Number(person.hourlyRate || 0);
+  personElements.hourlyRate.value = formatRateInput(person.hourlyRate);
   personElements.driverLicenseType.value = person.driverLicenseType || "NO TIENE";
   personElements.driverLicenseExpiry.value = person.driverLicenseExpiry || "";
   personElements.healthCardExpiry.value = person.healthCardExpiry || "";
@@ -710,7 +726,7 @@ async function savePerson(event) {
     team: teamFromOperationalRole(personElements.type.value),
     role: personElements.isOperator.checked ? "Operador" : personElements.type.value,
     operatorType: personElements.isOperator.checked ? "Operador" : personElements.type.value,
-    hourlyRate: Number(personElements.hourlyRate.value || 0),
+    hourlyRate: parseDecimalInput(personElements.hourlyRate.value),
     driverLicenseType: personElements.driverLicenseType.value,
     driverLicenseExpiry: personElements.driverLicenseType.value === "NO TIENE" ? "" : personElements.driverLicenseExpiry.value,
     healthCardExpiry: personElements.healthCardExpiry.value,
@@ -819,8 +835,24 @@ async function startPersonFaceCamera() {
     if (personFaceStream) {
       personFaceStream.getTracks().forEach((track) => track.stop());
     }
-    personFaceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+    personFaceStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        aspectRatio: { ideal: 16 / 9 },
+      },
+      audio: false,
+    });
     personElements.faceVideo.srcObject = personFaceStream;
+    await new Promise((resolve) => {
+      if (personElements.faceVideo.readyState >= 2 && personElements.faceVideo.videoWidth) {
+        resolve();
+        return;
+      }
+      personElements.faceVideo.onloadedmetadata = () => resolve();
+    });
+    await personElements.faceVideo.play().catch(() => {});
     renderPersonFaces();
     showPersonToast("Cámara activa");
   } catch (error) {
@@ -844,6 +876,10 @@ async function savePersonFace() {
     return;
   }
   try {
+    if (!personElements.faceVideo.videoWidth || !personElements.faceVideo.videoHeight) {
+      showPersonToast("Esperá un segundo a que la cámara enfoque");
+      return;
+    }
     const descriptor = buildFaceDescriptor(personElements.faceVideo, personElements.faceCanvas);
     await apiRequest(`/personas/${encodeURIComponent(personId)}/rostros`, {
       method: "POST",

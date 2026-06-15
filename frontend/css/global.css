@@ -2550,14 +2550,20 @@ select.current-week-selected {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #0d1320;
-  min-height: 150px;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  max-height: 280px;
+  width: min(100%, 640px);
+  display: grid;
+  place-items: stretch;
 }
 
 .person-face-camera video,
 .person-face-camera canvas {
   width: 100%;
-  min-height: 150px;
-  max-height: 190px;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
   object-fit: cover;
   display: block;
 }

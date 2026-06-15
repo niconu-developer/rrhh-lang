@@ -2,8 +2,8 @@ const FACE_DESCRIPTOR_SIZE = 24;
 
 function buildFaceDescriptor(video, canvas) {
   if (!video || !canvas) throw new Error("Cámara no disponible");
-  const width = video.videoWidth || 640;
-  const height = video.videoHeight || 480;
+  const width = video.videoWidth;
+  const height = video.videoHeight;
   if (!width || !height) throw new Error("La cámara todavía no está lista");
 
   const sourceSize = Math.min(width, height) * 0.72;
