@@ -71,6 +71,9 @@ def ensure_database():
         ensure_jornales_schema(connection)
         ensure_facturacion_schema(connection)
         ensure_operation_tarifas_schema(connection)
+        ensure_column(connection, "relojes_faciales", "token_visible", "TEXT")
+        ensure_column(connection, "relojes_faciales", "eliminado", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(connection, "relojes_faciales", "fecha_eliminacion", "TEXT")
         ensure_turnos_unique_index(connection)
         ensure_required_role_permissions(connection)
         if seed_path.exists():
@@ -871,7 +874,7 @@ def public_face_clock_request(method, path, query=None, payload=None):
         raw_token = (query.get("token") or [""])[0]
     if not raw_token and payload:
         raw_token = str(payload.get("reloj_token") or payload.get("token") or "")
-    link = repo.validate_reloj_facial_token(raw_token, touch=method == "POST" and path == "/api/marcas")
+    link = repo.validate_reloj_facial_token(raw_token, touch=method == "POST" and path in {"/api/marcas", "/api/reloj-facial/validar"})
     if not link:
         return None
     if method == "GET" and path in {"/api/personas", "/api/ubicaciones"}:
@@ -881,6 +884,8 @@ def public_face_clock_request(method, path, query=None, payload=None):
     if method == "POST" and path == "/api/marcas":
         if str((payload or {}).get("tipo_marca") or "").lower() == "por reloj facial":
             return link
+    if method == "POST" and path == "/api/reloj-facial/validar":
+        return link
     return None
 
 
@@ -947,14 +952,14 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         payload = {}
         try:
             if route_path == "/api/facturacion/importar":
-                if not self.authorize_request("POST", route_path, payload):
+                if not self.authorize_request("POST", route_path, query=parse_qs(parsed.query), payload=payload):
                     return
                 filename, raw_file = parse_multipart_file(self.headers.get("Content-Type", ""), read_raw_body(self))
                 rows_to_import = parse_facturacion_file(filename, raw_file)
                 self.send_json(repo.import_facturacion(rows_to_import))
                 return
             payload = read_body(self)
-            if not self.authorize_request("POST", route_path, payload):
+            if not self.authorize_request("POST", route_path, query=parse_qs(parsed.query), payload=payload):
                 return
             response_payload = self.route_post(route_path, payload)
             self.send_json(response_payload)
@@ -1196,6 +1201,19 @@ class PlannerHandler(SimpleHTTPRequestHandler):
 
     def toggle_reloj_facial(self, link_id):
         return repo.toggle_reloj_facial(link_id)
+
+    def delete_reloj_facial(self, link_id):
+        return repo.delete_reloj_facial(link_id)
+
+    def create_persona_rostro(self, persona_id, payload):
+        user_id = self.current_user.get("id") if self.current_user else None
+        return repo.create_persona_rostro(persona_id, payload, usuario_id=user_id)
+
+    def toggle_persona_rostro(self, face_id):
+        return repo.toggle_persona_rostro(face_id)
+
+    def validate_reloj_facial(self, payload):
+        return repo.validate_face_descriptor(payload, face_clock_link=self.current_user)
 
     def approval_tolerance_minutes(self, connection):
         return AprobacionesService.approval_tolerance_minutes(connection)

@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import datetime, timedelta
 
 from .database import IS_POSTGRES, connect, rows, one
@@ -120,11 +121,15 @@ def list_relojes_faciales():
         SELECT
           id,
           nombre,
+          token_visible,
           activo,
+          eliminado,
           fecha_creacion,
           fecha_expiracion,
+          fecha_eliminacion,
           ultimo_uso
         FROM relojes_faciales
+        WHERE COALESCE(eliminado, 0) = 0
         ORDER BY activo DESC, fecha_creacion DESC, nombre
     """)
 
@@ -138,9 +143,9 @@ def create_reloj_facial(payload, raw_token):
         expires_at = f"{expires_at} 23:59:59"
     with connect() as connection:
         cursor = connection.execute("""
-            INSERT INTO relojes_faciales (nombre, token_hash, activo, fecha_expiracion)
-            VALUES (?, ?, 1, ?)
-        """, (name, token_hash(raw_token), expires_at))
+            INSERT INTO relojes_faciales (nombre, token_hash, token_visible, activo, fecha_expiracion)
+            VALUES (?, ?, ?, 1, ?)
+        """, (name, token_hash(raw_token), raw_token, expires_at))
         link_id = cursor.lastrowid
         if not link_id:
             row = connection.execute("SELECT id FROM relojes_faciales WHERE token_hash = ?", (token_hash(raw_token),)).fetchone()
@@ -151,13 +156,29 @@ def create_reloj_facial(payload, raw_token):
 
 def toggle_reloj_facial(link_id):
     with connect() as connection:
-        current = connection.execute("SELECT activo FROM relojes_faciales WHERE id = ?", (link_id,)).fetchone()
+        current = connection.execute("SELECT activo FROM relojes_faciales WHERE id = ? AND COALESCE(eliminado, 0) = 0", (link_id,)).fetchone()
         if not current:
             raise ValueError("Reloj facial no encontrado")
         active = 0 if int(current["activo"] or 0) else 1
         connection.execute("UPDATE relojes_faciales SET activo = ? WHERE id = ?", (active, link_id))
         connection.commit()
         return {"ok": True, "activo": active}
+
+
+def delete_reloj_facial(link_id):
+    with connect() as connection:
+        current = connection.execute("SELECT id FROM relojes_faciales WHERE id = ? AND COALESCE(eliminado, 0) = 0", (link_id,)).fetchone()
+        if not current:
+            raise ValueError("Reloj facial no encontrado")
+        connection.execute("""
+            UPDATE relojes_faciales
+            SET activo = 0,
+                eliminado = 1,
+                fecha_eliminacion = ?
+            WHERE id = ?
+        """, (datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"), link_id))
+        connection.commit()
+        return {"ok": True}
 
 
 def validate_reloj_facial_token(raw_token, touch=False):
@@ -171,6 +192,7 @@ def validate_reloj_facial_token(raw_token, touch=False):
             FROM relojes_faciales
             WHERE token_hash = ?
               AND activo = 1
+              AND COALESCE(eliminado, 0) = 0
               AND (fecha_expiracion IS NULL OR fecha_expiracion = '' OR fecha_expiracion >= ?)
         """, (token_hash(clean), now_value)).fetchone()
         if not row:
@@ -179,6 +201,178 @@ def validate_reloj_facial_token(raw_token, touch=False):
             connection.execute("UPDATE relojes_faciales SET ultimo_uso = ? WHERE id = ?", (now_value, row["id"]))
             connection.commit()
         return dict(row)
+
+
+def normalize_face_descriptor(value):
+    if isinstance(value, str):
+        value = json.loads(value)
+    if not isinstance(value, list) or len(value) < 32:
+        raise ValueError("Huella facial inválida")
+    descriptor = []
+    for item in value:
+        try:
+            descriptor.append(float(item))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Huella facial inválida") from exc
+    return descriptor
+
+
+def face_similarity_score(left, right):
+    size = min(len(left), len(right))
+    if size < 32:
+        return 0
+    a = left[:size]
+    b = right[:size]
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(y * y for y in b))
+    if not norm_a or not norm_b:
+        return 0
+    cosine = max(-1, min(1, dot / (norm_a * norm_b)))
+    return round(((cosine + 1) / 2) * 100, 2)
+
+
+def list_persona_rostros(persona_id):
+    return rows("""
+        SELECT
+          rostros_personas.id,
+          rostros_personas.persona_id,
+          personas.nombre AS persona,
+          rostros_personas.activo,
+          rostros_personas.observacion,
+          rostros_personas.fecha_alta,
+          rostros_personas.fecha_actualizacion,
+          usuarios.email AS creado_por
+        FROM rostros_personas
+        JOIN personas ON personas.id = rostros_personas.persona_id
+        LEFT JOIN usuarios ON usuarios.id = rostros_personas.creado_por_usuario_id
+        WHERE rostros_personas.persona_id = ?
+        ORDER BY rostros_personas.activo DESC, rostros_personas.fecha_alta DESC
+    """, (persona_id,))
+
+
+def create_persona_rostro(persona_id, payload, usuario_id=None):
+    descriptor = normalize_face_descriptor(payload.get("descriptor"))
+    observation = str(payload.get("observacion") or "").strip() or None
+    now_value = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    with connect() as connection:
+        person = connection.execute("SELECT id FROM personas WHERE id = ?", (persona_id,)).fetchone()
+        if not person:
+            raise ValueError("Persona no encontrada")
+        active_count = connection.execute("""
+            SELECT COUNT(*) AS total
+            FROM rostros_personas
+            WHERE persona_id = ?
+              AND activo = 1
+        """, (persona_id,)).fetchone()
+        if int(active_count["total"] or 0) >= 5:
+            raise ValueError("Cada persona puede tener como máximo 5 rostros activos")
+        cursor = connection.execute("""
+            INSERT INTO rostros_personas (
+              persona_id,
+              descriptor_json,
+              activo,
+              observacion,
+              creado_por_usuario_id,
+              fecha_alta,
+              fecha_actualizacion
+            )
+            VALUES (?, ?, 1, ?, ?, ?, ?)
+        """, (persona_id, json.dumps(descriptor), observation, usuario_id, now_value, now_value))
+        face_id = cursor.lastrowid
+        connection.commit()
+    return {"ok": True, "id": face_id}
+
+
+def toggle_persona_rostro(face_id):
+    with connect() as connection:
+        current = connection.execute("SELECT activo FROM rostros_personas WHERE id = ?", (face_id,)).fetchone()
+        if not current:
+            raise ValueError("Rostro no encontrado")
+        active = 0 if int(current["activo"] or 0) else 1
+        connection.execute("""
+            UPDATE rostros_personas
+            SET activo = ?, fecha_actualizacion = ?
+            WHERE id = ?
+        """, (active, datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"), face_id))
+        connection.commit()
+    return {"ok": True, "activo": active}
+
+
+def validate_face_descriptor(payload, face_clock_link=None):
+    descriptor = normalize_face_descriptor(payload.get("descriptor"))
+    threshold = float(payload.get("umbral") or 78)
+    face_clock_id = None
+    if face_clock_link:
+        face_clock_id = face_clock_link.get("reloj_facial_id") or face_clock_link.get("id")
+    candidates = rows("""
+        SELECT
+          rostros_personas.id,
+          rostros_personas.descriptor_json,
+          personas.id AS persona_id,
+          personas.nombre AS persona,
+          personas.activo
+        FROM rostros_personas
+        JOIN personas ON personas.id = rostros_personas.persona_id
+        WHERE rostros_personas.activo = 1
+          AND personas.activo = 1
+          AND (
+            SELECT COUNT(*)
+            FROM rostros_personas AS activos
+            WHERE activos.persona_id = personas.id
+              AND activos.activo = 1
+          ) >= 3
+    """)
+    best = None
+    for candidate in candidates:
+        try:
+            candidate_descriptor = normalize_face_descriptor(candidate["descriptor_json"])
+        except ValueError:
+            continue
+        score = face_similarity_score(descriptor, candidate_descriptor)
+        if best is None or score > best["score"]:
+            best = {
+                "score": score,
+                "persona_id": candidate["persona_id"],
+                "persona": candidate["persona"],
+                "rostro_id": candidate["id"],
+            }
+    ok = bool(best and best["score"] >= threshold)
+    result = "VALIDADO" if ok else "SIN_COINCIDENCIA"
+    with connect() as connection:
+        if face_clock_id:
+            clock_exists = connection.execute("SELECT id FROM relojes_faciales WHERE id = ?", (face_clock_id,)).fetchone()
+            if not clock_exists:
+                face_clock_id = None
+        connection.execute("""
+            INSERT INTO reconocimientos_faciales_log (
+              reloj_facial_id,
+              persona_id,
+              resultado,
+              score,
+              detalle
+            )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            face_clock_id,
+            best.get("persona_id") if best else None,
+            result,
+            best.get("score") if best else None,
+            "Coincidencia facial" if ok else "No alcanzo el umbral de validacion",
+        ))
+        if face_clock_id:
+            connection.execute(
+                "UPDATE relojes_faciales SET ultimo_uso = ? WHERE id = ?",
+                (datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"), face_clock_id),
+            )
+        connection.commit()
+    return {
+        "ok": ok,
+        "score": best.get("score") if best else 0,
+        "threshold": threshold,
+        "persona": {"id": best["persona_id"], "nombre": best["persona"]} if ok else None,
+        "candidates": len(candidates),
+    }
 
 
 def list_turnos(date_from=None, date_to=None):

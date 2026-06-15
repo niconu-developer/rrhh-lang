@@ -17,7 +17,6 @@ const configElements = {
   locationList: document.querySelector("#locationList"),
   faceClockForm: document.querySelector("#faceClockForm"),
   faceClockNameInput: document.querySelector("#faceClockNameInput"),
-  faceClockExpiryInput: document.querySelector("#faceClockExpiryInput"),
   faceClockGeneratedLink: document.querySelector("#faceClockGeneratedLink"),
   faceClockList: document.querySelector("#faceClockList"),
   locationModal: document.querySelector("#locationModal"),
@@ -138,6 +137,7 @@ function apiFaceClockToConfig(link) {
     createdAt: link.fecha_creacion || "",
     expiresAt: link.fecha_expiracion || "",
     lastUsedAt: link.ultimo_uso || "",
+    token: link.token_visible || "",
   };
 }
 
@@ -253,13 +253,22 @@ function renderFaceClockList() {
   }
 
   configElements.faceClockList.innerHTML = appConfig.faceClocks
-    .map((link) => `<article class="admin-list-item">
+    .map((link) => {
+      const url = link.token ? faceClockUrl(link.token) : "";
+      return `<article class="admin-list-item face-clock-item">
       <div>
         <strong>${escapeConfigText(link.name)}</strong>
         <span>${link.active ? "Activo" : "Inactivo"} · Último uso: ${escapeConfigText(formatConfigDateTime(link.lastUsedAt) || "sin uso")}${link.expiresAt ? ` · Vence: ${escapeConfigText(formatConfigDate(link.expiresAt))}` : ""}</span>
+        <div class="face-clock-link-row">
+          ${url ? `<button class="ghost-button small" data-copy-face-clock-link="${escapeConfigText(url)}" type="button">Copiar link</button>` : `<span class="muted">Link no disponible. Generá uno nuevo.</span>`}
+        </div>
       </div>
-      <button class="ghost-button small" data-face-clock-toggle="${link.id}" type="button">${link.active ? "Desactivar" : "Activar"}</button>
-    </article>`)
+      <div class="table-actions">
+        <button class="ghost-button small" data-face-clock-toggle="${link.id}" type="button">${link.active ? "Desactivar" : "Activar"}</button>
+        <button class="ghost-button small" data-face-clock-delete="${link.id}" type="button">Eliminar</button>
+      </div>
+    </article>`;
+    })
     .join("");
 }
 
@@ -291,7 +300,7 @@ async function createFaceClockLink() {
     method: "POST",
     body: JSON.stringify({
       nombre: name,
-      fecha_expiracion: configElements.faceClockExpiryInput.value || null,
+      fecha_expiracion: null,
     }),
   });
   const url = faceClockUrl(response.token);
@@ -302,7 +311,6 @@ async function createFaceClockLink() {
     <button class="ghost-button small" data-copy-face-clock-link="${escapeConfigText(url)}" type="button">Copiar</button>
   `;
   configElements.faceClockNameInput.value = "";
-  configElements.faceClockExpiryInput.value = "";
   await loadConfigFromBackend();
   renderConfig();
   showConfigToast("Link generado");
@@ -313,6 +321,14 @@ async function toggleFaceClockLink(id) {
   await loadConfigFromBackend();
   renderConfig();
   showConfigToast("Reloj facial actualizado");
+}
+
+async function deleteFaceClockLink(id) {
+  if (!window.confirm("¿Eliminar este reloj facial? El historial de marcas se mantiene.")) return;
+  await configApi(`/relojes-faciales/${id}/delete`, { method: "POST", body: "{}" });
+  await loadConfigFromBackend();
+  renderConfig();
+  showConfigToast("Reloj facial eliminado");
 }
 
 async function addConfigItem(key, value) {
@@ -566,12 +582,14 @@ document.addEventListener("click", (event) => {
   const locationButton = event.target.closest("[data-location]");
   const editLocationButton = event.target.closest("[data-edit-location]");
   const faceClockToggle = event.target.closest("[data-face-clock-toggle]");
+  const faceClockDelete = event.target.closest("[data-face-clock-delete]");
   const copyFaceClockLink = event.target.closest("[data-copy-face-clock-link]");
   if (configTab) openConfigSection(configTab.dataset.configTab);
   if (button) removeConfigItem(button.dataset.key, button.dataset.value).catch((error) => showConfigToast(error.message));
   if (locationButton) removeLocation(locationButton.dataset.location).catch((error) => showConfigToast(error.message));
   if (editLocationButton) openLocationModal(editLocationButton.dataset.editLocation);
   if (faceClockToggle) toggleFaceClockLink(faceClockToggle.dataset.faceClockToggle).catch((error) => showConfigToast(error.message));
+  if (faceClockDelete) deleteFaceClockLink(faceClockDelete.dataset.faceClockDelete).catch((error) => showConfigToast(error.message));
   if (copyFaceClockLink) {
     navigator.clipboard?.writeText(copyFaceClockLink.dataset.copyFaceClockLink);
     showConfigToast("Link copiado");

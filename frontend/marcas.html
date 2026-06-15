@@ -31,6 +31,10 @@
               <span>Ubicación</span>
               <strong id="kioskDetectedLocation">Ubicación pendiente</strong>
             </div>
+            <div>
+              <span>Jornada actual</span>
+              <strong id="kioskWorkTimer">Sin entrada activa</strong>
+            </div>
           </div>
           <div class="detail-list compact kiosk-shift-grid">
             <div>
@@ -47,6 +51,12 @@
         <section class="mark-actions" aria-label="Registrar marcas">
           <button class="mark-button in" id="entryButton" type="button">Marcar entrada</button>
           <button class="mark-button out" id="exitButton" type="button">Marcar salida</button>
+        </section>
+
+        <section class="mark-confirmation" id="markConfirmation" aria-live="polite" hidden>
+          <span id="markConfirmationType">Marca registrada</span>
+          <strong id="markConfirmationTime">--:--</strong>
+          <small id="markConfirmationDetail">Registro confirmado</small>
         </section>
 
         <section class="operations-panel" id="operationsPanel" aria-label="Operación adicional">

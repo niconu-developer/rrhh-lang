@@ -37,15 +37,20 @@
             <div class="face-frame" aria-hidden="true"></div>
           </div>
           <div class="face-actions">
-            <button class="ghost-button" id="clockStartCamera" type="button">Abrir cámara</button>
             <button class="primary-button" id="clockValidateFace" type="button">Validar rostro</button>
-            <button class="ghost-button" id="clockCancelFace" type="button">Cancelar</button>
+            <button class="ghost-button" id="clockCancelFace" type="button">Cancelar - Reintentar</button>
           </div>
         </section>
 
         <section class="mark-actions">
           <button class="mark-button in" id="clockEntryButton" disabled type="button">Marcar entrada</button>
           <button class="mark-button out" id="clockExitButton" disabled type="button">Marcar salida</button>
+        </section>
+
+        <section class="mark-confirmation" id="clockMarkConfirmation" aria-live="polite" hidden>
+          <span id="clockMarkConfirmationType">Marca registrada</span>
+          <strong id="clockMarkConfirmationTime">--:--</strong>
+          <small id="clockMarkConfirmationDetail">Registro confirmado</small>
         </section>
       </section>
     </main>
@@ -54,6 +59,7 @@
     <script src="./api-client.js?v=20260610-arch1"></script>
     <script src="./shared-data.js?v=20260610-opcats1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./reloj-facial.js?v=20260611-link-token1"></script>
+    <script src="./face-descriptor.js?v=20260615-face-mvp1"></script>
+    <script src="./reloj-facial.js?v=20260615-face-mvp1"></script>
   </body>
 </html>

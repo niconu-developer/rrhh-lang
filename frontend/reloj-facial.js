@@ -15,13 +15,18 @@ const clock = {
   video: document.querySelector("#clockCameraPreview"),
   canvas: document.querySelector("#clockFaceCanvas"),
   cameraBox: document.querySelector(".camera-box"),
-  start: document.querySelector("#clockStartCamera"),
   validate: document.querySelector("#clockValidateFace"),
   cancel: document.querySelector("#clockCancelFace"),
   entry: document.querySelector("#clockEntryButton"),
   exit: document.querySelector("#clockExitButton"),
+  markConfirmation: document.querySelector("#clockMarkConfirmation"),
+  markConfirmationType: document.querySelector("#clockMarkConfirmationType"),
+  markConfirmationTime: document.querySelector("#clockMarkConfirmationTime"),
+  markConfirmationDetail: document.querySelector("#clockMarkConfirmationDetail"),
   toast: document.querySelector("#toast"),
 };
+
+let clockConfirmationTimeout = null;
 
 async function clockApi(path, options = {}) {
   const separator = path.includes("?") ? "&" : "?";
@@ -46,6 +51,10 @@ function clockInputDate(date) {
 function clockDbDateTime(date = new Date()) {
   const pad = (value) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function clockDisplayTime(date = new Date()) {
+  return date.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" });
 }
 
 function normalizeClockLocations(rows) {
@@ -83,37 +92,57 @@ function renderValidation() {
   clock.status.textContent = clockValidated && clockDetectedPerson ? `HOLA ${clockDetectedPerson.nombre.toUpperCase()}` : "Validación pendiente";
   clock.entry.disabled = !clockValidated;
   clock.exit.disabled = !clockValidated;
+  clock.validate.disabled = !clockStream;
 }
 
 async function startClockCamera() {
   if (!navigator.mediaDevices?.getUserMedia) {
     showClockToast("Este navegador no permite abrir cámara");
+    clock.validate.disabled = true;
     return;
   }
   try {
     clockStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
     clock.video.srcObject = clockStream;
+    renderValidation();
     showClockToast("Cámara activa");
   } catch (error) {
+    clockStream = null;
+    renderValidation();
     showClockToast("No se pudo acceder a la cámara");
   }
 }
 
-function validateClockFace() {
-  if (!clockPersonnel.length) {
-    showClockToast("No hay personal activo cargado");
+async function validateClockFace() {
+  if (!clockStream) {
+    showClockToast("Abrí la cámara para validar");
     return;
   }
 
-  const score = clockStream ? randomClockScore(88, 98) : randomClockScore(82, 92);
-  clockDetectedPerson = clockPersonnel[score % clockPersonnel.length];
-  clockValidated = score >= 82;
-  clock.score.textContent = `${score}%`;
-  clock.score.classList.toggle("ok", clockValidated);
-  clock.score.classList.toggle("warn", !clockValidated);
-  if (clockStream) captureClockFrame();
-  renderValidation();
-  showClockToast(clockValidated ? `Hola ${clockDetectedPerson.nombre}` : "Validación no aprobada");
+  try {
+    const descriptorCanvas = document.createElement("canvas");
+    const descriptor = buildFaceDescriptor(clock.video, descriptorCanvas);
+    const result = await clockApi("/reloj-facial/validar", {
+      method: "POST",
+      body: JSON.stringify({ descriptor }),
+    });
+    clockDetectedPerson = result.persona;
+    clockValidated = Boolean(result.ok && clockDetectedPerson);
+    clock.score.textContent = `${Math.round(Number(result.score || 0))}%`;
+    clock.score.classList.toggle("ok", clockValidated);
+    clock.score.classList.toggle("warn", !clockValidated);
+    captureClockFrame();
+    renderValidation();
+    showClockToast(clockValidated ? `Hola ${clockDetectedPerson.nombre}` : "Rostro no reconocido");
+  } catch (error) {
+    clockValidated = false;
+    clockDetectedPerson = null;
+    clock.score.textContent = "--%";
+    clock.score.classList.remove("ok");
+    clock.score.classList.add("warn");
+    renderValidation();
+    showClockToast(error.message || "No se pudo validar el rostro");
+  }
 }
 
 function captureClockFrame() {
@@ -163,8 +192,21 @@ async function registerClockMark(type) {
       genera_incidencia: Boolean(locationStatus.locationGeneratesIncident || locationStatus.matched === false),
     }),
   });
+  showClockMarkConfirmation(type, clockDetectedPerson.nombre, locationStatus.label);
   showClockToast(`${type} registrada`);
-  window.setTimeout(resetClockFace, 10000);
+  resetClockFace();
+}
+
+function showClockMarkConfirmation(type, personName, locationLabel) {
+  window.clearTimeout(clockConfirmationTimeout);
+  clock.markConfirmation.hidden = false;
+  clock.markConfirmation.dataset.type = String(type).toLowerCase();
+  clock.markConfirmationType.textContent = `${type} registrada`;
+  clock.markConfirmationTime.textContent = clockDisplayTime(new Date());
+  clock.markConfirmationDetail.textContent = `${personName} · ${locationLabel}`;
+  clockConfirmationTimeout = window.setTimeout(() => {
+    clock.markConfirmation.hidden = true;
+  }, 5000);
 }
 
 function clockShiftForPerson(person) {
@@ -190,18 +232,13 @@ function resetClockFace() {
   renderValidation();
 }
 
-function randomClockScore(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 function showClockToast(message) {
   clock.toast.textContent = message;
   clock.toast.classList.add("visible");
   window.setTimeout(() => clock.toast.classList.remove("visible"), 2200);
 }
 
-clock.start.addEventListener("click", startClockCamera);
-clock.validate.addEventListener("click", validateClockFace);
+clock.validate.addEventListener("click", () => validateClockFace());
 clock.cancel.addEventListener("click", resetClockFace);
 clock.entry.addEventListener("click", () => registerClockMark("Entrada"));
 clock.exit.addEventListener("click", () => registerClockMark("Salida"));

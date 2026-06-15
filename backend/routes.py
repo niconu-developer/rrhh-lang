@@ -39,6 +39,9 @@ def route_get(handler, path, query):
         return repo.list_configuracion()
     if path == "/api/relojes-faciales":
         return repo.list_relojes_faciales()
+    parts = path.strip("/").split("/")
+    if len(parts) == 4 and parts[:2] == ["api", "personas"] and parts[3] == "rostros":
+        return repo.list_persona_rostros(int(parts[2]))
     if path == "/api/turnos":
         return repo.list_turnos(query_value(query, "desde", "from"), query_value(query, "hasta", "to"))
     if path == "/api/jornales":
@@ -90,12 +93,18 @@ def route_post(handler, path, payload):
         return handler.save_configuracion(payload)
     if path == "/api/relojes-faciales":
         return handler.create_reloj_facial(payload)
+    if path == "/api/reloj-facial/validar":
+        return handler.validate_reloj_facial(payload)
     if path == "/api/usuarios":
         return handler.save_usuario(payload)
     if len(parts) == 3 and parts[:2] == ["api", "personas"]:
         return handler.save_persona(payload, int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "personas"] and parts[3] == "toggle":
         return handler.toggle_persona(int(parts[2]))
+    if len(parts) == 4 and parts[:2] == ["api", "personas"] and parts[3] == "rostros":
+        return handler.create_persona_rostro(int(parts[2]), payload)
+    if len(parts) == 5 and parts[:3] == ["api", "personas", "rostros"] and parts[4] == "toggle":
+        return handler.toggle_persona_rostro(int(parts[3]))
     if len(parts) == 3 and parts[:2] == ["api", "roles-operativos"]:
         return handler.save_rol_operativo(payload, int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "roles-operativos"] and parts[3] == "delete":
@@ -108,6 +117,8 @@ def route_post(handler, path, payload):
         return handler.toggle_usuario(int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "relojes-faciales"] and parts[3] == "toggle":
         return handler.toggle_reloj_facial(int(parts[2]))
+    if len(parts) == 4 and parts[:2] == ["api", "relojes-faciales"] and parts[3] == "delete":
+        return handler.delete_reloj_facial(int(parts[2]))
     if len(parts) == 3 and parts[:2] == ["api", "usuarios"]:
         return handler.save_usuario(payload, int(parts[2]))
     if path == "/api/turnos":

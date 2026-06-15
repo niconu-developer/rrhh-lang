@@ -219,11 +219,48 @@ CREATE TABLE IF NOT EXISTS relojes_faciales (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL,
   token_hash TEXT NOT NULL UNIQUE,
+  token_visible TEXT,
   activo INTEGER NOT NULL DEFAULT 1,
+  eliminado INTEGER NOT NULL DEFAULT 0,
   fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   fecha_expiracion TEXT,
+  fecha_eliminacion TEXT,
   ultimo_uso TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_relojes_faciales_token_hash
 ON relojes_faciales(token_hash);
+
+CREATE TABLE IF NOT EXISTS rostros_personas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  persona_id INTEGER NOT NULL,
+  descriptor_json TEXT NOT NULL,
+  activo INTEGER NOT NULL DEFAULT 1,
+  observacion TEXT,
+  creado_por_usuario_id INTEGER,
+  fecha_alta TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE CASCADE,
+  FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rostros_personas_persona
+ON rostros_personas(persona_id);
+
+CREATE INDEX IF NOT EXISTS idx_rostros_personas_activo
+ON rostros_personas(activo);
+
+CREATE TABLE IF NOT EXISTS reconocimientos_faciales_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  reloj_facial_id INTEGER,
+  persona_id INTEGER,
+  resultado TEXT NOT NULL,
+  score REAL,
+  detalle TEXT,
+  fecha_hora TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (reloj_facial_id) REFERENCES relojes_faciales(id),
+  FOREIGN KEY (persona_id) REFERENCES personas(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reconocimientos_faciales_fecha
+ON reconocimientos_faciales_log(fecha_hora);

@@ -18,11 +18,15 @@ const personElements = {
   driverLicenseExpiry: document.querySelector("#driverLicenseExpiryInput"),
   healthCardExpiry: document.querySelector("#healthCardExpiryInput"),
   active: document.querySelector("#personActiveInput"),
-  accessEnabled: document.querySelector("#accessEnabledInput"),
   accessFields: document.querySelector("#accessFields"),
   accessPassword: document.querySelector("#accessPasswordInput"),
   accessRole: document.querySelector("#accessRoleInput"),
-  accessActive: document.querySelector("#accessActiveInput"),
+  faceStatus: document.querySelector("#faceEnrollmentStatus"),
+  faceVideo: document.querySelector("#personFaceVideo"),
+  faceCanvas: document.querySelector("#personFaceCanvas"),
+  faceList: document.querySelector("#personFaceList"),
+  faceStart: document.querySelector("#startPersonFaceCamera"),
+  faceSave: document.querySelector("#savePersonFace"),
   fixedEditor: document.querySelector("#fixedScheduleEditor"),
   fixedRows: document.querySelector("#fixedScheduleRows"),
   list: document.querySelector("#personList"),
@@ -50,6 +54,8 @@ let availableAppRoles = [];
 let availableOperationTariffs = [];
 let appConfig = defaultPersonConfigSnapshot();
 let hourlyEditMode = false;
+let personFaceStream = null;
+let selectedPersonFaces = [];
 
 const API_BASE = apiBase();
 
@@ -93,7 +99,7 @@ function apiPersonToLocal(person) {
       enabled: hasAccess,
       email: person.email || person.usuario_email || "",
       roleId: normalizeApplicationRole(person.rol_app || "usuario"),
-      active: hasAccess ? Number(person.usuario_activo) !== 0 : true,
+      active: hasAccess ? Number(person.usuario_activo) !== 0 : false,
     },
     operationTariffIds: parseOperationTariffIds(person.operacion_tarifa_ids),
   };
@@ -267,8 +273,8 @@ function renderOperatorCategoryOptions() {
   personElements.operatorCategory.innerHTML = activeTariffs.length
     ? activeTariffs
       .map((tariff) => `<label class="check-line operation-tariff-option">
+        <span>${escapePersonText(tariff.label)}</span>
         <input data-operation-tariff-option="${tariff.id}" type="checkbox" />
-        ${tariff.label}
       </label>`)
       .join("")
     : `<span>No hay tarifas activas parametrizadas.</span>`;
@@ -415,12 +421,11 @@ function toggleOperatorFlag() {
 }
 
 function updateAccessFieldsState() {
-  const enabled = personElements.accessEnabled.checked;
+  const enabled = personElements.active.checked;
   personElements.accessFields.classList.toggle("disabled-section", !enabled);
   [
     personElements.accessPassword,
     personElements.accessRole,
-    personElements.accessActive,
   ].forEach((field) => {
     field.disabled = !enabled;
   });
@@ -612,16 +617,16 @@ function resetPersonForm() {
   personElements.driverLicenseExpiry.value = "";
   personElements.healthCardExpiry.value = "";
   personElements.active.checked = true;
-  personElements.accessEnabled.checked = false;
   personElements.accessPassword.value = "";
   personElements.accessRole.value = "usuario";
-  personElements.accessActive.checked = true;
+  selectedPersonFaces = [];
+  renderPersonFaces();
   renderFixedRows(defaultFixedSchedule());
   renderPersonPage();
   openPersonModal();
 }
 
-function editPerson(id) {
+async function editPerson(id) {
   const person = personnel.find((item) => item.id === id);
   if (!person) return;
   personElements.title.textContent = "Editar persona";
@@ -638,13 +643,13 @@ function editPerson(id) {
   personElements.driverLicenseExpiry.value = person.driverLicenseExpiry || "";
   personElements.healthCardExpiry.value = person.healthCardExpiry || "";
   personElements.active.checked = person.active;
-  personElements.accessEnabled.checked = Boolean(person.access?.enabled);
   personElements.accessPassword.value = "";
   personElements.accessRole.value = person.access?.roleId || "usuario";
-  personElements.accessActive.checked = person.access?.active !== false;
   renderFixedRows(person.fixedSchedule || defaultFixedSchedule());
+  selectedPersonFaces = [];
   renderPersonPage();
   openPersonModal();
+  await loadPersonFaces(id);
 }
 
 async function savePerson(event) {
@@ -667,15 +672,15 @@ async function savePerson(event) {
     fixedSchedule: readFixedSchedule(),
     operationTariffIds: personElements.isOperator.checked ? readOperatorCategoryInputs() : [],
     access: {
-      enabled: personElements.accessEnabled.checked,
+      enabled: personElements.active.checked,
       password: personElements.accessPassword.value,
       email: personElements.email.value.trim(),
       roleId: personElements.accessRole.value,
-      active: personElements.accessActive.checked,
+      active: personElements.active.checked,
     },
   };
 
-  if (nextPerson.access.enabled && !nextPerson.email) {
+  if (nextPerson.active && !nextPerson.email) {
     showPersonToast("Completá el mail para habilitar acceso");
     return;
   }
@@ -716,6 +721,103 @@ async function togglePerson(id) {
   showPersonToast("No hay conexión con la base local");
 }
 
+async function loadPersonFaces(personId) {
+  if (!personId || !backendEnabled) {
+    selectedPersonFaces = [];
+    renderPersonFaces();
+    return;
+  }
+  try {
+    selectedPersonFaces = await apiRequest(`/personas/${encodeURIComponent(personId)}/rostros`);
+  } catch (error) {
+    selectedPersonFaces = [];
+    showPersonToast(error.message || "No se pudieron cargar los rostros");
+  }
+  renderPersonFaces();
+}
+
+function renderPersonFaces() {
+  const activeFaces = selectedPersonFaces.filter((face) => Number(face.activo) !== 0);
+  const ready = activeFaces.length >= 3;
+  const limitReached = activeFaces.length >= 5;
+  personElements.faceStatus.textContent = ready ? `${activeFaces.length}/5 listo` : `${activeFaces.length}/3 mínimo`;
+  personElements.faceStatus.classList.toggle("ok", ready);
+  personElements.faceStatus.classList.toggle("off", !ready);
+  personElements.faceSave.disabled = !personElements.id.value || !personFaceStream || limitReached;
+  if (!personElements.id.value) {
+    personElements.faceList.innerHTML = `<p class="muted">Guardá la persona antes de cargar rostro facial.</p>`;
+    return;
+  }
+  if (!selectedPersonFaces.length) {
+    personElements.faceList.innerHTML = `<p class="muted">Sin rostros registrados. Cargá al menos 3 capturas.</p>`;
+    return;
+  }
+  personElements.faceList.innerHTML = selectedPersonFaces
+    .map((face) => `<article class="face-template-item ${Number(face.activo) ? "" : "inactive"}">
+      <div>
+        <strong>${Number(face.activo) ? "Rostro activo" : "Rostro inactivo"}</strong>
+        <span>${face.fecha_alta || ""}</span>
+      </div>
+      <button class="ghost-button small" data-toggle-face-template="${face.id}" type="button">${Number(face.activo) ? "Desactivar" : "Activar"}</button>
+    </article>`)
+    .join("");
+}
+
+async function startPersonFaceCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showPersonToast("Este navegador no permite abrir cámara");
+    return;
+  }
+  try {
+    if (personFaceStream) {
+      personFaceStream.getTracks().forEach((track) => track.stop());
+    }
+    personFaceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+    personElements.faceVideo.srcObject = personFaceStream;
+    renderPersonFaces();
+    showPersonToast("Cámara activa");
+  } catch (error) {
+    showPersonToast("No se pudo acceder a la cámara");
+  }
+}
+
+async function savePersonFace() {
+  const personId = personElements.id.value;
+  if (!personId) {
+    showPersonToast("Primero guardá la persona");
+    return;
+  }
+  if (!personFaceStream) {
+    showPersonToast("Abrí la cámara para capturar el rostro");
+    return;
+  }
+  const activeFaces = selectedPersonFaces.filter((face) => Number(face.activo) !== 0);
+  if (activeFaces.length >= 5) {
+    showPersonToast("Máximo 5 rostros activos por persona");
+    return;
+  }
+  try {
+    const descriptor = buildFaceDescriptor(personElements.faceVideo, personElements.faceCanvas);
+    await apiRequest(`/personas/${encodeURIComponent(personId)}/rostros`, {
+      method: "POST",
+      body: JSON.stringify({ descriptor, observacion: "Carga desde ficha de personal" }),
+    });
+    await loadPersonFaces(personId);
+    showPersonToast("Rostro guardado");
+  } catch (error) {
+    showPersonToast(error.message || "No se pudo guardar el rostro");
+  }
+}
+
+async function togglePersonFace(faceId) {
+  await apiRequest(`/personas/rostros/${encodeURIComponent(faceId)}/toggle`, {
+    method: "POST",
+    body: "{}",
+  });
+  await loadPersonFaces(personElements.id.value);
+  showPersonToast("Rostro actualizado");
+}
+
 function showPersonToast(message) {
   personElements.toast.textContent = message;
   personElements.toast.classList.add("visible");
@@ -745,7 +847,7 @@ personElements.mode.addEventListener("change", renderPersonPage);
 personElements.type.addEventListener("change", updateOperatorCategoryState);
 personElements.isOperator.addEventListener("change", toggleOperatorFlag);
 personElements.driverLicenseType.addEventListener("change", updateDriverLicenseExpiryState);
-personElements.accessEnabled.addEventListener("change", updateAccessFieldsState);
+personElements.active.addEventListener("change", updateAccessFieldsState);
 personElements.filter.addEventListener("input", renderPersonList);
 personElements.hourlyRateFilter.addEventListener("input", renderHourlyRateList);
 personElements.toggleHourlyEdit.addEventListener("click", toggleHourlyEditMode);
@@ -757,7 +859,7 @@ personElements.saveOperationPrices.addEventListener("click", () => {
 personElements.list.addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit]");
   const toggle = event.target.closest("[data-toggle]");
-  if (edit) editPerson(edit.dataset.edit);
+  if (edit) editPerson(edit.dataset.edit).catch((error) => showPersonToast(error.message || "No se pudo abrir la persona"));
   if (toggle) togglePerson(toggle.dataset.toggle);
 });
 document.addEventListener("click", (event) => {
@@ -770,5 +872,13 @@ personElements.operationValueList.addEventListener("click", (event) => {
   event.preventDefault();
   removeOperationTariff(removeOperationTariffButton.dataset.removeOperationTariff)
     .catch((error) => showPersonToast(error.message || "No se pudo desactivar la tarifa"));
+});
+personElements.faceStart.addEventListener("click", startPersonFaceCamera);
+personElements.faceSave.addEventListener("click", savePersonFace);
+personElements.faceList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-toggle-face-template]");
+  if (!button) return;
+  togglePersonFace(button.dataset.toggleFaceTemplate)
+    .catch((error) => showPersonToast(error.message || "No se pudo actualizar el rostro"));
 });
 loadPersonPage();

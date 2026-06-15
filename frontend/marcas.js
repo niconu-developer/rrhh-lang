@@ -11,6 +11,7 @@ const elements = {
   exitButton: document.querySelector("#exitButton"),
   clock: document.querySelector("#kioskClock"),
   date: document.querySelector("#kioskDate"),
+  workTimer: document.querySelector("#kioskWorkTimer"),
   time: document.querySelector("#kioskTime"),
   activityLocation: document.querySelector("#kioskActivityLocation"),
   detectedLocation: document.querySelector("#kioskDetectedLocation"),
@@ -26,6 +27,10 @@ const elements = {
   todayPlanDay: document.querySelector("#todayPlanDay"),
   nextPlanDay: document.querySelector("#nextPlanDay"),
   daySummaryList: document.querySelector("#daySummaryList"),
+  markConfirmation: document.querySelector("#markConfirmation"),
+  markConfirmationType: document.querySelector("#markConfirmationType"),
+  markConfirmationTime: document.querySelector("#markConfirmationTime"),
+  markConfirmationDetail: document.querySelector("#markConfirmationDetail"),
   toast: document.querySelector("#toast"),
 };
 
@@ -43,6 +48,9 @@ function renderKioskSessionActions(target) {
 let operator = null;
 let todayShift = { noSchedule: true, status: "SIN PREVISIÓN", activity: "SIN PREVISIÓN", location: "SIN PREVISIÓN" };
 let todayTurnsCache = [];
+let recentMarks = [];
+let activeEntryAt = null;
+let confirmationTimeout = null;
 let visiblePlanDate = currentIsoDate();
 let appDbConfig = {};
 let operationTariffs = [];
@@ -172,15 +180,23 @@ async function loadInitialData() {
 
 async function refreshDbData() {
   const today = currentIsoDate();
+  const yesterday = addIsoDays(today, -1);
   const selectedDate = visiblePlanDate || today;
-  const [todayTurns, visibleTurns] = selectedDate === today
-    ? await api(`/turnos?desde=${today}&hasta=${today}`).then((turns) => [turns, turns])
+  const [todayTurns, visibleTurns, marks] = selectedDate === today
+    ? await Promise.all([
+        api(`/turnos?desde=${today}&hasta=${today}`),
+        api(`/turnos?desde=${today}&hasta=${today}`),
+        api(`/marcas?persona=${encodeURIComponent(operator.nombre)}&desde=${yesterday}&hasta=${today}`),
+      ])
     : await Promise.all([
         api(`/turnos?desde=${today}&hasta=${today}`),
         api(`/turnos?desde=${selectedDate}&hasta=${selectedDate}`),
+        api(`/marcas?persona=${encodeURIComponent(operator.nombre)}&desde=${yesterday}&hasta=${today}`),
       ]);
   todayShift = parseShiftFromTurn(todayTurns.find((turn) => turn.persona === operator.nombre));
   todayTurnsCache = visibleTurns;
+  recentMarks = marks;
+  activeEntryAt = activeEntryFromMarks(recentMarks);
   renderShift();
   renderDaySummary();
 
@@ -199,9 +215,36 @@ function renderShift() {
   const now = new Date();
   elements.clock.textContent = formatDisplayTime(now);
   elements.date.textContent = formatDisplayDate(now);
+  elements.workTimer.textContent = activeEntryAt ? formatElapsedTime(now - activeEntryAt) : "Sin entrada activa";
   elements.time.textContent = todayShift.noSchedule ? "Sin horario" : `${todayShift.start} - ${todayShift.end}`;
   elements.activityLocation.textContent = todayShift.activity;
   elements.detectedLocation.textContent = currentLocationLabel();
+}
+
+function parseDbDateTime(value) {
+  const normalized = String(value || "").replace(" ", "T");
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function activeEntryFromMarks(marks) {
+  let openEntry = null;
+  [...marks]
+    .sort((a, b) => String(a.fecha_hora).localeCompare(String(b.fecha_hora)))
+    .forEach((mark) => {
+      const type = normalizeStatus(mark.tipo);
+      if (type === "ENTRADA") openEntry = parseDbDateTime(mark.fecha_hora);
+      if (type === "SALIDA") openEntry = null;
+    });
+  return openEntry;
+}
+
+function formatElapsedTime(milliseconds) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function renderDaySummary() {
@@ -352,7 +395,20 @@ async function registerMark(type) {
     }),
   });
   await refreshDbData();
-  showToast(`${type} registrada desde ${locationStatus.label}`);
+  showMarkConfirmation(type, locationStatus.label);
+  showToast(`${type} registrada`);
+}
+
+function showMarkConfirmation(type, locationLabel) {
+  window.clearTimeout(confirmationTimeout);
+  elements.markConfirmation.hidden = false;
+  elements.markConfirmation.dataset.type = normalizeStatus(type).toLowerCase();
+  elements.markConfirmationType.textContent = `${type} registrada`;
+  elements.markConfirmationTime.textContent = formatDisplayTime(new Date());
+  elements.markConfirmationDetail.textContent = `Desde ${locationLabel}`;
+  confirmationTimeout = window.setTimeout(() => {
+    elements.markConfirmation.hidden = true;
+  }, 5000);
 }
 
 function operationValueForBand(band) {
@@ -405,4 +461,4 @@ loadInitialData().catch((error) => {
   elements.entryButton.disabled = true;
   elements.exitButton.disabled = true;
 });
-window.setInterval(renderShift, 15000);
+window.setInterval(renderShift, 1000);

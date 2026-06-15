@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Personal</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/global.css?v=20260615-person-editor1" />
     <link rel="stylesheet" href="./css/pages/personal.css?v=20260610-css-split1" />
   </head>
   <body>
@@ -117,114 +117,117 @@
         <form class="person-form" id="personForm">
           <input id="personId" type="hidden" />
           <div class="person-editor-layout">
-            <div class="person-editor-main">
-              <section class="person-editor-section">
-                <div class="form-section-head">
-                  <div>
-                    <p class="muted">Datos base</p>
-                    <h3>Identidad y rol</h3>
-                  </div>
-                  <label class="check-line"><input id="personActiveInput" type="checkbox" checked /> Activo</label>
+            <section class="person-editor-section">
+              <div class="form-section-head">
+                <div>
+                  <p class="muted">Datos</p>
+                  <h3>Identidad, rol y costos</h3>
                 </div>
-                <div class="person-form-grid">
-                  <label>Nombre<input id="personNameInput" required type="text" /></label>
-                  <label>ID privado<input id="personPrivateIdInput" inputmode="numeric" maxlength="3" pattern="[0-9]{3}" placeholder="3 cifras" type="text" /></label>
-                  <label>Mail<input id="personEmailInput" type="email" placeholder="nombre@dominio.com" /></label>
-                  <label>Rol operativo<select id="personTypeInput"></select></label>
-                </div>
-              </section>
+                <label class="check-line"><input id="personActiveInput" type="checkbox" checked /> Persona activa y con acceso</label>
+              </div>
+              <div class="person-form-grid">
+                <label>Nombre<input id="personNameInput" required type="text" /></label>
+                <label>ID privado<input id="personPrivateIdInput" inputmode="numeric" maxlength="3" pattern="[0-9]{3}" placeholder="3 cifras" type="text" /></label>
+                <label>Mail<input id="personEmailInput" type="email" placeholder="nombre@dominio.com" /></label>
+                <label>Rol operativo<select id="personTypeInput"></select></label>
+                <label>Valor hora<input id="hourlyRateInput" min="0" step="1" type="number" /></label>
+              </div>
+            </section>
 
-              <section class="person-editor-section">
-                <div class="form-section-head">
-                  <div>
-                    <p class="muted">Turnos</p>
-                    <h3>Modalidad horaria</h3>
-                  </div>
+            <section class="person-editor-section person-access-editor">
+              <div class="form-section-head">
+                <div>
+                  <p class="muted">Acceso al sistema</p>
+                  <h3>Usuario y permisos</h3>
                 </div>
-                <div class="person-form-grid compact-form-grid">
-                  <label>Modalidad
-                    <select id="scheduleModeInput">
-                      <option value="variable">Horario variable</option>
-                      <option value="fixed">Horario fijo</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="fixed-schedule-editor" id="fixedScheduleEditor">
-                  <div class="fixed-schedule-head">
-                    <strong>Horario fijo por día</strong>
-                    <span>Se usa al crear semanas nuevas.</span>
-                  </div>
-                  <div id="fixedScheduleRows"></div>
-                </div>
-              </section>
-            </div>
+              </div>
+              <div class="person-form-grid" id="accessFields">
+                <label>Contraseña temporal<input id="accessPasswordInput" type="text" placeholder="Solo si se crea o cambia" /></label>
+                <label>Rol de aplicación<select id="accessRoleInput"></select></label>
+              </div>
+            </section>
 
-            <div class="person-editor-side">
-              <section class="person-editor-section">
-                <div class="form-section-head">
-                  <div>
-                    <p class="muted">Costos</p>
-                    <h3>Valores de referencia</h3>
-                  </div>
+            <section class="person-editor-section face-enrollment-section">
+              <div class="form-section-head">
+                <div>
+                  <p class="muted">Rostro</p>
+                  <h3>Reconocimiento facial</h3>
                 </div>
-                <div class="person-form-grid single-form-grid">
-                  <label>Valor hora<input id="hourlyRateInput" min="0" step="1" type="number" /></label>
-                </div>
-              </section>
+                <span class="access-status off" id="faceEnrollmentStatus">Sin cargar</span>
+              </div>
+              <p class="face-enrollment-help">Mínimo 3 capturas activas para reconocer. Máximo 5 por persona.</p>
+              <div class="person-face-camera">
+                <video id="personFaceVideo" autoplay muted playsinline></video>
+                <canvas id="personFaceCanvas" width="320" height="240"></canvas>
+              </div>
+              <div class="table-actions face-enrollment-actions">
+                <button class="ghost-button small" id="startPersonFaceCamera" type="button">Abrir cámara</button>
+                <button class="primary-button small" id="savePersonFace" type="button" disabled>Guardar rostro</button>
+              </div>
+              <div class="face-template-list" id="personFaceList"></div>
+            </section>
 
-              <section class="person-editor-section">
-                <div class="form-section-head">
-                  <div>
-                    <p class="muted">Operaciones</p>
-                    <h3>Habilitaciones</h3>
-                  </div>
-                  <label class="check-line"><input id="personIsOperatorInput" type="checkbox" /> Es operador</label>
+            <section class="person-editor-section">
+              <div class="form-section-head">
+                <div>
+                  <p class="muted">Documentos</p>
+                  <h3>Vencimientos</h3>
                 </div>
-                <div class="operator-category-field" id="operatorCategoryField">
-                  <span>Categorías disponibles para cargar operaciones</span>
-                  <div class="operation-category-selector" id="operatorCategoryInput"></div>
-                </div>
-              </section>
+              </div>
+              <div class="person-form-grid">
+                <label>Tipo de libreta
+                  <select id="driverLicenseTypeInput">
+                    <option value="NO TIENE">NO TIENE</option>
+                    <option value="AUTO A">AUTO A</option>
+                    <option value="AUTO B">AUTO B</option>
+                    <option value="CAMION C">CAMION C</option>
+                    <option value="CAMION D">CAMION D</option>
+                    <option value="CAMION E">CAMION E</option>
+                    <option value="CAMION F">CAMION F</option>
+                  </select>
+                </label>
+                <label>Vencimiento libreta<input id="driverLicenseExpiryInput" type="date" disabled /></label>
+                <label>Carné de salud<input id="healthCardExpiryInput" type="date" /></label>
+              </div>
+            </section>
 
-              <section class="person-editor-section">
-                <div class="form-section-head">
-                  <div>
-                    <p class="muted">Documentación</p>
-                    <h3>Vencimientos</h3>
-                  </div>
+            <section class="person-editor-section">
+              <div class="form-section-head">
+                <div>
+                  <p class="muted">Operaciones</p>
+                  <h3>Habilitaciones</h3>
                 </div>
-                <div class="person-form-grid single-form-grid">
-                  <label>Tipo de libreta
-                    <select id="driverLicenseTypeInput">
-                      <option value="NO TIENE">NO TIENE</option>
-                      <option value="AUTO A">AUTO A</option>
-                      <option value="AUTO B">AUTO B</option>
-                      <option value="CAMION C">CAMION C</option>
-                      <option value="CAMION D">CAMION D</option>
-                      <option value="CAMION E">CAMION E</option>
-                      <option value="CAMION F">CAMION F</option>
-                    </select>
-                  </label>
-                  <label>Vencimiento libreta<input id="driverLicenseExpiryInput" type="date" disabled /></label>
-                  <label>Carné de salud<input id="healthCardExpiryInput" type="date" /></label>
-                </div>
-              </section>
+                <label class="check-line"><input id="personIsOperatorInput" type="checkbox" /> Es operador</label>
+              </div>
+              <div class="operator-category-field" id="operatorCategoryField">
+                <span>Categorías disponibles para cargar operaciones</span>
+                <div class="operation-category-selector" id="operatorCategoryInput"></div>
+              </div>
+            </section>
 
-              <section class="person-editor-section person-access-editor">
-                <div class="form-section-head">
-                  <div>
-                    <p class="muted">Acceso al sistema</p>
-                    <h3>Usuario y permisos</h3>
-                  </div>
-                  <label class="check-line"><input id="accessEnabledInput" type="checkbox" /> Tiene acceso</label>
+            <section class="person-editor-section">
+              <div class="form-section-head">
+                <div>
+                  <p class="muted">Turnos</p>
+                  <h3>Modalidad horaria</h3>
                 </div>
-                <div class="person-form-grid single-form-grid" id="accessFields">
-                  <label>Contraseña temporal<input id="accessPasswordInput" type="text" placeholder="Solo si se crea o cambia" /></label>
-                  <label>Rol de aplicación<select id="accessRoleInput"></select></label>
-                  <label class="check-line"><input id="accessActiveInput" type="checkbox" checked /> Acceso activo</label>
+              </div>
+              <div class="person-form-grid compact-form-grid">
+                <label>Modalidad
+                  <select id="scheduleModeInput">
+                    <option value="variable">Horario variable</option>
+                    <option value="fixed">Horario fijo</option>
+                  </select>
+                </label>
+              </div>
+              <div class="fixed-schedule-editor" id="fixedScheduleEditor">
+                <div class="fixed-schedule-head">
+                  <strong>Horario fijo por día</strong>
+                  <span>Se usa al crear semanas nuevas.</span>
                 </div>
-              </section>
-            </div>
+                <div id="fixedScheduleRows"></div>
+              </div>
+            </section>
           </div>
 
           <div class="modal-actions">
@@ -241,6 +244,7 @@
     <script src="./api-client.js?v=20260610-arch1"></script>
     <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./personal.js?v=20260611-operation-tariff-table1"></script>
+    <script src="./face-descriptor.js?v=20260615-face-mvp1"></script>
+    <script src="./personal.js?v=20260615-person-editor2"></script>
   </body>
 </html>
