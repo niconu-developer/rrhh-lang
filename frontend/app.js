@@ -24,12 +24,15 @@ const STATUS_CONFIG = {
 };
 
 const PLAN_API_BASE = apiBase();
+const PLANNER_PENDING_TURNS_KEY = "plannerPendingTurns";
 const CURRENT_WEEK_OFFSET = 2;
 let weeks = [];
 let currentWeekIndex = CURRENT_WEEK_OFFSET;
 let backendPlannerEnabled = false;
 let plannerHydrating = false;
 let plannerSyncTimer = null;
+let plannerSavedTurnSnapshot = new Map();
+let plannerDirtyTurns = new Map();
 let plannerRoleOrderList = [];
 let plannerVisibleRoles = new Set();
 let publishedPlanDates = new Set();
@@ -140,6 +143,7 @@ function buildWeeks() {
 
 function saveWeeks() {
   monthlyPersonCache = new Map();
+  collectDirtyPlannerTurns();
   schedulePlannerBackendSync();
 }
 
@@ -151,6 +155,108 @@ async function plannerApi(path, options = {}) {
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || "No se pudo conectar con la base");
   return payload;
+}
+
+function turnPayloadKey(payload) {
+  return `${payload.persona}|${payload.fecha}`;
+}
+
+function turnPayloadFingerprint(payload) {
+  return JSON.stringify({
+    persona: payload.persona || "",
+    fecha: payload.fecha || "",
+    estado: payload.estado || "VACIO",
+    hora_inicio: payload.hora_inicio || "",
+    hora_fin: payload.hora_fin || "",
+    actividad_ubicacion: payload.actividad_ubicacion || "",
+    origen: payload.origen || "",
+    origen_referencia_tipo: payload.origen_referencia_tipo || "",
+    origen_referencia_id: payload.origen_referencia_id || "",
+    fecha_regularizacion: payload.fecha_regularizacion || "",
+  });
+}
+
+function persistPendingPlannerTurns() {
+  const turnos = [...plannerDirtyTurns.values()];
+  if (!turnos.length) {
+    localStorage.removeItem(PLANNER_PENDING_TURNS_KEY);
+    return;
+  }
+  localStorage.setItem(
+    PLANNER_PENDING_TURNS_KEY,
+    JSON.stringify({
+      updatedAt: new Date().toISOString(),
+      turnos,
+    })
+  );
+}
+
+function readPendingPlannerTurns() {
+  try {
+    const payload = JSON.parse(localStorage.getItem(PLANNER_PENDING_TURNS_KEY) || "null");
+    return Array.isArray(payload?.turnos) ? payload.turnos : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function capturePlannerSnapshotFromCurrentState() {
+  plannerSavedTurnSnapshot = new Map(
+    allPlannerTurnPayloads().map((payload) => [turnPayloadKey(payload), turnPayloadFingerprint(payload)])
+  );
+  plannerDirtyTurns = new Map();
+  persistPendingPlannerTurns();
+}
+
+function markPlannerPayloadsSaved(payloads) {
+  payloads.forEach((payload) => {
+    const key = turnPayloadKey(payload);
+    plannerSavedTurnSnapshot.set(key, turnPayloadFingerprint(payload));
+    plannerDirtyTurns.delete(key);
+  });
+  persistPendingPlannerTurns();
+}
+
+function collectDirtyPlannerTurns() {
+  if (plannerHydrating || !weeks.length) return [];
+  allPlannerTurnPayloads().forEach((payload) => {
+    const key = turnPayloadKey(payload);
+    const fingerprint = turnPayloadFingerprint(payload);
+    if (plannerSavedTurnSnapshot.get(key) !== fingerprint) {
+      plannerDirtyTurns.set(key, payload);
+    } else {
+      plannerDirtyTurns.delete(key);
+    }
+  });
+  persistPendingPlannerTurns();
+  return [...plannerDirtyTurns.values()];
+}
+
+function applyTurnPayloadToWeeks(payload) {
+  if (!payload?.persona || !payload?.fecha) return false;
+  let applied = false;
+  weeks.forEach((week) => {
+    const dayIndex = week.days.findIndex((day) => inputDateValue(day.fullDate) === payload.fecha);
+    if (dayIndex === -1) return;
+    const personIndex = week.people.findIndex((person) => person.name === payload.persona);
+    if (personIndex === -1) return;
+    week.people[personIndex].shifts[dayIndex] = dbTurnToShift(payload);
+    applied = true;
+  });
+  return applied;
+}
+
+function restorePendingPlannerTurns() {
+  const pendingTurns = readPendingPlannerTurns();
+  if (!pendingTurns.length) return false;
+  pendingTurns.forEach((payload) => {
+    if (applyTurnPayloadToWeeks(payload)) {
+      plannerDirtyTurns.set(turnPayloadKey(payload), payload);
+    }
+  });
+  collectDirtyPlannerTurns();
+  if (plannerDirtyTurns.size) schedulePlannerBackendSync();
+  return plannerDirtyTurns.size > 0;
 }
 
 async function loadPlannerPeopleFromBackend() {
@@ -300,31 +406,46 @@ async function hydratePlannerFromBackend() {
   });
   backendPlannerEnabled = true;
   plannerHydrating = false;
-  if (!turns.length) window.setTimeout(syncPlannerTurnsToBackend, 300);
+  capturePlannerSnapshotFromCurrentState();
+  if (!turns.length) window.setTimeout(() => syncPlannerTurnsToBackend({ all: true }), 300);
   return true;
 }
 
 function schedulePlannerBackendSync() {
   if (plannerHydrating) return;
+  if (!plannerDirtyTurns.size) return;
   if (!backendPlannerEnabled) {
     showToast("Base no conectada. No se guardó el cambio.");
     return;
   }
   window.clearTimeout(plannerSyncTimer);
-  plannerSyncTimer = window.setTimeout(syncPlannerTurnsToBackend, 450);
+  plannerSyncTimer = window.setTimeout(syncPlannerTurnsToBackend, 120);
 }
 
-async function syncPlannerTurnsToBackend() {
+async function syncPlannerTurnsToBackend({ all = false, keepalive = false, silent = false } = {}) {
   if (!backendPlannerEnabled) return;
+  const turnos = all ? allPlannerTurnPayloads() : [...plannerDirtyTurns.values()];
+  if (!turnos.length) return;
   try {
     await plannerApi("/turnos/lote", {
       method: "POST",
-      body: JSON.stringify({ turnos: allPlannerTurnPayloads() }),
+      keepalive,
+      body: JSON.stringify({ turnos }),
     });
+    markPlannerPayloadsSaved(turnos);
   } catch (error) {
     backendPlannerEnabled = false;
-    showToast("No pude guardar en la base. Revisá el backend.");
+    persistPendingPlannerTurns();
+    if (!silent) showToast("No pude guardar en la base. Revisá el backend.");
   }
+}
+
+function flushPlannerBackendSync(options = {}) {
+  if (plannerHydrating || !backendPlannerEnabled) return;
+  collectDirtyPlannerTurns();
+  window.clearTimeout(plannerSyncTimer);
+  plannerSyncTimer = null;
+  syncPlannerTurnsToBackend(options);
 }
 
 async function publishSelectedDay() {
@@ -2126,6 +2247,18 @@ document.addEventListener("keydown", (event) => {
   else if (key === "z") undoLastShiftChange();
 });
 
+window.addEventListener("pagehide", () => {
+  if (editingCell) saveInlineEdit();
+  flushPlannerBackendSync({ keepalive: true, silent: true });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    if (editingCell) saveInlineEdit();
+    flushPlannerBackendSync({ keepalive: true, silent: true });
+  }
+});
+
 elements.contextMenu.addEventListener("click", (event) => {
   const actionButton = event.target.closest("[data-context-action]");
   if (!actionButton) return;
@@ -2242,6 +2375,7 @@ async function initPlanner() {
     setActiveWeek(CURRENT_WEEK_OFFSET);
     initPanelResizer();
     await hydratePlannerFromBackend();
+    restorePendingPlannerTurns();
     setActiveWeek(currentWeekIndex);
     setSingleSelectedCell(selected.personIndex, selected.dayIndex);
     await loadMonthlyPersonData();
