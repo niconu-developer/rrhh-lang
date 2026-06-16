@@ -423,9 +423,9 @@ function schedulePlannerBackendSync() {
 }
 
 async function syncPlannerTurnsToBackend({ all = false, keepalive = false, silent = false } = {}) {
-  if (!backendPlannerEnabled) return;
+  if (!backendPlannerEnabled) return false;
   const turnos = all ? allPlannerTurnPayloads() : [...plannerDirtyTurns.values()];
-  if (!turnos.length) return;
+  if (!turnos.length) return true;
   try {
     await plannerApi("/turnos/lote", {
       method: "POST",
@@ -433,23 +433,37 @@ async function syncPlannerTurnsToBackend({ all = false, keepalive = false, silen
       body: JSON.stringify({ turnos }),
     });
     markPlannerPayloadsSaved(turnos);
+    return true;
   } catch (error) {
     backendPlannerEnabled = false;
     persistPendingPlannerTurns();
     if (!silent) showToast("No pude guardar en la base. Revisá el backend.");
+    return false;
   }
 }
 
 function flushPlannerBackendSync(options = {}) {
-  if (plannerHydrating || !backendPlannerEnabled) return;
+  if (plannerHydrating || !backendPlannerEnabled) return Promise.resolve(false);
   collectDirtyPlannerTurns();
   window.clearTimeout(plannerSyncTimer);
   plannerSyncTimer = null;
-  syncPlannerTurnsToBackend(options);
+  return syncPlannerTurnsToBackend(options);
+}
+
+async function ensurePlannerBackendConnection() {
+  if (backendPlannerEnabled) return true;
+  try {
+    await plannerApi("/health");
+    backendPlannerEnabled = true;
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 async function publishSelectedDay() {
-  if (!backendPlannerEnabled) {
+  const backendAvailable = await ensurePlannerBackendConnection();
+  if (!backendAvailable) {
     showToast("Base no conectada. No se pudo publicar el día.");
     return;
   }
@@ -462,6 +476,15 @@ async function publishSelectedDay() {
     const dateValue = inputDateValue(dayToPublish.fullDate);
     const confirmed = window.confirm(`¿Publicar ${dayToPublish.label} ${dayToPublish.date} en el reloj?`);
     if (!confirmed) return;
+    if (editingCell) saveInlineEdit();
+    collectDirtyPlannerTurns();
+    if (plannerDirtyTurns.size) {
+      const synced = await flushPlannerBackendSync();
+      if (!synced) {
+        showToast("No se publicó: primero hay que guardar los cambios pendientes.");
+        return;
+      }
+    }
     const configRows = await plannerApi("/configuracion");
     const currentValue = configRows.find((row) => row.clave === "published_plan_dates")?.valor;
     let published = [];
@@ -483,7 +506,7 @@ async function publishSelectedDay() {
     updatePublishedDayStatus();
     showToast(`${dayToPublish.label} ${dayToPublish.date} publicado para el reloj`);
   } catch (error) {
-    showToast("No se pudo publicar el día");
+    showToast(error.message || "No se pudo publicar el día");
   }
 }
 
