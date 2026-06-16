@@ -1,10 +1,10 @@
 # Backend local
 
-Este backend usa Python + SQLite y no requiere instalar paquetes.
+Este backend usa Python y puede trabajar con PostgreSQL o SQLite local.
 
 ## Base de datos
 
-Archivo:
+Archivo SQLite local, si no se define `DATABASE_URL`:
 
 ```text
 backend/planner.db
@@ -16,6 +16,14 @@ Scripts:
 backend/schema.sql
 backend/seed.sql
 ```
+
+`schema.sql` define estructura y migraciones base. `seed.sql`/`seed.postgres.sql` contienen datos semilla de referencia o demo y no se ejecutan por defecto. Para cargarlos deliberadamente hay que iniciar el backend con:
+
+```bash
+PLANNER_RUN_DATA_SEED=1 python3 backend/app.py
+```
+
+En produccion con datos reales, mantener `PLANNER_RUN_DATA_SEED=0` o sin definir.
 
 ## Estructura interna
 

@@ -35,6 +35,7 @@ from backend.settings import (
     HOST,
     PORT,
     BASE_PATH,
+    RUN_DATA_SEED,
     SERVE_STATIC,
 )
 
@@ -47,9 +48,11 @@ def ensure_database():
     with connect() as connection:
         if schema_path.exists():
             execute_script(connection, schema_path.read_text(encoding="utf-8"))
+        ensure_reference_data(connection)
         if IS_POSTGRES:
             if seed_path.exists():
-                execute_script(connection, seed_path.read_text(encoding="utf-8"))
+                if RUN_DATA_SEED:
+                    execute_script(connection, seed_path.read_text(encoding="utf-8"))
             ensure_required_role_permissions(connection)
             ensure_identity_model(connection)
         else:
@@ -68,7 +71,7 @@ def ensure_database():
             ensure_column(connection, "relojes_faciales", "eliminado", "INTEGER NOT NULL DEFAULT 0")
             ensure_column(connection, "relojes_faciales", "fecha_eliminacion", "TEXT")
             ensure_turnos_unique_index(connection)
-            if seed_path.exists():
+            if seed_path.exists() and RUN_DATA_SEED:
                 execute_script(connection, seed_path.read_text(encoding="utf-8"))
             ensure_required_role_permissions(connection)
             ensure_identity_model(connection)
@@ -77,14 +80,48 @@ def ensure_database():
         ensure_bootstrap_admin(connection)
         ensure_seed_named_admin(connection)
         ensure_private_person_codes(connection)
-        seed_default_operation_tarifas(connection)
-        seed_default_persona_operation_tarifas(connection)
+        if RUN_DATA_SEED:
+            seed_default_operation_tarifas(connection)
+            seed_default_persona_operation_tarifas(connection)
 
 
 def ensure_column(connection, table, column, definition):
     existing = [row["name"] for row in connection.execute(f"PRAGMA table_info({table})")]
     if column not in existing:
         connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def ensure_reference_data(connection):
+    connection.executemany(
+        "INSERT INTO roles_app (nombre) VALUES (?) ON CONFLICT(nombre) DO NOTHING",
+        [("admin",), ("rrhh",), ("usuario",)],
+    )
+    connection.executemany(
+        """
+        INSERT INTO roles_operativos (nombre, aparece_plan_semanal)
+        VALUES (?, ?)
+        ON CONFLICT(nombre) DO NOTHING
+        """,
+        [
+            ("Logistico", 1),
+            ("Referente", 1),
+            ("Operador", 1),
+            ("Depo y Mant.", 1),
+            ("Admin", 0),
+        ],
+    )
+    connection.executemany(
+        """
+        INSERT INTO configuracion (clave, valor)
+        VALUES (?, ?)
+        ON CONFLICT(clave) DO NOTHING
+        """,
+        [
+            ("operation_bands", '["Hasta 4 horas", "4 a 8 horas", "8 a 12 horas"]'),
+            ("tolerancia_alerta_verde_minutos", "15"),
+            ("tolerancia_alerta_amarilla_minutos", "30"),
+        ],
+    )
 
 
 def ensure_private_person_codes(connection):
@@ -464,8 +501,6 @@ def ensure_operation_tarifas_schema(connection):
     ensure_column(connection, "operaciones", "operacion_tarifa_id", "INTEGER")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_operacion_tarifas_activo ON operacion_tarifas(activo)")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_persona_operacion_tarifas_persona ON persona_operacion_tarifas(persona_id)")
-    seed_default_operation_tarifas(connection)
-    seed_default_persona_operation_tarifas(connection)
 
 
 def seed_default_operation_tarifas(connection):
@@ -844,6 +879,8 @@ def ensure_required_role_permissions(connection):
         "aprobaciones",
         "operaciones",
         "reportes",
+        "analisis",
+        "facturacion",
         "importacion",
         "liquidacion",
         "personal",
