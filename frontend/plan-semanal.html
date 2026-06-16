@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Plan semanal</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260611-density-pass1" />
+    <link rel="stylesheet" href="./css/global.css?v=20260616-mobile-header2" />
     <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260611-density-pass1" />
   </head>
   <body>
@@ -52,6 +52,27 @@
             <tbody id="scheduleBody"></tbody>
           </table>
         </div>
+
+        <section class="mobile-day-planner" id="mobileDayPlanner" aria-label="Plan diario">
+          <div class="mobile-day-control">
+            <div class="mobile-day-nav" aria-label="Navegar días">
+              <button class="ghost-button" id="mobilePrevDayButton" type="button" aria-label="Día anterior">&lt;</button>
+              <button class="ghost-button" id="mobileTodayButton" type="button">Hoy</button>
+              <button class="ghost-button" id="mobileNextDayButton" type="button" aria-label="Día siguiente">&gt;</button>
+            </div>
+            <div class="mobile-day-heading">
+              <span>Plan diario</span>
+              <strong id="mobileDayTitle">Lunes 18</strong>
+              <small id="mobileDayMeta">0 personas planificadas</small>
+            </div>
+          </div>
+          <div class="mobile-day-publication">
+            <span class="publish-status not-published" id="mobilePublishDayStatus">No publicado</span>
+            <button class="ghost-button small" id="mobilePublishDayButton" type="button">Publicar día</button>
+            <button class="primary-button small" id="mobileExportDayButton" type="button">Exportar día</button>
+          </div>
+          <div class="mobile-day-list" id="mobileDayList"></div>
+        </section>
       </section>
 
       <div class="panel-resizer" id="panelResizer" role="separator" aria-label="Redimensionar panel lateral" aria-orientation="vertical" tabindex="0"></div>
@@ -171,6 +192,57 @@
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="mobile-sheet-backdrop" id="mobileSheetBackdrop" hidden></div>
+    <section class="mobile-shift-sheet" id="mobileShiftSheet" data-mode="edit" aria-label="Editar turno móvil" hidden>
+      <div class="mobile-sheet-handle" aria-hidden="true"></div>
+      <div class="mobile-sheet-head">
+        <div>
+          <p class="muted" id="mobileSheetEyebrow">Editar turno</p>
+          <h2 id="mobileSheetTitle">Persona · Día</h2>
+        </div>
+        <button class="ghost-button tiny" id="mobileSheetClose" type="button">Cerrar</button>
+      </div>
+      <form class="mobile-sheet-form" id="mobileShiftForm">
+        <label>
+          Estado
+          <select id="mobileShiftStatus">
+            <option value="NORMAL">Jornada normal</option>
+            <option value="VACIO">Vacío</option>
+            <option value="LIBRE">Libre</option>
+            <option value="LICENCIA">Licencia</option>
+            <option value="SUSPENDIDO">Suspendido</option>
+            <option value="LIC. MEDICA">Lic. médica</option>
+            <option value="AUSENTE">Ausente</option>
+          </select>
+        </label>
+        <div class="form-row mobile-time-fields">
+          <label>
+            Entrada
+            <input id="mobileShiftStart" type="text" inputmode="numeric" maxlength="5" placeholder="9:00" />
+          </label>
+          <label>
+            Salida
+            <input id="mobileShiftEnd" type="text" inputmode="numeric" maxlength="5" placeholder="18:00" />
+          </label>
+        </div>
+        <label class="mobile-activity-field">
+          Actividad / ubicación
+          <input id="mobileShiftActivity" type="text" placeholder="LOGISTICA, DEPO, LATU..." />
+        </label>
+        <button class="primary-button full" type="submit">Guardar turno</button>
+      </form>
+      <div class="mobile-sheet-actions" id="mobileSheetActions">
+        <button type="button" data-mobile-status="LIBRE">Libre</button>
+        <button type="button" data-mobile-action="copy">Copiar</button>
+        <button type="button" data-mobile-action="paste">Pegar</button>
+        <button type="button" data-mobile-status="LICENCIA">Licencia</button>
+        <button type="button" data-mobile-status="SUSPENDIDO">Suspendido</button>
+        <button type="button" data-mobile-status="LIC. MEDICA">Lic. médica</button>
+        <button type="button" data-mobile-status="AUSENTE">Ausente</button>
+        <button type="button" data-mobile-action="normal">Jornada normal</button>
+        <button type="button" data-mobile-action="edit">Editar detalle</button>
+      </div>
+    </section>
     <div class="shift-context-menu" id="shiftContextMenu" aria-hidden="true">
       <button type="button" data-context-action="status" data-status="LIBRE">Libre</button>
       <button type="button" id="copyShiftButton">Copiar</button>
@@ -183,6 +255,6 @@
     <script src="./api-client.js?v=20260610-arch1"></script>
     <script src="./shared-data.js?v=20260610-opcats1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./app.js?v=20260611-no-demo-shifts1"></script>
+    <script src="./app.js?v=20260615-mobile-day1"></script>
   </body>
 </html>

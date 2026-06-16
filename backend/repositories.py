@@ -784,10 +784,12 @@ def save_usuario_for_persona(connection, persona_id, access_payload):
     if username.lower() == "admin":
         raise ValueError("admin se reserva como usuario tecnico del sistema")
 
-    duplicate = connection.execute(
-        "SELECT id FROM usuarios WHERE (usuario = ? OR lower(coalesce(email, '')) = lower(?)) AND (? IS NULL OR id <> ?)",
-        (username, email, existing["id"] if existing else None, existing["id"] if existing else None),
-    ).fetchone()
+    duplicate_sql = "SELECT id FROM usuarios WHERE (usuario = ? OR lower(coalesce(email, '')) = lower(?))"
+    duplicate_params = [username, email]
+    if existing:
+        duplicate_sql += " AND id <> ?"
+        duplicate_params.append(existing["id"])
+    duplicate = connection.execute(duplicate_sql, duplicate_params).fetchone()
     if duplicate:
         raise ValueError("Ese correo ya tiene acceso")
 
@@ -1196,11 +1198,15 @@ def save_usuario(payload, user_id=None):
             raise ValueError("Todo usuario debe estar vinculado a una persona, salvo admin")
         if persona_id and is_technical_user:
             raise ValueError("admin se reserva como usuario tecnico sin persona vinculada")
-        duplicate = connection.execute("""
+        duplicate_sql = """
             SELECT id FROM usuarios
             WHERE (usuario = ? OR lower(coalesce(email, '')) = lower(?))
-              AND (? IS NULL OR id <> ?)
-        """, (username, email, user_id, user_id)).fetchone()
+        """
+        duplicate_params = [username, email]
+        if user_id:
+            duplicate_sql += " AND id <> ?"
+            duplicate_params.append(user_id)
+        duplicate = connection.execute(duplicate_sql, duplicate_params).fetchone()
         if duplicate:
             raise ValueError("Ese correo ya tiene acceso")
         role_id = app_role_id_for(connection, payload.get("rol_app") or "usuario")

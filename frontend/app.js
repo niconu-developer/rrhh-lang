@@ -92,6 +92,27 @@ const elements = {
   exportDayButton: document.querySelector("#exportDayButton"),
   publishDayButton: document.querySelector("#publishDayButton"),
   publishDayStatus: document.querySelector("#publishDayStatus"),
+  mobileDayPlanner: document.querySelector("#mobileDayPlanner"),
+  mobilePrevDayButton: document.querySelector("#mobilePrevDayButton"),
+  mobileTodayButton: document.querySelector("#mobileTodayButton"),
+  mobileNextDayButton: document.querySelector("#mobileNextDayButton"),
+  mobileDayTitle: document.querySelector("#mobileDayTitle"),
+  mobileDayMeta: document.querySelector("#mobileDayMeta"),
+  mobileDayList: document.querySelector("#mobileDayList"),
+  mobilePublishDayButton: document.querySelector("#mobilePublishDayButton"),
+  mobilePublishDayStatus: document.querySelector("#mobilePublishDayStatus"),
+  mobileExportDayButton: document.querySelector("#mobileExportDayButton"),
+  mobileSheetBackdrop: document.querySelector("#mobileSheetBackdrop"),
+  mobileShiftSheet: document.querySelector("#mobileShiftSheet"),
+  mobileSheetClose: document.querySelector("#mobileSheetClose"),
+  mobileSheetEyebrow: document.querySelector("#mobileSheetEyebrow"),
+  mobileSheetTitle: document.querySelector("#mobileSheetTitle"),
+  mobileShiftForm: document.querySelector("#mobileShiftForm"),
+  mobileShiftStatus: document.querySelector("#mobileShiftStatus"),
+  mobileShiftStart: document.querySelector("#mobileShiftStart"),
+  mobileShiftEnd: document.querySelector("#mobileShiftEnd"),
+  mobileShiftActivity: document.querySelector("#mobileShiftActivity"),
+  mobileSheetActions: document.querySelector("#mobileSheetActions"),
   contextMenu: document.querySelector("#shiftContextMenu"),
   copyShiftButton: document.querySelector("#copyShiftButton"),
   pasteShiftButton: document.querySelector("#pasteShiftButton"),
@@ -362,13 +383,16 @@ function selectedDayDateValue() {
 }
 
 function updatePublishedDayStatus() {
-  if (!elements.publishDayStatus) return;
   const isPublished = publishedPlanDates.has(selectedDayDateValue());
-  elements.publishDayStatus.textContent = isPublished ? "Publicado" : "No publicado";
-  elements.publishDayStatus.classList.toggle("published", isPublished);
-  elements.publishDayStatus.classList.toggle("not-published", !isPublished);
-  elements.publishDayStatus.classList.toggle("hidden", !isPublished);
+  [elements.publishDayStatus, elements.mobilePublishDayStatus].forEach((statusEl) => {
+    if (!statusEl) return;
+    statusEl.textContent = isPublished ? "Publicado" : "No publicado";
+    statusEl.classList.toggle("published", isPublished);
+    statusEl.classList.toggle("not-published", !isPublished);
+    statusEl.classList.toggle("hidden", !isPublished);
+  });
   elements.publishDayButton?.classList.toggle("hidden", isPublished);
+  elements.mobilePublishDayButton?.classList.toggle("hidden", isPublished);
 }
 
 function clonePeople(source) {
@@ -712,6 +736,7 @@ function render() {
   renderBody();
   updateOperatorDetail();
   updateDaySummary();
+  renderMobileDayPlanner();
   updateBulkEditor();
 }
 
@@ -984,6 +1009,252 @@ function updateDaySummary() {
       </article>`)
       .join("")
     : `<article class="day-summary-item"><strong>Sin turnos planificados</strong><span>No hay horarios cargados para este día.</span></article>`;
+}
+
+function renderMobileDayPlanner() {
+  if (!elements.mobileDayPlanner || !days.length || !people.length) return;
+  const day = days[selectedDayDetailIndex] || days[selected.dayIndex] || days[0];
+  const { total } = daySummaryData(selectedDayDetailIndex);
+  const dateLabel = day.fullDate.toLocaleDateString("es-UY", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  elements.mobileDayTitle.textContent = capitalize(dateLabel);
+  elements.mobileDayMeta.textContent = `${total} personas planificadas`;
+  updatePublishedDayStatus();
+
+  const visiblePeople = getVisiblePeople();
+  if (!visiblePeople.length) {
+    elements.mobileDayList.innerHTML = `<article class="mobile-empty-state">No hay personas para ese filtro.</article>`;
+    return;
+  }
+
+  const roleGroups = [];
+  visiblePeople.forEach((item) => {
+    const role = item.person.role || "Sin rol";
+    let group = roleGroups.find((candidate) => candidate.role === role);
+    if (!group) {
+      group = { role, people: [] };
+      roleGroups.push(group);
+    }
+    group.people.push(item);
+  });
+
+  elements.mobileDayList.innerHTML = roleGroups
+    .map((group) => `<section class="mobile-role-group">
+      <h3>${group.role}</h3>
+      <div class="mobile-role-list">
+        ${group.people.map(({ person, personIndex }) => mobileShiftCardHtml(person, personIndex, selectedDayDetailIndex)).join("")}
+      </div>
+    </section>`)
+    .join("");
+}
+
+function mobileShiftCardHtml(person, personIndex, dayIndex) {
+  const shift = getShift(personIndex, dayIndex);
+  const key = cellKey(personIndex, dayIndex);
+  const selectedClass = selectedCells.has(key) ? "selected" : "";
+  const copiedClass = copiedCellsWeekIndex === currentWeekIndex && copiedCells.has(key) ? "copied" : "";
+  const pastedClass = pastedCells.has(key) ? "pasted" : "";
+  const regularizedKey = `${person.name}|${inputDateValue(days[dayIndex].fullDate)}`;
+  const regularizedClass = regularizedTurnKeys.has(regularizedKey) ? "regularized" : "";
+  const statusClass = shift.noSchedule ? shift.statusClass : "normal";
+  const time = shift.noSchedule ? shift.status : `${shift.start} - ${shift.end}`;
+  const activity = shift.noSchedule ? mobileNoScheduleSubtitle(shift.status) : shift.activity || "LOGISTICA";
+  const regularizedTitle = regularizedClass ? regularizedTooltip(regularizedTurnOrigins.get(regularizedKey)) : "";
+  return `<button class="mobile-shift-card ${statusClass} ${selectedClass} ${copiedClass} ${pastedClass} ${regularizedClass}" type="button" data-mobile-person="${personIndex}" data-mobile-day="${dayIndex}" title="${regularizedTitle}">
+    <span class="mobile-shift-person">${person.name}</span>
+    <span class="mobile-shift-time">${time}</span>
+    <span class="mobile-shift-activity">${activity}</span>
+    <span class="mobile-shift-more" aria-hidden="true">...</span>
+  </button>`;
+}
+
+function mobileNoScheduleSubtitle(status) {
+  const normalized = normalizeStatus(status);
+  if (normalized === "VACIO") return "Sin horario cargado";
+  if (normalized === "LIBRE") return "Sin horario";
+  return "Estado del día";
+}
+
+function setMobileDay(weekIndex, dayIndex) {
+  if (!weeks[weekIndex] || !weeks[weekIndex].days[dayIndex]) return false;
+  setActiveWeek(weekIndex);
+  elements.week.value = String(weekIndex);
+  selectedDayDetailIndex = dayIndex;
+  selected.dayIndex = dayIndex;
+  selected.personIndex = Math.min(selected.personIndex, people.length - 1);
+  setSingleSelectedCell(selected.personIndex, selected.dayIndex);
+  loadMonthlyPersonData().catch(() => {});
+  render();
+  return true;
+}
+
+function moveMobileDay(delta) {
+  const nextGlobalIndex = currentWeekIndex * 7 + selectedDayDetailIndex + delta;
+  if (nextGlobalIndex < 0 || nextGlobalIndex >= weeks.length * 7) {
+    showToast(delta < 0 ? "No hay días anteriores en la vista" : "No hay días posteriores en la vista");
+    return;
+  }
+  const weekIndex = Math.floor(nextGlobalIndex / 7);
+  const dayIndex = nextGlobalIndex % 7;
+  setMobileDay(weekIndex, dayIndex);
+}
+
+function setMobileToday() {
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  setMobileDay(CURRENT_WEEK_OFFSET, todayIndex);
+  showToast("Día actual seleccionado");
+}
+
+function selectedMobileTarget() {
+  const sheet = elements.mobileShiftSheet;
+  if (!sheet) return null;
+  const personIndex = Number(sheet.dataset.personIndex);
+  const dayIndex = Number(sheet.dataset.dayIndex);
+  if (!people[personIndex] || !days[dayIndex]) return null;
+  return { personIndex, dayIndex };
+}
+
+function openMobileSheet(personIndex, dayIndex, mode = "edit") {
+  const person = people[personIndex];
+  const day = days[dayIndex];
+  if (!person || !day || !elements.mobileShiftSheet) return;
+  contextTarget = { personIndex, dayIndex };
+  selected = { personIndex, dayIndex };
+  selectedDayDetailIndex = dayIndex;
+  setSingleSelectedCell(personIndex, dayIndex);
+  elements.mobileShiftSheet.dataset.personIndex = String(personIndex);
+  elements.mobileShiftSheet.dataset.dayIndex = String(dayIndex);
+  elements.mobileShiftSheet.dataset.mode = mode;
+  elements.mobileSheetTitle.textContent = `${person.name} · ${day.label} ${day.date}`;
+  elements.mobileSheetEyebrow.textContent = mode === "actions" ? "Acciones rápidas" : "Editar turno";
+  elements.mobileSheetActions.querySelector('[data-mobile-action="paste"]').disabled = !copiedShift;
+  fillMobileShiftForm(personIndex, dayIndex);
+  elements.mobileSheetBackdrop.hidden = false;
+  elements.mobileShiftSheet.hidden = false;
+  document.body.classList.add("mobile-sheet-open");
+  renderMobileDayPlanner();
+}
+
+function openMobileShiftEditor(personIndex, dayIndex) {
+  openMobileSheet(personIndex, dayIndex, "edit");
+  window.setTimeout(() => elements.mobileShiftStatus?.focus(), 0);
+}
+
+function openMobileQuickActions(personIndex, dayIndex) {
+  openMobileSheet(personIndex, dayIndex, "actions");
+}
+
+function closeMobileSheet() {
+  elements.mobileSheetBackdrop.hidden = true;
+  elements.mobileShiftSheet.hidden = true;
+  document.body.classList.remove("mobile-sheet-open");
+}
+
+function fillMobileShiftForm(personIndex, dayIndex) {
+  const shift = getShift(personIndex, dayIndex);
+  if (shift.noSchedule) {
+    elements.mobileShiftStatus.value = normalizeStatus(shift.status);
+    elements.mobileShiftStart.value = "";
+    elements.mobileShiftEnd.value = "";
+    elements.mobileShiftActivity.value = "";
+  } else {
+    elements.mobileShiftStatus.value = "NORMAL";
+    elements.mobileShiftStart.value = compactTime(shift.start);
+    elements.mobileShiftEnd.value = compactTime(shift.end);
+    elements.mobileShiftActivity.value = shift.activity || "LOGISTICA";
+  }
+  syncMobileSheetStatusFields();
+}
+
+function syncMobileSheetStatusFields() {
+  const isNormal = elements.mobileShiftStatus.value === "NORMAL";
+  [elements.mobileShiftStart, elements.mobileShiftEnd, elements.mobileShiftActivity].forEach((input) => {
+    input.disabled = !isNormal;
+  });
+}
+
+function saveMobileShiftEdit(event) {
+  event.preventDefault();
+  const target = selectedMobileTarget();
+  if (!target) return;
+  const status = elements.mobileShiftStatus.value;
+  const { personIndex, dayIndex } = target;
+  const before = people[personIndex].shifts[dayIndex];
+  let after = status;
+
+  if (status === "NORMAL") {
+    const start = normalizeTime(elements.mobileShiftStart.value);
+    const end = normalizeTime(elements.mobileShiftEnd.value);
+    const activity = normalizeActivity(elements.mobileShiftActivity.value || "LOGISTICA");
+    if (!start || !end) {
+      showToast("Completá entrada y salida");
+      return;
+    }
+    after = serializeShift({ free: false, start, end, activity });
+  }
+
+  pushUndo([{ personIndex, dayIndex, before, after }], "edición mobile");
+  people[personIndex].shifts[dayIndex] = after;
+  selected = { personIndex, dayIndex };
+  selectedDayDetailIndex = dayIndex;
+  setSingleSelectedCell(personIndex, dayIndex);
+  saveWeeks();
+  closeMobileSheet();
+  render();
+  showToast("Turno actualizado");
+}
+
+function handleMobileAction(event) {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const target = selectedMobileTarget();
+  if (!target) return;
+  const { personIndex, dayIndex } = target;
+  contextTarget = { personIndex, dayIndex };
+  selected = { personIndex, dayIndex };
+  selectedDayDetailIndex = dayIndex;
+  setSingleSelectedCell(personIndex, dayIndex);
+
+  if (button.dataset.mobileStatus) {
+    closeMobileSheet();
+    applyContextShiftType(button.dataset.mobileStatus);
+    return;
+  }
+
+  if (button.dataset.mobileAction === "normal") {
+    closeMobileSheet();
+    applyContextShiftType("normal");
+    return;
+  }
+
+  if (button.dataset.mobileAction === "copy") {
+    copyContextShift();
+    closeMobileSheet();
+    return;
+  }
+
+  if (button.dataset.mobileAction === "paste") {
+    pasteContextShift({ personIndex, dayIndex });
+    closeMobileSheet();
+    return;
+  }
+
+  if (button.dataset.mobileAction === "edit") {
+    openMobileShiftEditor(personIndex, dayIndex);
+  }
+}
+
+function mobileCardTarget(event) {
+  const card = event.target.closest(".mobile-shift-card");
+  if (!card) return null;
+  return {
+    personIndex: Number(card.dataset.mobilePerson),
+    dayIndex: Number(card.dataset.mobileDay),
+  };
 }
 
 function updateBulkEditor() {
@@ -1860,6 +2131,59 @@ elements.contextMenu.addEventListener("click", (event) => {
   if (!actionButton) return;
   if (actionButton.dataset.contextAction === "normal") applyContextShiftType("normal");
   if (actionButton.dataset.contextAction === "status") applyContextShiftType(actionButton.dataset.status);
+});
+
+let mobilePressTimer = null;
+let mobilePressStart = null;
+let mobileLongPressTriggered = false;
+
+function clearMobilePressTimer() {
+  window.clearTimeout(mobilePressTimer);
+  mobilePressTimer = null;
+  mobilePressStart = null;
+}
+
+elements.mobilePrevDayButton?.addEventListener("click", () => moveMobileDay(-1));
+elements.mobileNextDayButton?.addEventListener("click", () => moveMobileDay(1));
+elements.mobileTodayButton?.addEventListener("click", setMobileToday);
+elements.mobilePublishDayButton?.addEventListener("click", publishSelectedDay);
+elements.mobileExportDayButton?.addEventListener("click", exportDayJpg);
+elements.mobileSheetClose?.addEventListener("click", closeMobileSheet);
+elements.mobileSheetBackdrop?.addEventListener("click", closeMobileSheet);
+elements.mobileShiftStatus?.addEventListener("change", syncMobileSheetStatusFields);
+elements.mobileShiftActivity?.addEventListener("input", () => {
+  elements.mobileShiftActivity.value = normalizeActivity(elements.mobileShiftActivity.value);
+});
+elements.mobileShiftForm?.addEventListener("submit", saveMobileShiftEdit);
+elements.mobileSheetActions?.addEventListener("click", handleMobileAction);
+elements.mobileDayList?.addEventListener("contextmenu", (event) => {
+  if (event.target.closest(".mobile-shift-card")) event.preventDefault();
+});
+elements.mobileDayList?.addEventListener("pointerdown", (event) => {
+  const target = mobileCardTarget(event);
+  if (!target || event.button !== 0) return;
+  mobileLongPressTriggered = false;
+  mobilePressStart = { x: event.clientX, y: event.clientY, ...target };
+  mobilePressTimer = window.setTimeout(() => {
+    mobileLongPressTriggered = true;
+    openMobileQuickActions(target.personIndex, target.dayIndex);
+  }, 1000);
+});
+elements.mobileDayList?.addEventListener("pointermove", (event) => {
+  if (!mobilePressStart) return;
+  const moved = Math.abs(event.clientX - mobilePressStart.x) + Math.abs(event.clientY - mobilePressStart.y);
+  if (moved > 12) clearMobilePressTimer();
+});
+elements.mobileDayList?.addEventListener("pointerup", clearMobilePressTimer);
+elements.mobileDayList?.addEventListener("pointercancel", clearMobilePressTimer);
+elements.mobileDayList?.addEventListener("click", (event) => {
+  const target = mobileCardTarget(event);
+  if (!target) return;
+  if (mobileLongPressTriggered) {
+    mobileLongPressTriggered = false;
+    return;
+  }
+  openMobileShiftEditor(target.personIndex, target.dayIndex);
 });
 
 elements.copyShiftButton.addEventListener("click", copyContextShift);

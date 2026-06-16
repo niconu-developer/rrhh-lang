@@ -1843,6 +1843,278 @@ select.current-week-selected {
   line-height: 1.35;
 }
 
+.mobile-day-planner,
+.mobile-sheet-backdrop,
+.mobile-shift-sheet {
+  display: none;
+}
+
+.mobile-day-control,
+.mobile-day-publication,
+.mobile-day-nav,
+.mobile-sheet-head {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-day-control {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-day-nav {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.mobile-day-heading {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.mobile-day-heading span,
+.mobile-day-heading small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mobile-day-heading strong {
+  font-size: 18px;
+  line-height: 1.05;
+}
+
+.mobile-day-publication {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.mobile-day-list {
+  display: grid;
+  gap: 16px;
+}
+
+.mobile-role-group {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-role-group h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.mobile-role-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mobile-shift-card {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  grid-template-areas:
+    "person time more"
+    "activity activity more";
+  align-items: center;
+  gap: 4px 10px;
+  border: 1px solid var(--soft-line);
+  border-radius: 12px;
+  background: #fbfcfd;
+  color: var(--ink);
+  padding: 10px 12px;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.mobile-shift-card.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.mobile-shift-card.copied {
+  border-color: #38bdf8;
+  background: #dff5ff;
+}
+
+.mobile-shift-card.pasted {
+  border-color: #f3c665;
+  background: #fff3c4;
+}
+
+.mobile-shift-card.regularized {
+  outline: 2px dashed #7dd3fc;
+  outline-offset: -5px;
+}
+
+.mobile-shift-card.free {
+  background: var(--free);
+}
+
+.mobile-shift-card.empty {
+  background: #f8fafb;
+  color: #8a949e;
+}
+
+.mobile-shift-card.license {
+  background: #bfe7f5;
+}
+
+.mobile-shift-card.suspended {
+  background: #fff0b8;
+}
+
+.mobile-shift-card.medical {
+  background: #145c43;
+  color: #fff;
+}
+
+.mobile-shift-card.absent {
+  background: #f0d7d7;
+  color: #7b1f2a;
+}
+
+.mobile-shift-person {
+  grid-area: person;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-shift-time {
+  grid-area: time;
+  font-size: 13px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.mobile-shift-activity {
+  grid-area: activity;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mobile-shift-card.medical .mobile-shift-activity {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mobile-shift-more {
+  grid-area: more;
+  align-self: center;
+  color: currentColor;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: 1px;
+  opacity: 0.52;
+}
+
+.mobile-empty-state {
+  border: 1px solid var(--soft-line);
+  border-radius: 12px;
+  padding: 18px;
+  background: #fbfcfd;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(3, 6, 10, 0.66);
+}
+
+.mobile-shift-sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 90;
+  max-height: min(82vh, 640px);
+  overflow: auto;
+  border: 1px solid var(--soft-line);
+  border-radius: 18px 18px 0 0;
+  background: var(--panel);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.35);
+  padding: 10px 14px 16px;
+}
+
+.mobile-sheet-backdrop:not([hidden]),
+.mobile-shift-sheet:not([hidden]) {
+  display: block;
+}
+
+.mobile-sheet-handle {
+  width: 48px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--soft-line);
+  margin: 0 auto 12px;
+}
+
+.mobile-sheet-head {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mobile-sheet-head h2 {
+  font-size: 18px;
+}
+
+.mobile-sheet-form {
+  display: grid;
+  gap: 12px;
+}
+
+.mobile-time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mobile-sheet-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobile-shift-sheet[data-mode="actions"] .mobile-sheet-form,
+.mobile-shift-sheet[data-mode="edit"] .mobile-sheet-actions {
+  display: none;
+}
+
+.mobile-sheet-actions button {
+  min-height: 44px;
+  border: 1px solid var(--soft-line);
+  border-radius: 10px;
+  background: #fbfcfd;
+  color: var(--ink);
+  font-weight: 900;
+  text-align: center;
+}
+
+.mobile-sheet-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .kiosk-day-summary {
   border-top: 1px solid var(--soft-line);
   padding-top: 18px;
@@ -5073,10 +5345,7 @@ label {
   }
 
   .brand-heading .eyebrow {
-    max-width: 100%;
-    font-size: 10px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none;
   }
 
   .brand-heading h1 {
@@ -5090,12 +5359,37 @@ label {
   .top-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: stretch;
+    gap: 8px;
   }
 
   .top-actions > * {
     width: 100%;
+  }
+
+  .top-actions .session-help-link,
+  .top-actions a[href$="ayuda.html"] {
+    display: none;
+  }
+
+  .top-actions .session-chip,
+  .top-actions #logoutButton {
+    min-width: 0;
+    min-height: 42px;
+    border-radius: 10px;
+  }
+
+  .top-actions .session-chip {
+    justify-content: flex-start;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .top-actions #logoutButton {
+    width: auto;
+    min-width: 76px;
   }
 
   .primary-button,
@@ -5176,6 +5470,121 @@ label {
   .operation-form button,
   .face-actions button,
   .mark-project-panel select {
+    min-height: 44px;
+  }
+
+  .plan-shell {
+    display: block;
+  }
+
+  .planner-panel {
+    padding: 10px;
+  }
+
+  .planner-panel .toolbar {
+    margin-bottom: 12px;
+  }
+
+  .planner-panel .toolbar-week,
+  .planner-panel .toolbar-compact,
+  .planner-panel .toolbar-action,
+  .grid-frame,
+  .panel-resizer,
+  .side-panel {
+    display: none;
+  }
+
+  .mobile-day-planner {
+    display: grid;
+    gap: 14px;
+  }
+
+  .mobile-day-control {
+    align-items: flex-start;
+  }
+
+  .mobile-day-nav .ghost-button {
+    min-width: 48px;
+  }
+
+  .mobile-day-nav #mobileTodayButton {
+    min-width: 82px;
+  }
+
+  .mobile-day-heading strong {
+    color: #f8fbff;
+  }
+
+  .mobile-day-publication .publish-status {
+    min-height: 36px;
+    margin-top: 0;
+  }
+
+  .mobile-day-publication .small {
+    min-height: 36px;
+  }
+
+  .mobile-shift-card,
+  .mobile-empty-state,
+  .mobile-shift-sheet,
+  .mobile-sheet-actions button {
+    background: #151a23;
+    border-color: #2d3850;
+    color: #edf3fb;
+  }
+
+  .mobile-shift-card.normal {
+    background: #171e2b;
+  }
+
+  .mobile-shift-card.empty {
+    background: #101722;
+    color: #8f9bb0;
+  }
+
+  .mobile-shift-card.free {
+    background: #1e3b2c;
+    color: #9ce5ad;
+  }
+
+  .mobile-shift-card.license {
+    background: #14334a;
+    color: #a9ddff;
+  }
+
+  .mobile-shift-card.suspended {
+    background: #493916;
+    color: #ffd875;
+  }
+
+  .mobile-shift-card.medical {
+    background: #124632;
+    color: #f8fbff;
+  }
+
+  .mobile-shift-card.absent {
+    background: #3a1f2a;
+    color: #ff9dad;
+  }
+
+  .mobile-shift-activity,
+  .mobile-day-heading span,
+  .mobile-day-heading small,
+  .mobile-role-group h3 {
+    color: #9ba6ba;
+  }
+
+  .mobile-shift-card.copied {
+    background: #163149;
+    border-color: #38bdf8;
+  }
+
+  .mobile-shift-card.pasted {
+    background: #3b3218;
+    border-color: #e8c35b;
+  }
+
+  .mobile-sheet-actions button {
     min-height: 44px;
   }
 }

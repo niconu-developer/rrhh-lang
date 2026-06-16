@@ -89,7 +89,7 @@ function renderSessionActions(target) {
   const roleName = user.role?.name || "Sin rol";
   target.insertAdjacentHTML(
     "beforeend",
-    `${canAccessModule("ayuda") ? `<a class="ghost-link as-button" href="./ayuda.html">Ayuda</a>` : ""}<span class="session-chip">${user.username} · ${roleName}</span><button class="ghost-link as-button" id="logoutButton" type="button">Salir</button>`
+    `${canAccessModule("ayuda") ? `<a class="ghost-link as-button session-help-link" href="./ayuda.html">Ayuda</a>` : ""}<span class="session-chip">${user.username} · ${roleName}</span><button class="ghost-link as-button" id="logoutButton" type="button">Salir</button>`
   );
   document.querySelector("#logoutButton")?.addEventListener("click", logoutUser);
 }
