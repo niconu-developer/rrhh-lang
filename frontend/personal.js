@@ -398,12 +398,7 @@ function renderAccessRoleOptions() {
 }
 
 function updateOperatorCategoryState() {
-  const isOperatorRole = personElements.type.value === "Operador";
-  personElements.isOperator.checked = isOperatorRole || personElements.isOperator.checked;
   const enabled = personElements.isOperator.checked;
-  if (enabled && personElements.type.value !== "Operador" && availableOperatorTypes.includes("Operador")) {
-    personElements.type.value = "Operador";
-  }
   personElements.operatorCategoryField.classList.toggle("hidden", !enabled);
   [...personElements.operatorCategory.querySelectorAll("input")].forEach((input) => {
     input.disabled = !enabled;
@@ -411,12 +406,6 @@ function updateOperatorCategoryState() {
 }
 
 function toggleOperatorFlag() {
-  if (personElements.isOperator.checked) {
-    if (availableOperatorTypes.includes("Operador")) personElements.type.value = "Operador";
-  } else if (personElements.type.value === "Operador") {
-    const fallback = availableOperatorTypes.find((type) => type !== "Operador") || "Logistico";
-    personElements.type.value = fallback;
-  }
   updateOperatorCategoryState();
 }
 
@@ -471,7 +460,7 @@ function renderPersonList() {
   personElements.list.innerHTML = rows
     .map((person) => {
       const documentText = documentationText(person);
-      const operatorText = person.operatorType === "Operador" ? formatOperatorCategory(person.operationTariffIds) : "No";
+      const operatorText = personCanSubmitOperations(person) ? formatOperatorCategory(person.operationTariffIds) : "No";
       return `<tr class="${person.active ? "" : "inactive"}">
       <td>${person.privateId || "-"}</td>
       <td><strong>${person.name}</strong></td>
@@ -503,10 +492,14 @@ function personSortValue(person, key) {
   if (key === "name") return person.name || "";
   if (key === "email") return person.email || "";
   if (key === "role") return person.operatorType || "";
-  if (key === "operator") return person.operatorType === "Operador" ? formatOperatorCategory(person.operationTariffIds) : "No";
+  if (key === "operator") return personCanSubmitOperations(person) ? formatOperatorCategory(person.operationTariffIds) : "No";
   if (key === "documentation") return documentationText(person);
   if (key === "status") return person.active ? "Activo" : "Inactivo";
   return "";
+}
+
+function personCanSubmitOperations(person) {
+  return Array.isArray(person.operationTariffIds) && person.operationTariffIds.length > 0;
 }
 
 function comparePersonSortValues(left, right) {
@@ -698,7 +691,7 @@ async function editPerson(id) {
   personElements.privateId.value = person.privateId || "";
   personElements.email.value = person.email || "";
   personElements.type.value = person.operatorType;
-  personElements.isOperator.checked = person.operatorType === "Operador";
+  personElements.isOperator.checked = personCanSubmitOperations(person) || person.operatorType === "Operador";
   setOperatorCategoryInputs(person.operationTariffIds);
   personElements.mode.value = person.scheduleMode;
   personElements.hourlyRate.value = formatRateInput(person.hourlyRate);
@@ -724,8 +717,8 @@ async function savePerson(event) {
     email: personElements.email.value.trim(),
     name: personElements.name.value.trim(),
     team: teamFromOperationalRole(personElements.type.value),
-    role: personElements.isOperator.checked ? "Operador" : personElements.type.value,
-    operatorType: personElements.isOperator.checked ? "Operador" : personElements.type.value,
+    role: personElements.type.value,
+    operatorType: personElements.type.value,
     hourlyRate: parseDecimalInput(personElements.hourlyRate.value),
     driverLicenseType: personElements.driverLicenseType.value,
     driverLicenseExpiry: personElements.driverLicenseType.value === "NO TIENE" ? "" : personElements.driverLicenseExpiry.value,
