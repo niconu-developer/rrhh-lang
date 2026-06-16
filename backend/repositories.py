@@ -1303,10 +1303,10 @@ def upsert_turno(connection, payload):
         payload.get("origen_referencia_tipo"),
         payload.get("origen_referencia_id"),
         payload.get("fecha_regularizacion"),
-        int(has_origin),
-        int(has_origin_reference_type),
-        int(has_origin_reference_id),
-        int(has_regularization_date),
+        bool(has_origin),
+        bool(has_origin_reference_type),
+        bool(has_origin_reference_id),
+        bool(has_regularization_date),
     ))
     return persona_id
 
