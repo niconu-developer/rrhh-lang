@@ -814,7 +814,10 @@ function renderPersonFaces() {
         <strong>${Number(face.activo) ? "Rostro activo" : "Rostro inactivo"}</strong>
         <span>${face.fecha_alta || ""}</span>
       </div>
-      <button class="ghost-button small" data-toggle-face-template="${face.id}" type="button">${Number(face.activo) ? "Desactivar" : "Activar"}</button>
+      <div class="face-template-actions">
+        <button class="ghost-button small" data-toggle-face-template="${face.id}" type="button">${Number(face.activo) ? "Desactivar" : "Activar"}</button>
+        <button class="ghost-button small mark-delete-button" data-delete-face-template="${face.id}" type="button">Eliminar</button>
+      </div>
     </article>`)
     .join("");
 }
@@ -873,7 +876,7 @@ async function savePersonFace() {
       showPersonToast("Esperá un segundo a que la cámara enfoque");
       return;
     }
-    const descriptor = buildFaceDescriptor(personElements.faceVideo, personElements.faceCanvas);
+    const descriptor = await buildFaceDescriptor(personElements.faceVideo, personElements.faceCanvas);
     await apiRequest(`/personas/${encodeURIComponent(personId)}/rostros`, {
       method: "POST",
       body: JSON.stringify({ descriptor, observacion: "Carga desde ficha de personal" }),
@@ -892,6 +895,17 @@ async function togglePersonFace(faceId) {
   });
   await loadPersonFaces(personElements.id.value);
   showPersonToast("Rostro actualizado");
+}
+
+async function deletePersonFace(faceId) {
+  const confirmed = window.confirm("¿Eliminar definitivamente esta huella biométrica? Esta acción no se puede deshacer.");
+  if (!confirmed) return;
+  await apiRequest(`/personas/rostros/${encodeURIComponent(faceId)}/delete`, {
+    method: "POST",
+    body: "{}",
+  });
+  await loadPersonFaces(personElements.id.value);
+  showPersonToast("Rostro eliminado");
 }
 
 function showPersonToast(message) {
@@ -957,9 +971,15 @@ personElements.operationValueList.addEventListener("click", (event) => {
 personElements.faceStart.addEventListener("click", startPersonFaceCamera);
 personElements.faceSave.addEventListener("click", savePersonFace);
 personElements.faceList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-toggle-face-template]");
-  if (!button) return;
-  togglePersonFace(button.dataset.toggleFaceTemplate)
+  const toggleButton = event.target.closest("[data-toggle-face-template]");
+  if (toggleButton) {
+    togglePersonFace(toggleButton.dataset.toggleFaceTemplate)
+      .catch((error) => showPersonToast(error.message || "No se pudo actualizar el rostro"));
+    return;
+  }
+  const deleteButton = event.target.closest("[data-delete-face-template]");
+  if (!deleteButton) return;
+  deletePersonFace(deleteButton.dataset.deleteFaceTemplate)
     .catch((error) => showPersonToast(error.message || "No se pudo actualizar el rostro"));
 });
 loadPersonPage();

@@ -2886,6 +2886,13 @@ select.current-week-selected {
   gap: 2px;
 }
 
+.face-template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .face-template-item span {
   color: var(--muted);
   font-size: 11px;

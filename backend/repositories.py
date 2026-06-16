@@ -357,6 +357,16 @@ def toggle_persona_rostro(face_id):
     return {"ok": True, "activo": active}
 
 
+def delete_persona_rostro(face_id):
+    with connect() as connection:
+        current = connection.execute("SELECT id FROM rostros_personas WHERE id = ?", (face_id,)).fetchone()
+        if not current:
+            raise ValueError("Rostro no encontrado")
+        connection.execute("DELETE FROM rostros_personas WHERE id = ?", (face_id,))
+        connection.commit()
+    return {"ok": True}
+
+
 def validate_face_descriptor(payload, face_clock_link=None):
     descriptor = normalize_face_descriptor(payload.get("descriptor"))
     threshold = float(payload.get("umbral") or 78)

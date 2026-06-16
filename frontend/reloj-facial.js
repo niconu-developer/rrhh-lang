@@ -147,7 +147,7 @@ async function validateClockFace() {
 
   try {
     const descriptorCanvas = document.createElement("canvas");
-    const descriptor = buildFaceDescriptor(clock.video, descriptorCanvas);
+    const descriptor = await buildFaceDescriptor(clock.video, descriptorCanvas);
     const result = await clockApi("/reloj-facial/validar", {
       method: "POST",
       body: JSON.stringify({ descriptor }),

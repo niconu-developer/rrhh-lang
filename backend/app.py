@@ -1287,6 +1287,9 @@ class PlannerHandler(SimpleHTTPRequestHandler):
     def toggle_persona_rostro(self, face_id):
         return repo.toggle_persona_rostro(face_id)
 
+    def delete_persona_rostro(self, face_id):
+        return repo.delete_persona_rostro(face_id)
+
     def validate_reloj_facial(self, payload):
         return repo.validate_face_descriptor(payload, face_clock_link=self.current_user)
 

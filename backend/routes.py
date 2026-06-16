@@ -109,6 +109,8 @@ def route_post(handler, path, payload):
         return handler.create_persona_rostro(int(parts[2]), payload)
     if len(parts) == 5 and parts[:3] == ["api", "personas", "rostros"] and parts[4] == "toggle":
         return handler.toggle_persona_rostro(int(parts[3]))
+    if len(parts) == 5 and parts[:3] == ["api", "personas", "rostros"] and parts[4] == "delete":
+        return handler.delete_persona_rostro(int(parts[3]))
     if len(parts) == 3 and parts[:2] == ["api", "roles-operativos"]:
         return handler.save_rol_operativo(payload, int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "roles-operativos"] and parts[3] == "delete":
