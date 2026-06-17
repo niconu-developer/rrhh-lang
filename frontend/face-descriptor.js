@@ -1,6 +1,16 @@
 const LEGACY_FACE_DESCRIPTOR_SIZE = 24;
 const FACE_DESCRIPTOR_SIZE = 40;
 const FACE_BLOCK_GRID = 8;
+const LOCAL_FACE_DESCRIPTOR_VERSION = "lang-local-v2";
+const FACE_API_DESCRIPTOR_VERSION = "face-api-v1";
+const FACE_API_MODEL_URL = new URL("./models/face-api", window.location.href).href.replace(/\/$/, "");
+window.LANG_FACE_DESCRIPTOR_VERSION = LOCAL_FACE_DESCRIPTOR_VERSION;
+
+let faceApiModelsPromise = null;
+
+function setCurrentFaceDescriptorVersion(version) {
+  window.LANG_FACE_DESCRIPTOR_VERSION = version || LOCAL_FACE_DESCRIPTOR_VERSION;
+}
 
 async function buildFaceDescriptor(video, canvas) {
   if (!video || !canvas) throw new Error("Cámara no disponible");
@@ -8,6 +18,56 @@ async function buildFaceDescriptor(video, canvas) {
   const height = video.videoHeight;
   if (!width || !height) throw new Error("La cámara todavía no está lista");
 
+  const faceApiDescriptor = await buildFaceApiDescriptor(video);
+  if (faceApiDescriptor) return faceApiDescriptor;
+
+  return buildLocalFaceDescriptor(video, canvas, width, height);
+}
+
+async function ensureFaceApiModels() {
+  if (!window.faceapi) return false;
+  if (!faceApiModelsPromise) {
+    faceApiModelsPromise = Promise.all([
+      window.faceapi.nets.tinyFaceDetector.loadFromUri(FACE_API_MODEL_URL),
+      window.faceapi.nets.faceLandmark68Net.loadFromUri(FACE_API_MODEL_URL),
+      window.faceapi.nets.faceRecognitionNet.loadFromUri(FACE_API_MODEL_URL),
+    ])
+      .then(() => true)
+      .catch((error) => {
+        console.warn("No se pudieron cargar los modelos de face-api", error);
+        faceApiModelsPromise = null;
+        return false;
+      });
+  }
+  return faceApiModelsPromise;
+}
+
+async function buildFaceApiDescriptor(video) {
+  const ready = await ensureFaceApiModels();
+  if (!ready) return null;
+  try {
+    const options = new window.faceapi.TinyFaceDetectorOptions({
+      inputSize: 320,
+      scoreThreshold: 0.5,
+    });
+    const result = await window.faceapi
+      .detectSingleFace(video, options)
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    if (!result?.descriptor?.length) {
+      throw new Error("No se detectó un rostro claro. Centrá la cara y probá de nuevo.");
+    }
+    setCurrentFaceDescriptorVersion(FACE_API_DESCRIPTOR_VERSION);
+    return Array.from(result.descriptor).map((value) => Number(value.toFixed(6)));
+  } catch (error) {
+    if (String(error?.message || "").includes("No se detectó")) throw error;
+    console.warn("face-api no pudo generar descriptor, se usa respaldo local", error);
+    return null;
+  }
+}
+
+async function buildLocalFaceDescriptor(video, canvas, width, height) {
+  setCurrentFaceDescriptorVersion(LOCAL_FACE_DESCRIPTOR_VERSION);
   const crop = await detectFaceCrop(video, width, height);
   canvas.width = FACE_DESCRIPTOR_SIZE;
   canvas.height = FACE_DESCRIPTOR_SIZE;

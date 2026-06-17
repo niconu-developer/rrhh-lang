@@ -6,6 +6,13 @@ from datetime import datetime, timedelta
 from .database import IS_POSTGRES, connect, rows, one
 from .security import hash_password, token_hash, verify_password
 from .settings import SESSION_TTL_HOURS
+from .utils import app_config_json
+
+
+FACE_RECOGNITION_DEFAULTS = {
+    "threshold": 78,
+    "ambiguity_margin": 4,
+}
 
 
 def parse_decimal_value(value, default=0):
@@ -275,12 +282,51 @@ def normalize_face_descriptor(value):
     return descriptor
 
 
-def face_similarity_score(left, right):
+def face_descriptor_version(payload, descriptor):
+    version = str(payload.get("descriptor_version") or payload.get("version") or "").strip()
+    return version or f"len:{len(descriptor)}"
+
+
+def face_descriptor_family(version):
+    clean = str(version or "").strip().lower()
+    if clean.startswith("face-api"):
+        return "face-api"
+    return "lang-local"
+
+
+def face_descriptor_versions_compatible(left_version, right_version):
+    return face_descriptor_family(left_version) == face_descriptor_family(right_version)
+
+
+def face_recognition_settings(connection):
+    settings = app_config_json(connection, "face_recognition", FACE_RECOGNITION_DEFAULTS)
+    if not isinstance(settings, dict):
+        settings = FACE_RECOGNITION_DEFAULTS
+    try:
+        threshold = float(settings.get("threshold", FACE_RECOGNITION_DEFAULTS["threshold"]))
+    except (TypeError, ValueError):
+        threshold = FACE_RECOGNITION_DEFAULTS["threshold"]
+    try:
+        ambiguity_margin = float(settings.get("ambiguity_margin", FACE_RECOGNITION_DEFAULTS["ambiguity_margin"]))
+    except (TypeError, ValueError):
+        ambiguity_margin = FACE_RECOGNITION_DEFAULTS["ambiguity_margin"]
+    return {
+        "threshold": max(50, min(99, threshold)),
+        "ambiguity_margin": max(0, min(25, ambiguity_margin)),
+    }
+
+
+def face_similarity_score(left, right, descriptor_version=None):
     size = min(len(left), len(right))
     if size < 32:
         return 0
     a = left[:size]
     b = right[:size]
+    if face_descriptor_family(descriptor_version) == "face-api":
+        distance = math.sqrt(sum((x - y) * (x - y) for x, y in zip(a, b)))
+        # En face-api una distancia cercana a 0.6 suele ser el límite práctico de coincidencia.
+        score = 100 - (distance * (22 / 0.6))
+        return round(max(0, min(100, score)), 2)
     dot = sum(x * y for x, y in zip(a, b))
     norm_a = math.sqrt(sum(x * x for x in a))
     norm_b = math.sqrt(sum(y * y for y in b))
@@ -296,6 +342,8 @@ def list_persona_rostros(persona_id):
           rostros_personas.id,
           rostros_personas.persona_id,
           personas.nombre AS persona,
+          rostros_personas.descriptor_version,
+          rostros_personas.descriptor_size,
           rostros_personas.activo,
           rostros_personas.observacion,
           rostros_personas.fecha_alta,
@@ -311,6 +359,7 @@ def list_persona_rostros(persona_id):
 
 def create_persona_rostro(persona_id, payload, usuario_id=None):
     descriptor = normalize_face_descriptor(payload.get("descriptor"))
+    descriptor_version = face_descriptor_version(payload, descriptor)
     observation = str(payload.get("observacion") or "").strip() or None
     now_value = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     with connect() as connection:
@@ -329,14 +378,16 @@ def create_persona_rostro(persona_id, payload, usuario_id=None):
             INSERT INTO rostros_personas (
               persona_id,
               descriptor_json,
+              descriptor_version,
+              descriptor_size,
               activo,
               observacion,
               creado_por_usuario_id,
               fecha_alta,
               fecha_actualizacion
             )
-            VALUES (?, ?, 1, ?, ?, ?, ?)
-        """, (persona_id, json.dumps(descriptor), observation, usuario_id, now_value, now_value))
+            VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)
+        """, (persona_id, json.dumps(descriptor), descriptor_version, len(descriptor), observation, usuario_id, now_value, now_value))
         face_id = cursor.lastrowid
         connection.commit()
     return {"ok": True, "id": face_id}
@@ -369,45 +420,85 @@ def delete_persona_rostro(face_id):
 
 def validate_face_descriptor(payload, face_clock_link=None):
     descriptor = normalize_face_descriptor(payload.get("descriptor"))
-    threshold = float(payload.get("umbral") or 78)
+    descriptor_version = face_descriptor_version(payload, descriptor)
     face_clock_id = None
     if face_clock_link:
         face_clock_id = face_clock_link.get("reloj_facial_id") or face_clock_link.get("id")
-    candidates = rows("""
-        SELECT
-          rostros_personas.id,
-          rostros_personas.descriptor_json,
-          personas.id AS persona_id,
-          personas.nombre AS persona,
-          personas.activo
-        FROM rostros_personas
-        JOIN personas ON personas.id = rostros_personas.persona_id
-        WHERE rostros_personas.activo = 1
-          AND personas.activo = 1
-          AND (
-            SELECT COUNT(*)
-            FROM rostros_personas AS activos
-            WHERE activos.persona_id = personas.id
-              AND activos.activo = 1
-          ) >= 3
-    """)
-    best = None
-    for candidate in candidates:
-        try:
-            candidate_descriptor = normalize_face_descriptor(candidate["descriptor_json"])
-        except ValueError:
-            continue
-        score = face_similarity_score(descriptor, candidate_descriptor)
-        if best is None or score > best["score"]:
-            best = {
-                "score": score,
-                "persona_id": candidate["persona_id"],
-                "persona": candidate["persona"],
-                "rostro_id": candidate["id"],
-            }
-    ok = bool(best and best["score"] >= threshold)
-    result = "VALIDADO" if ok else "SIN_COINCIDENCIA"
     with connect() as connection:
+        settings = face_recognition_settings(connection)
+        threshold = settings["threshold"]
+        ambiguity_margin = settings["ambiguity_margin"]
+        candidates = [dict(row) for row in connection.execute("""
+            SELECT
+              rostros_personas.id,
+              rostros_personas.descriptor_json,
+              rostros_personas.descriptor_version,
+              rostros_personas.descriptor_size,
+              personas.id AS persona_id,
+              personas.nombre AS persona,
+              personas.activo
+            FROM rostros_personas
+            JOIN personas ON personas.id = rostros_personas.persona_id
+            WHERE rostros_personas.activo = 1
+              AND personas.activo = 1
+              AND (
+                SELECT COUNT(*)
+                FROM rostros_personas AS activos
+                WHERE activos.persona_id = personas.id
+                  AND activos.activo = 1
+              ) >= 3
+        """).fetchall()]
+        best_by_person = {}
+        compatible_counts = {}
+        template_matches = 0
+        skipped_by_version = 0
+        for candidate in candidates:
+            if not face_descriptor_versions_compatible(descriptor_version, candidate.get("descriptor_version")):
+                skipped_by_version += 1
+                continue
+            try:
+                candidate_descriptor = normalize_face_descriptor(candidate["descriptor_json"])
+            except ValueError:
+                continue
+            template_matches += 1
+            compatible_counts[candidate["persona_id"]] = compatible_counts.get(candidate["persona_id"], 0) + 1
+            score = face_similarity_score(descriptor, candidate_descriptor, descriptor_version)
+            current = best_by_person.get(candidate["persona_id"])
+            if current is None or score > current["score"]:
+                best_by_person[candidate["persona_id"]] = {
+                    "score": score,
+                    "persona_id": candidate["persona_id"],
+                    "persona": candidate["persona"],
+                    "rostro_id": candidate["id"],
+                    "descriptor_version": candidate.get("descriptor_version"),
+                    "descriptor_size": candidate.get("descriptor_size"),
+                }
+        eligible_by_person = {
+            persona_id: match
+            for persona_id, match in best_by_person.items()
+            if compatible_counts.get(persona_id, 0) >= 3
+        }
+        ranked = sorted(eligible_by_person.values(), key=lambda item: item["score"], reverse=True)
+        best = ranked[0] if ranked else None
+        second = ranked[1] if len(ranked) > 1 else None
+        second_score = second.get("score") if second else None
+        margin = round(best["score"] - second_score, 2) if best and second_score is not None else None
+        if not best:
+            result = "SIN_ROSTROS"
+            if skipped_by_version:
+                detail = "No hay rostros compatibles con el modelo facial actual"
+            else:
+                detail = "No hay rostros activos suficientes para comparar"
+        elif best["score"] < threshold:
+            result = "SIN_COINCIDENCIA"
+            detail = "No alcanzo el umbral de validacion"
+        elif second and margin is not None and margin < ambiguity_margin:
+            result = "AMBIGUO"
+            detail = "Coincidencia facial ambigua, requiere reintento"
+        else:
+            result = "VALIDADO"
+            detail = "Coincidencia facial"
+        ok = result == "VALIDADO"
         if face_clock_id:
             clock_exists = connection.execute("SELECT id FROM relojes_faciales WHERE id = ?", (face_clock_id,)).fetchone()
             if not clock_exists:
@@ -418,15 +509,27 @@ def validate_face_descriptor(payload, face_clock_link=None):
               persona_id,
               resultado,
               score,
+              threshold,
+              segundo_score,
+              margen_score,
+              candidatos,
+              descriptor_version,
+              descriptor_size,
               detalle
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             face_clock_id,
             best.get("persona_id") if best else None,
             result,
             best.get("score") if best else None,
-            "Coincidencia facial" if ok else "No alcanzo el umbral de validacion",
+            threshold,
+            second_score,
+            margin,
+            template_matches,
+            descriptor_version,
+            len(descriptor),
+            detail,
         ))
         if face_clock_id:
             connection.execute(
@@ -436,11 +539,57 @@ def validate_face_descriptor(payload, face_clock_link=None):
         connection.commit()
     return {
         "ok": ok,
+        "status": result,
+        "message": detail,
         "score": best.get("score") if best else 0,
         "threshold": threshold,
+        "second_score": second_score,
+        "margin": margin,
+        "ambiguity_margin": ambiguity_margin,
         "persona": {"id": best["persona_id"], "nombre": best["persona"]} if ok else None,
-        "candidates": len(candidates),
+        "candidates": template_matches,
+        "skipped_by_version": skipped_by_version,
+        "candidate_people": len(eligible_by_person),
+        "descriptor": {
+            "version": descriptor_version,
+            "size": len(descriptor),
+        },
     }
+
+
+def list_reconocimientos_faciales(filters=None):
+    filters = filters or {}
+    where = []
+    params = []
+    date_from = str(filters.get("desde") or "").strip()
+    date_to = str(filters.get("hasta") or "").strip()
+    persona = str(filters.get("persona") or "").strip()
+    if date_from:
+        where.append("substr(reconocimientos_faciales_log.fecha_hora, 1, 10) >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("substr(reconocimientos_faciales_log.fecha_hora, 1, 10) <= ?")
+        params.append(date_to)
+    if persona:
+        where.append("lower(personas.nombre) LIKE ?")
+        params.append(f"%{persona.lower()}%")
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    try:
+        limit = max(1, min(500, int(filters.get("limit") or 200)))
+    except (TypeError, ValueError):
+        limit = 200
+    return rows(f"""
+        SELECT
+          reconocimientos_faciales_log.*,
+          personas.nombre AS persona,
+          relojes_faciales.nombre AS reloj_facial
+        FROM reconocimientos_faciales_log
+        LEFT JOIN personas ON personas.id = reconocimientos_faciales_log.persona_id
+        LEFT JOIN relojes_faciales ON relojes_faciales.id = reconocimientos_faciales_log.reloj_facial_id
+        {where_sql}
+        ORDER BY reconocimientos_faciales_log.fecha_hora DESC
+        LIMIT {limit}
+    """, tuple(params))
 
 
 def list_turnos(date_from=None, date_to=None):

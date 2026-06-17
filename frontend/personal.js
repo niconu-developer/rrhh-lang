@@ -24,6 +24,7 @@ const personElements = {
   faceStatus: document.querySelector("#faceEnrollmentStatus"),
   faceVideo: document.querySelector("#personFaceVideo"),
   faceCanvas: document.querySelector("#personFaceCanvas"),
+  faceCamera: document.querySelector("#personFaceCameraInput"),
   faceList: document.querySelector("#personFaceList"),
   faceStart: document.querySelector("#startPersonFaceCamera"),
   faceSave: document.querySelector("#savePersonFace"),
@@ -56,6 +57,7 @@ let appConfig = defaultPersonConfigSnapshot();
 let hourlyEditMode = false;
 let personFaceStream = null;
 let selectedPersonFaces = [];
+let personFaceCameras = [];
 let personListSort = { key: "name", direction: "asc" };
 
 const API_BASE = apiBase();
@@ -812,7 +814,7 @@ function renderPersonFaces() {
     .map((face) => `<article class="face-template-item ${Number(face.activo) ? "" : "inactive"}">
       <div>
         <strong>${Number(face.activo) ? "Rostro activo" : "Rostro inactivo"}</strong>
-        <span>${face.fecha_alta || ""}</span>
+        <span>${face.fecha_alta || ""}${face.descriptor_version ? ` · ${escapePersonText(face.descriptor_version)}` : ""}${face.descriptor_size ? ` · ${face.descriptor_size} puntos` : ""}</span>
       </div>
       <div class="face-template-actions">
         <button class="ghost-button small" data-toggle-face-template="${face.id}" type="button">${Number(face.activo) ? "Desactivar" : "Activar"}</button>
@@ -820,6 +822,49 @@ function renderPersonFaces() {
       </div>
     </article>`)
     .join("");
+}
+
+function defaultPersonFaceCamera() {
+  return window.matchMedia?.("(pointer: coarse)")?.matches ? "environment" : "user";
+}
+
+function personFaceCameraConstraints() {
+  const selected = personElements.faceCamera?.value || defaultPersonFaceCamera();
+  const base = {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    aspectRatio: { ideal: 16 / 9 },
+  };
+  if (selected.startsWith("device:")) {
+    return { ...base, deviceId: { exact: selected.replace("device:", "") } };
+  }
+  return { ...base, facingMode: { exact: selected } };
+}
+
+async function refreshPersonFaceCameraOptions() {
+  if (!personElements.faceCamera || !navigator.mediaDevices?.enumerateDevices) return;
+  const selected = personElements.faceCamera.value || defaultPersonFaceCamera();
+  try {
+    personFaceCameras = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "videoinput");
+  } catch (error) {
+    personFaceCameras = [];
+  }
+  const deviceOptions = personFaceCameras
+    .map((device, index) => {
+      const label = device.label || `Cámara ${index + 1}`;
+      return `<option value="device:${escapePersonText(device.deviceId)}">${escapePersonText(label)}</option>`;
+    })
+    .join("");
+  personElements.faceCamera.innerHTML = `
+    <option value="user">Frontal</option>
+    <option value="environment">Posterior</option>
+    ${deviceOptions}
+  `;
+  if ([...personElements.faceCamera.options].some((option) => option.value === selected)) {
+    personElements.faceCamera.value = selected;
+  } else {
+    personElements.faceCamera.value = defaultPersonFaceCamera();
+  }
 }
 
 async function startPersonFaceCamera() {
@@ -832,12 +877,7 @@ async function startPersonFaceCamera() {
       personFaceStream.getTracks().forEach((track) => track.stop());
     }
     personFaceStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "user",
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        aspectRatio: { ideal: 16 / 9 },
-      },
+      video: personFaceCameraConstraints(),
       audio: false,
     });
     personElements.faceVideo.srcObject = personFaceStream;
@@ -849,9 +889,13 @@ async function startPersonFaceCamera() {
       personElements.faceVideo.onloadedmetadata = () => resolve();
     });
     await personElements.faceVideo.play().catch(() => {});
+    await refreshPersonFaceCameraOptions();
     renderPersonFaces();
     showPersonToast("Cámara activa");
   } catch (error) {
+    personFaceStream = null;
+    personElements.faceVideo.srcObject = null;
+    renderPersonFaces();
     showPersonToast("No se pudo acceder a la cámara");
   }
 }
@@ -879,7 +923,11 @@ async function savePersonFace() {
     const descriptor = await buildFaceDescriptor(personElements.faceVideo, personElements.faceCanvas);
     await apiRequest(`/personas/${encodeURIComponent(personId)}/rostros`, {
       method: "POST",
-      body: JSON.stringify({ descriptor, observacion: "Carga desde ficha de personal" }),
+      body: JSON.stringify({
+        descriptor,
+        descriptor_version: window.LANG_FACE_DESCRIPTOR_VERSION || "lang-local",
+        observacion: "Carga desde ficha de personal",
+      }),
     });
     await loadPersonFaces(personId);
     showPersonToast("Rostro guardado");
@@ -970,6 +1018,13 @@ personElements.operationValueList.addEventListener("click", (event) => {
 });
 personElements.faceStart.addEventListener("click", startPersonFaceCamera);
 personElements.faceSave.addEventListener("click", savePersonFace);
+if (personElements.faceCamera) {
+  personElements.faceCamera.value = defaultPersonFaceCamera();
+  refreshPersonFaceCameraOptions();
+  personElements.faceCamera.addEventListener("change", () => {
+    if (personFaceStream) startPersonFaceCamera();
+  });
+}
 personElements.faceList.addEventListener("click", (event) => {
   const toggleButton = event.target.closest("[data-toggle-face-template]");
   if (toggleButton) {

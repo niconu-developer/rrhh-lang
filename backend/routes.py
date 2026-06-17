@@ -41,6 +41,13 @@ def route_get(handler, path, query):
         return repo.list_configuracion()
     if path == "/api/relojes-faciales":
         return repo.list_relojes_faciales()
+    if path == "/api/reconocimientos-faciales":
+        return repo.list_reconocimientos_faciales({
+            "desde": query_value(query, "desde", "from"),
+            "hasta": query_value(query, "hasta", "to"),
+            "persona": query_value(query, "persona"),
+            "limit": query_value(query, "limit"),
+        })
     parts = path.strip("/").split("/")
     if len(parts) == 4 and parts[:2] == ["api", "personas"] and parts[3] == "rostros":
         return repo.list_persona_rostros(int(parts[2]))

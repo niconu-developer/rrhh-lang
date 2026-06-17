@@ -2859,6 +2859,7 @@ select.current-week-selected {
 .face-enrollment-actions {
   margin-top: 10px;
   justify-content: stretch;
+  align-items: stretch;
 }
 
 .face-enrollment-help {
@@ -2870,6 +2871,25 @@ select.current-week-selected {
 
 .face-enrollment-actions > button {
   flex: 1;
+}
+
+.face-camera-picker {
+  flex: 1.2;
+  min-width: 190px;
+  display: grid;
+  gap: 4px;
+}
+
+.face-camera-picker span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.face-camera-picker select {
+  min-height: 38px;
 }
 
 .face-template-list {

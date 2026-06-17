@@ -150,7 +150,7 @@ async function validateClockFace() {
     const descriptor = await buildFaceDescriptor(clock.video, descriptorCanvas);
     const result = await clockApi("/reloj-facial/validar", {
       method: "POST",
-      body: JSON.stringify({ descriptor }),
+      body: JSON.stringify({ descriptor, descriptor_version: window.LANG_FACE_DESCRIPTOR_VERSION || "lang-local" }),
     });
     clockDetectedPerson = result.persona;
     clockValidated = Boolean(result.ok && clockDetectedPerson);
@@ -159,7 +159,7 @@ async function validateClockFace() {
     clock.score.classList.toggle("warn", !clockValidated);
     captureClockFrame();
     renderValidation();
-    showClockToast(clockValidated ? `Hola ${clockDetectedPerson.nombre}` : "Rostro no reconocido");
+    showClockToast(clockValidated ? `Hola ${clockDetectedPerson.nombre}` : (result.message || "Rostro no reconocido"));
   } catch (error) {
     clockValidated = false;
     clockDetectedPerson = null;

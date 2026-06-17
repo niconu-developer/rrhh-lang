@@ -70,6 +70,7 @@ def ensure_database():
             ensure_column(connection, "relojes_faciales", "token_visible", "TEXT")
             ensure_column(connection, "relojes_faciales", "eliminado", "INTEGER NOT NULL DEFAULT 0")
             ensure_column(connection, "relojes_faciales", "fecha_eliminacion", "TEXT")
+            ensure_face_recognition_schema(connection)
             ensure_turnos_unique_index(connection)
             if seed_path.exists() and RUN_DATA_SEED:
                 execute_script(connection, seed_path.read_text(encoding="utf-8"))
@@ -120,6 +121,7 @@ def ensure_reference_data(connection):
             ("operation_bands", '["Hasta 4 horas", "4 a 8 horas", "8 a 12 horas"]'),
             ("tolerancia_alerta_verde_minutos", "15"),
             ("tolerancia_alerta_amarilla_minutos", "30"),
+            ("face_recognition", '{"threshold": 78, "ambiguity_margin": 4}'),
         ],
     )
 
@@ -417,6 +419,17 @@ def ensure_marcas_approval_schema(connection):
         WHERE tipo_marca = 'Por usuario'
           AND (modificado_por_usuario_id IS NOT NULL OR observacion_modificacion IS NOT NULL)
     """)
+
+
+def ensure_face_recognition_schema(connection):
+    ensure_column(connection, "rostros_personas", "descriptor_version", "TEXT")
+    ensure_column(connection, "rostros_personas", "descriptor_size", "INTEGER")
+    ensure_column(connection, "reconocimientos_faciales_log", "threshold", "REAL")
+    ensure_column(connection, "reconocimientos_faciales_log", "segundo_score", "REAL")
+    ensure_column(connection, "reconocimientos_faciales_log", "margen_score", "REAL")
+    ensure_column(connection, "reconocimientos_faciales_log", "candidatos", "INTEGER")
+    ensure_column(connection, "reconocimientos_faciales_log", "descriptor_version", "TEXT")
+    ensure_column(connection, "reconocimientos_faciales_log", "descriptor_size", "INTEGER")
 
 
 def ensure_jornales_schema(connection):
@@ -885,6 +898,7 @@ def ensure_required_role_permissions(connection):
         "liquidacion",
         "personal",
         "marcas",
+        "reconocimientos-faciales",
         "mis-marcas",
         "reloj",
     ]:
@@ -928,7 +942,7 @@ def ensure_persona_id(connection, name, role_name="Operador"):
 
 ROLE_MODULES = {
     "admin": {"*"},
-    "rrhh": {"personas", "roles-operativos", "ubicaciones", "proyectos", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion"},
+    "rrhh": {"personas", "roles-operativos", "ubicaciones", "proyectos", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion", "reconocimientos-faciales"},
     "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "proyectos", "configuracion"},
 }
 
