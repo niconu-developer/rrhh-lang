@@ -128,7 +128,15 @@ async function startClockCamera() {
     return;
   }
   try {
-    clockStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+    clockStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 960 },
+        height: { ideal: 960 },
+        aspectRatio: { ideal: 1 },
+      },
+      audio: false,
+    });
     clock.video.srcObject = clockStream;
     renderValidation();
     showClockToast("Cámara activa");
@@ -173,9 +181,14 @@ async function validateClockFace() {
 
 function captureClockFrame() {
   const context = clock.canvas.getContext("2d");
-  clock.canvas.width = clock.video.videoWidth || 640;
-  clock.canvas.height = clock.video.videoHeight || 480;
-  context.drawImage(clock.video, 0, 0, clock.canvas.width, clock.canvas.height);
+  const width = clock.video.videoWidth || 640;
+  const height = clock.video.videoHeight || 640;
+  const size = Math.min(width, height);
+  const sourceX = (width - size) / 2;
+  const sourceY = (height - size) / 2;
+  clock.canvas.width = 640;
+  clock.canvas.height = 640;
+  context.drawImage(clock.video, sourceX, sourceY, size, size, 0, 0, clock.canvas.width, clock.canvas.height);
   clock.cameraBox.classList.add("captured");
 }
 

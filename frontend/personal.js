@@ -831,9 +831,9 @@ function defaultPersonFaceCamera() {
 function personFaceCameraConstraints() {
   const selected = personElements.faceCamera?.value || defaultPersonFaceCamera();
   const base = {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    aspectRatio: { ideal: 16 / 9 },
+    width: { ideal: 960 },
+    height: { ideal: 960 },
+    aspectRatio: { ideal: 1 },
   };
   if (selected.startsWith("device:")) {
     return { ...base, deviceId: { exact: selected.replace("device:", "") } };
