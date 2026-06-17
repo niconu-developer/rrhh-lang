@@ -1148,8 +1148,8 @@ function updateDaySummary() {
   elements.daySummaryList.innerHTML = items.length
     ? items
       .map((item) => `<article class="day-summary-item">
-        <strong>${item.time} · ${item.activity}</strong>
-        <span>${item.people.join(", ")}</span>
+        <strong class="day-summary-people">${item.people.join(", ")}</strong>
+        <span class="day-summary-shift">${item.time} · ${item.activity}</span>
       </article>`)
       .join("")
     : `<article class="day-summary-item"><strong>Sin turnos planificados</strong><span>No hay horarios cargados para este día.</span></article>`;
@@ -1665,8 +1665,8 @@ function exportDayJpg() {
   const minCardHeight = 108;
   const cardWidth = width - padding * 2;
   const cardHeights = (items.length ? items : [{ time: "Sin turnos planificados", activity: "", people: ["No hay horarios cargados para este día."] }]).map((item) => {
-    const peopleLines = wrapCanvasText(item.people.join(", "), cardWidth - 44, "700 24px Arial");
-    return Math.max(minCardHeight, 62 + peopleLines.length * 30);
+    const peopleLines = wrapCanvasText(item.people.join(", "), cardWidth - 44, "900 28px Arial");
+    return Math.max(minCardHeight, 64 + peopleLines.length * 32);
   });
   const height = padding + headerHeight + cardHeights.reduce((sum, value) => sum + value, 0) + Math.max(0, cardHeights.length - 1) * cardGap + padding;
   const canvas = document.createElement("canvas");
@@ -1700,18 +1700,20 @@ function exportDayJpg() {
     const cardHeight = cardHeights[index];
     roundRect(ctx, padding, y, cardWidth, cardHeight, 12, "#fbfcfd", "#cfd8e3", 1.5);
     ctx.fillStyle = "#151c24";
-    ctx.font = "900 32px Arial";
-    ctx.fillText(`${item.time} · ${item.activity}`, padding + 22, y + 38);
-    ctx.fillStyle = "#65717f";
-    ctx.font = "700 24px Arial";
-    wrapCanvasText(item.people.join(", "), cardWidth - 44, "700 24px Arial").forEach((line, lineIndex) => {
-      ctx.fillText(line, padding + 22, y + 72 + lineIndex * 30);
+    ctx.font = "900 28px Arial";
+    const peopleLines = wrapCanvasText(item.people.join(", "), cardWidth - 44, "900 28px Arial");
+    peopleLines.forEach((line, lineIndex) => {
+      ctx.fillText(line, padding + 22, y + 38 + lineIndex * 32);
     });
+    ctx.fillStyle = "#65717f";
+    ctx.font = "800 22px Arial";
+    ctx.fillText(`${item.time} · ${item.activity}`, padding + 22, y + 52 + peopleLines.length * 32);
     y += cardHeight + cardGap;
   });
 
+  const generatedAt = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
   const link = document.createElement("a");
-  link.download = `resumen-dia-${day.label.toLowerCase()}-${day.date}.jpg`;
+  link.download = `resumen-dia-${day.label.toLowerCase()}-${day.date}-${generatedAt}.jpg`;
   link.href = canvas.toDataURL("image/jpeg", 0.92);
   link.click();
   showToast("Día JPG generado");

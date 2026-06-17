@@ -1843,6 +1843,18 @@ select.current-week-selected {
   line-height: 1.35;
 }
 
+.day-summary-item .day-summary-people {
+  line-height: 1.18;
+}
+
+.day-summary-item .day-summary-shift {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .mobile-day-planner,
 .mobile-sheet-backdrop,
 .mobile-shift-sheet {

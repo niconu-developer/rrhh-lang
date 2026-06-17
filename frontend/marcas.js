@@ -291,8 +291,8 @@ function renderDaySummary() {
   elements.nextPlanDay.disabled = !canViewPlanDate(addIsoDays(visiblePlanDate, 1));
   elements.daySummaryList.innerHTML = items.length
     ? items.map((item) => `<article class="day-summary-item">
-        <strong>${item.time} · ${item.activity}</strong>
-        <span>${item.people.join(", ")}</span>
+        <strong class="day-summary-people">${item.people.join(", ")}</strong>
+        <span class="day-summary-shift">${item.time} · ${item.activity}</span>
       </article>`).join("")
     : `<article class="day-summary-item"><strong>Sin turnos planificados</strong><span>No hay horarios cargados para hoy.</span></article>`;
 }
