@@ -73,6 +73,46 @@ http://127.0.0.1:8765/api/health
 
 Los endpoints de datos requieren login y token de sesion.
 
+## API de integracion
+
+Existe un endpoint de solo lectura para exponer la tabla de personal a sistemas externos:
+
+```text
+GET /api/integraciones/personal
+```
+
+Autenticacion:
+
+```text
+X-API-Key: <PLANNER_INTEGRATION_API_KEY>
+```
+
+Tambien acepta:
+
+```text
+Authorization: Bearer <PLANNER_INTEGRATION_API_KEY>
+```
+
+Variables:
+
+```bash
+PLANNER_INTEGRATION_API_KEY=clave-larga-y-secreta
+```
+
+Filtros opcionales:
+
+```text
+?activo=1
+?rol_operativo=Logistico
+```
+
+Ejemplo:
+
+```bash
+curl -H "X-API-Key: $PLANNER_INTEGRATION_API_KEY" \
+  "http://127.0.0.1:8765/api/integraciones/personal?activo=1"
+```
+
 La app web queda en `frontend/`. En desarrollo, el backend la sirve desde:
 
 ```text

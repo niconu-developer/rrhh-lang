@@ -66,6 +66,41 @@ def list_personas():
     """.format(tariff_ids_sql=tariff_ids_sql))
 
 
+def list_personal_integracion(filters=None):
+    filters = filters or {}
+    where = []
+    params = []
+    active = str(filters.get("activo") or "").strip().lower()
+    if active in {"1", "true", "si", "sí", "activo", "activos"}:
+        where.append("personas.activo = 1")
+    elif active in {"0", "false", "no", "inactivo", "inactivos"}:
+        where.append("personas.activo = 0")
+    role = str(filters.get("rol_operativo") or "").strip()
+    if role:
+        where.append("lower(roles_operativos.nombre) = ?")
+        params.append(role.lower())
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    return rows(f"""
+        SELECT
+          personas.id,
+          personas.codigo_privado,
+          personas.nombre,
+          personas.email,
+          personas.activo,
+          roles_operativos.nombre AS rol_operativo,
+          personas.horario_tipo,
+          personas.horas_acordadas,
+          personas.valor_hora,
+          personas.tipo_libreta,
+          personas.vencimiento_libreta,
+          personas.vencimiento_carne_salud
+        FROM personas
+        LEFT JOIN roles_operativos ON roles_operativos.id = personas.rol_operativo_id
+        {where_sql}
+        ORDER BY personas.nombre
+    """, tuple(params))
+
+
 def list_usuarios():
     return rows("""
         SELECT

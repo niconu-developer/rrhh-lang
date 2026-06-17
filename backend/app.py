@@ -5,6 +5,7 @@ import json
 import os
 import re
 import secrets
+import hmac
 import sys
 import zipfile
 from datetime import datetime, timedelta
@@ -33,6 +34,7 @@ from backend.settings import (
     EXTERNAL_AUTH_TIMEOUT_SECONDS,
     FRONTEND_DIR,
     HOST,
+    INTEGRATION_API_KEY,
     PORT,
     BASE_PATH,
     RUN_DATA_SEED,
@@ -949,6 +951,7 @@ ROLE_MODULES = {
 
 PUBLIC_GET_PATHS = {"/api/health"}
 PUBLIC_POST_PATHS = {"/api/login", "/api/password-reset"}
+INTEGRATION_GET_PATHS = {"/api/integraciones/personal"}
 
 
 def module_from_path(path):
@@ -996,7 +999,7 @@ class PlannerHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Cookie")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Cookie, X-API-Key")
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -1086,6 +1089,16 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         if (method == "GET" and path in PUBLIC_GET_PATHS) or (method == "POST" and path in PUBLIC_POST_PATHS):
             self.current_user = None
             return True
+        if method == "GET" and path in INTEGRATION_GET_PATHS:
+            if self.authenticate_integration_key():
+                self.current_user = {
+                    "id": None,
+                    "usuario": "integracion-api",
+                    "rol_app": "integracion",
+                }
+                return True
+            self.send_error_json("API key inválida o no configurada", 401)
+            return False
         face_clock_link = public_face_clock_request(method, path, query=query, payload=payload)
         if face_clock_link:
             self.current_user = {
@@ -1105,6 +1118,15 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             return False
         self.current_user = user
         return True
+
+    def authenticate_integration_key(self):
+        if not INTEGRATION_API_KEY:
+            return False
+        raw_key = self.headers.get("X-API-Key", "").strip()
+        auth_header = self.headers.get("Authorization", "")
+        if not raw_key and auth_header.lower().startswith("bearer "):
+            raw_key = auth_header.split(" ", 1)[1].strip()
+        return bool(raw_key) and hmac.compare_digest(raw_key, INTEGRATION_API_KEY)
 
     def authenticate_user(self):
         auth_header = self.headers.get("Authorization", "")

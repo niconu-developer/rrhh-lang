@@ -20,3 +20,4 @@ EXTERNAL_AUTH_COOKIE_NAME = os.environ.get("PLANNER_EXTERNAL_AUTH_COOKIE_NAME", 
 EXTERNAL_AUTH_TIMEOUT_SECONDS = float(os.environ.get("PLANNER_EXTERNAL_AUTH_TIMEOUT_SECONDS", "3"))
 EXTERNAL_AUTH_DEBUG = os.environ.get("PLANNER_EXTERNAL_AUTH_DEBUG", "0").lower() in {"1", "true", "yes", "si"}
 RUN_DATA_SEED = os.environ.get("PLANNER_RUN_DATA_SEED", "0").lower() in {"1", "true", "yes", "si"}
+INTEGRATION_API_KEY = os.environ.get("PLANNER_INTEGRATION_API_KEY", "").strip()

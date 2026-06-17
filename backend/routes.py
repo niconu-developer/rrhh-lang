@@ -21,6 +21,14 @@ def route_get(handler, path, query):
         return handler.session()
     if path == "/api/personas":
         return repo.list_personas()
+    if path == "/api/integraciones/personal":
+        return {
+            "ok": True,
+            "data": repo.list_personal_integracion({
+                "activo": query_value(query, "activo", "active"),
+                "rol_operativo": query_value(query, "rol_operativo", "rol", "role"),
+            }),
+        }
     if path == "/api/usuarios":
         return repo.list_usuarios()
     if path == "/api/roles-app":
