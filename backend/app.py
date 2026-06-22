@@ -7,6 +7,7 @@ import re
 import secrets
 import hmac
 import sys
+import traceback
 import zipfile
 from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -1033,6 +1034,8 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             payload = self.route_get(route_path, query)
             self.send_json(payload)
         except Exception as error:
+            print(f"[api-error] GET {route_path}: {error}", file=sys.stderr)
+            traceback.print_exc()
             self.send_error_json(str(error), 500)
 
     def do_POST(self):
@@ -1055,6 +1058,8 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             response_payload = self.route_post(route_path, payload)
             self.send_json(response_payload)
         except Exception as error:
+            print(f"[api-error] POST {route_path}: {error}", file=sys.stderr)
+            traceback.print_exc()
             self.send_error_json(str(error), 500)
 
     def normalize_request_path(self, path):

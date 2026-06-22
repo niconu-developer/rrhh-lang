@@ -60,16 +60,30 @@ async function incidentApiPost(path, payload) {
 }
 
 async function refreshIncidents() {
+  let loadedIncidents = [];
   try {
     const { from, to } = selectedIncidentRange();
     const status = incidentElements.status.value || "pendientes";
     const statusQuery = status === "todos" ? "" : `&estado=${encodeURIComponent(status)}`;
-    incidents = await incidentApiGet(`/incidencias?desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}${statusQuery}`);
+    loadedIncidents = await incidentApiGet(`/incidencias?desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}${statusQuery}`);
+  } catch (error) {
+    console.error("No se pudo cargar incidencias", error);
+    incidents = [];
+    incidentElements.count.textContent = "0 incidencias";
+    showIncidentToast(error.message || "No se pudo cargar incidencias");
+    incidentElements.body.innerHTML = `<tr><td colspan="7">No se pudieron cargar las incidencias desde la base.</td></tr>`;
+    return;
+  }
+
+  incidents = loadedIncidents;
+  try {
     renderIncidentTypeOptions();
     renderIncidents();
   } catch (error) {
-    showIncidentToast(error.message || "No se pudo cargar incidencias");
-    incidentElements.body.innerHTML = `<tr><td colspan="7">No se pudo conectar con la base local.</td></tr>`;
+    console.error("No se pudieron mostrar incidencias", error);
+    incidentElements.count.textContent = `${incidents.length} incidencias`;
+    showIncidentToast("Se cargaron las incidencias, pero hubo un error al mostrarlas");
+    incidentElements.body.innerHTML = `<tr><td colspan="7">Se cargaron las incidencias, pero hubo un error al mostrarlas.</td></tr>`;
   }
 }
 
@@ -283,6 +297,15 @@ async function saveIncidentMarkEdit(event) {
 
 function detailItem(label, value) {
   return `<article><span>${label}</span><strong>${value}</strong></article>`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function locationDetailItem(incident) {
