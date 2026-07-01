@@ -17,6 +17,8 @@ def route_get(handler, path, query):
             "ok": True,
             "status": "ready",
         }
+    if path == "/api/access-links/validate":
+        return handler.validate_access_link(query)
     if path == "/api/session":
         return handler.session()
     if path == "/api/personas":
@@ -96,6 +98,10 @@ def route_post(handler, path, payload):
         return handler.login(payload)
     if path == "/api/password-reset":
         return handler.reset_password(payload)
+    if path == "/api/access-links":
+        return handler.create_access_link(payload)
+    if path == "/api/access-links/complete":
+        return handler.complete_access_link(payload)
     if path == "/api/importacion/marcas":
         return handler.import_marcas(payload)
 

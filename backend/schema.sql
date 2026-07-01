@@ -245,6 +245,26 @@ CREATE TABLE IF NOT EXISTS relojes_faciales (
 CREATE INDEX IF NOT EXISTS idx_relojes_faciales_token_hash
 ON relojes_faciales(token_hash);
 
+CREATE TABLE IF NOT EXISTS tokens_acceso (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  tipo TEXT NOT NULL DEFAULT 'primer_acceso',
+  fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_expiracion TEXT NOT NULL,
+  fecha_uso TEXT,
+  creado_por_usuario_id INTEGER,
+  activo INTEGER NOT NULL DEFAULT 1,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  FOREIGN KEY (creado_por_usuario_id) REFERENCES usuarios(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tokens_acceso_token_hash
+ON tokens_acceso(token_hash);
+
+CREATE INDEX IF NOT EXISTS idx_tokens_acceso_usuario
+ON tokens_acceso(usuario_id);
+
 CREATE TABLE IF NOT EXISTS rostros_personas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   persona_id INTEGER NOT NULL,

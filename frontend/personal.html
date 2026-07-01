@@ -142,8 +142,19 @@
                 </div>
               </div>
               <div class="person-form-grid" id="accessFields">
-                <label>Contraseña temporal<input id="accessPasswordInput" type="text" placeholder="Opcional: si queda vacío, la define la persona" /></label>
+                <label>Contraseña temporal manual<input id="accessPasswordInput" type="text" placeholder="Opcional: alternativa al link de primer acceso" /></label>
                 <label>Rol de aplicación<select id="accessRoleInput"></select></label>
+              </div>
+              <div class="access-link-panel">
+                <div>
+                  <p class="muted">Primer acceso</p>
+                  <h4>Link para definir contraseña</h4>
+                </div>
+                <div class="access-link-controls">
+                  <button class="ghost-button small" id="generateAccessLinkButton" type="button">Generar link</button>
+                  <button class="ghost-button small" id="copyAccessLinkButton" type="button" disabled>Copiar link</button>
+                </div>
+                <input id="accessLinkOutput" readonly type="text" placeholder="Guardá la persona y generá el link" />
               </div>
             </section>
 

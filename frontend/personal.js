@@ -21,6 +21,9 @@ const personElements = {
   accessFields: document.querySelector("#accessFields"),
   accessPassword: document.querySelector("#accessPasswordInput"),
   accessRole: document.querySelector("#accessRoleInput"),
+  accessLinkButton: document.querySelector("#generateAccessLinkButton"),
+  accessLinkCopy: document.querySelector("#copyAccessLinkButton"),
+  accessLinkOutput: document.querySelector("#accessLinkOutput"),
   faceStatus: document.querySelector("#faceEnrollmentStatus"),
   faceVideo: document.querySelector("#personFaceVideo"),
   faceCanvas: document.querySelector("#personFaceCanvas"),
@@ -660,6 +663,70 @@ async function saveHourlyRates() {
   }
 }
 
+function resetAccessLinkOutput() {
+  if (!personElements.accessLinkOutput) return;
+  personElements.accessLinkOutput.value = "";
+  personElements.accessLinkOutput.placeholder = personElements.id.value
+    ? "Generá un link para enviar a la persona"
+    : "Guardá la persona y generá el link";
+  if (personElements.accessLinkCopy) personElements.accessLinkCopy.disabled = true;
+}
+
+async function generateAccessLink() {
+  if (!backendEnabled) {
+    showPersonToast("No hay conexión con la base local");
+    return;
+  }
+  const personId = personElements.id.value;
+  const email = personElements.email.value.trim();
+  if (!personId) {
+    showPersonToast("Guardá la persona antes de generar el link");
+    return;
+  }
+  if (!email) {
+    showPersonToast("Completá el mail antes de generar el link");
+    return;
+  }
+  try {
+    const payload = await apiRequest("/access-links", {
+      method: "POST",
+      body: JSON.stringify({
+        persona_id: Number(personId),
+        email,
+        tipo: "primer_acceso",
+      }),
+    });
+    personElements.accessLinkOutput.value = payload.link || "";
+    personElements.accessLinkOutput.placeholder = payload.expiresAt ? `Vence ${payload.expiresAt}` : "Link generado";
+    if (personElements.accessLinkCopy) personElements.accessLinkCopy.disabled = !payload.link;
+    if (payload.link && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload.link);
+      showPersonToast("Link generado y copiado");
+    } else {
+      showPersonToast("Link generado");
+    }
+  } catch (error) {
+    showPersonToast(error.message || "No se pudo generar el link");
+  }
+}
+
+async function copyAccessLink() {
+  const link = personElements.accessLinkOutput?.value || "";
+  if (!link) return;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+      showPersonToast("Link copiado");
+      return;
+    }
+  } catch (error) {
+    // Si el navegador no permite copiar, dejamos el campo seleccionado.
+  }
+  personElements.accessLinkOutput.focus();
+  personElements.accessLinkOutput.select();
+  showPersonToast("Seleccioná y copiá el link");
+}
+
 function resetPersonForm() {
   personElements.title.textContent = "Nueva persona";
   personElements.id.value = "";
@@ -677,6 +744,7 @@ function resetPersonForm() {
   personElements.active.checked = true;
   personElements.accessPassword.value = "";
   personElements.accessRole.value = "usuario";
+  resetAccessLinkOutput();
   selectedPersonFaces = [];
   renderPersonFaces();
   renderFixedRows(defaultFixedSchedule());
@@ -703,6 +771,7 @@ async function editPerson(id) {
   personElements.active.checked = person.active;
   personElements.accessPassword.value = "";
   personElements.accessRole.value = person.access?.roleId || "usuario";
+  resetAccessLinkOutput();
   renderFixedRows(person.fixedSchedule || defaultFixedSchedule());
   selectedPersonFaces = [];
   renderPersonPage();
@@ -986,6 +1055,8 @@ personElements.type.addEventListener("change", updateOperatorCategoryState);
 personElements.isOperator.addEventListener("change", toggleOperatorFlag);
 personElements.driverLicenseType.addEventListener("change", updateDriverLicenseExpiryState);
 personElements.active.addEventListener("change", updateAccessFieldsState);
+personElements.accessLinkButton?.addEventListener("click", generateAccessLink);
+personElements.accessLinkCopy?.addEventListener("click", copyAccessLink);
 personElements.filter.addEventListener("input", renderPersonList);
 document.querySelector(".person-table thead")?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-person-sort]");

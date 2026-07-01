@@ -1,0 +1,39 @@
+.access-link-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid rgba(119, 146, 191, 0.26);
+  border-radius: 12px;
+  background: rgba(96, 136, 230, 0.07);
+}
+
+.access-link-panel h4 {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+
+.access-link-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.access-link-panel input {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .access-link-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .access-link-controls {
+    justify-content: stretch;
+  }
+
+  .access-link-controls > button {
+    flex: 1;
+  }
+}

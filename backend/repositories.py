@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from .database import IS_POSTGRES, connect, rows, one
 from .security import hash_password, token_hash, verify_password
-from .settings import SESSION_TTL_HOURS
+from .settings import ACCESS_LINK_TTL_HOURS, SESSION_TTL_HOURS
 from .utils import app_config_json
 
 
@@ -875,6 +875,172 @@ def reset_user_password(email, password):
         connection.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (hash_password(password), user["id"]))
         connection.commit()
         return True
+
+
+def _utc_now_text():
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _access_token_user(connection, payload):
+    payload = payload or {}
+    usuario_id = payload.get("usuario_id")
+    persona_id = payload.get("persona_id")
+    email = str(payload.get("email") or "").strip().lower()
+    where = ""
+    params = []
+    if usuario_id:
+        where = "usuarios.id = ?"
+        params.append(int(usuario_id))
+    elif persona_id:
+        where = "usuarios.persona_id = ?"
+        params.append(int(persona_id))
+    elif email:
+        where = "(lower(coalesce(usuarios.email, '')) = ? OR lower(usuarios.usuario) = ?)"
+        params.extend([email, email])
+    else:
+        raise ValueError("Indicá una persona o correo para generar el link")
+
+    user = connection.execute(f"""
+        SELECT
+          usuarios.id,
+          usuarios.usuario,
+          usuarios.email,
+          usuarios.activo,
+          usuarios.persona_id,
+          personas.nombre AS persona,
+          roles_app.nombre AS rol_app
+        FROM usuarios
+        LEFT JOIN personas ON personas.id = usuarios.persona_id
+        JOIN roles_app ON roles_app.id = usuarios.rol_app_id
+        WHERE {where}
+    """, params).fetchone()
+    if not user:
+        raise ValueError("No encontramos un usuario activo para esa persona")
+    if int(user["activo"] or 0) != 1:
+        raise ValueError("El usuario está desactivado")
+    if not str(user["email"] or "").strip():
+        raise ValueError("El usuario no tiene mail asociado")
+    if email and str(user["email"] or "").strip().lower() != email:
+        raise ValueError("Guardá los cambios de mail antes de generar el link")
+    return user
+
+
+def create_access_token(payload, created_by_user_id=None):
+    kind = str((payload or {}).get("tipo") or "primer_acceso").strip() or "primer_acceso"
+    raw_token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=ACCESS_LINK_TTL_HOURS)).strftime("%Y-%m-%d %H:%M:%S")
+    with connect() as connection:
+        user = _access_token_user(connection, payload)
+        connection.execute("""
+            UPDATE tokens_acceso
+            SET activo = 0
+            WHERE usuario_id = ?
+              AND tipo = ?
+              AND activo = 1
+              AND fecha_uso IS NULL
+        """, (user["id"], kind))
+        connection.execute("""
+            INSERT INTO tokens_acceso (
+              usuario_id,
+              token_hash,
+              tipo,
+              fecha_expiracion,
+              creado_por_usuario_id,
+              activo
+            ) VALUES (?, ?, ?, ?, ?, 1)
+        """, (user["id"], token_hash(raw_token), kind, expires_at, created_by_user_id))
+        connection.commit()
+        return {
+            "ok": True,
+            "token": raw_token,
+            "usuario_id": user["id"],
+            "email": user["email"],
+            "persona": user["persona"] or user["usuario"],
+            "rol_app": user["rol_app"],
+            "tipo": kind,
+            "expiresAt": expires_at,
+        }
+
+
+def _read_access_token(connection, raw_token):
+    clean_token = str(raw_token or "").strip()
+    if not clean_token:
+        return None
+    row = connection.execute("""
+        SELECT
+          tokens_acceso.id AS token_id,
+          tokens_acceso.tipo,
+          tokens_acceso.fecha_expiracion,
+          tokens_acceso.fecha_uso,
+          tokens_acceso.activo AS token_activo,
+          usuarios.id AS usuario_id,
+          usuarios.usuario,
+          usuarios.email,
+          usuarios.activo AS usuario_activo,
+          personas.nombre AS persona,
+          roles_app.nombre AS rol_app
+        FROM tokens_acceso
+        JOIN usuarios ON usuarios.id = tokens_acceso.usuario_id
+        LEFT JOIN personas ON personas.id = usuarios.persona_id
+        JOIN roles_app ON roles_app.id = usuarios.rol_app_id
+        WHERE tokens_acceso.token_hash = ?
+    """, (token_hash(clean_token),)).fetchone()
+    return row
+
+
+def access_token_status(raw_token):
+    with connect() as connection:
+        row = _read_access_token(connection, raw_token)
+        if not row:
+            return {"ok": False, "error": "Link inválido"}
+        if int(row["token_activo"] or 0) != 1 or row["fecha_uso"]:
+            return {"ok": False, "error": "Este link ya fue usado"}
+        if int(row["usuario_activo"] or 0) != 1:
+            return {"ok": False, "error": "El usuario está desactivado"}
+        if str(row["fecha_expiracion"] or "") <= _utc_now_text():
+            return {"ok": False, "error": "El link venció"}
+        return {
+            "ok": True,
+            "email": row["email"] or row["usuario"],
+            "persona": row["persona"] or row["usuario"],
+            "rol_app": row["rol_app"],
+            "expiresAt": row["fecha_expiracion"],
+            "tipo": row["tipo"],
+        }
+
+
+def complete_access_token(raw_token, password):
+    password = str(password or "").strip()
+    if len(password) < 8:
+        raise ValueError("La contraseña debe tener al menos 8 caracteres")
+    with connect() as connection:
+        row = _read_access_token(connection, raw_token)
+        if not row:
+            return {"ok": False, "error": "Link inválido"}
+        if int(row["token_activo"] or 0) != 1 or row["fecha_uso"]:
+            return {"ok": False, "error": "Este link ya fue usado"}
+        if int(row["usuario_activo"] or 0) != 1:
+            return {"ok": False, "error": "El usuario está desactivado"}
+        if str(row["fecha_expiracion"] or "") <= _utc_now_text():
+            return {"ok": False, "error": "El link venció"}
+        connection.execute("""
+            UPDATE usuarios
+            SET password_hash = ?
+            WHERE id = ?
+        """, (hash_password(password), row["usuario_id"]))
+        connection.execute("""
+            UPDATE tokens_acceso
+            SET activo = 0,
+                fecha_uso = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (row["token_id"],))
+        connection.execute("UPDATE sesiones SET activa = 0 WHERE usuario_id = ?", (row["usuario_id"],))
+        connection.commit()
+        return {
+            "ok": True,
+            "email": row["email"] or row["usuario"],
+            "persona": row["persona"] or row["usuario"],
+        }
 
 
 def persona_id_by_name(connection, name):

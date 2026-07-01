@@ -37,6 +37,7 @@ from backend.settings import (
     HOST,
     INTEGRATION_API_KEY,
     PORT,
+    PUBLIC_BASE_URL,
     BASE_PATH,
     RUN_DATA_SEED,
     SERVE_STATIC,
@@ -945,13 +946,13 @@ def ensure_persona_id(connection, name, role_name="Operador"):
 
 ROLE_MODULES = {
     "admin": {"*"},
-    "rrhh": {"personas", "roles-operativos", "ubicaciones", "proyectos", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion", "reconocimientos-faciales"},
+    "rrhh": {"personas", "roles-operativos", "ubicaciones", "proyectos", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion", "reconocimientos-faciales", "access-links"},
     "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "proyectos", "configuracion"},
 }
 
 
-PUBLIC_GET_PATHS = {"/api/health"}
-PUBLIC_POST_PATHS = {"/api/login", "/api/password-reset"}
+PUBLIC_GET_PATHS = {"/api/health", "/api/access-links/validate"}
+PUBLIC_POST_PATHS = {"/api/login", "/api/password-reset", "/api/access-links/complete"}
 INTEGRATION_GET_PATHS = {"/api/integraciones/personal"}
 
 
@@ -1271,6 +1272,27 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         if not email or not password:
             raise ValueError("Correo y contraseña son obligatorios")
         return {"ok": repo.reset_user_password(email, password)}
+
+    def access_link_base_url(self):
+        if PUBLIC_BASE_URL:
+            return PUBLIC_BASE_URL
+        proto = self.headers.get("X-Forwarded-Proto") or ("https" if self.headers.get("X-Forwarded-Ssl") == "on" else "http")
+        host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or f"{HOST}:{PORT}"
+        return f"{proto}://{host}{BASE_PATH}"
+
+    def create_access_link(self, payload):
+        creator_id = self.current_user.get("id") if self.current_user else None
+        result = repo.create_access_token(payload, creator_id)
+        raw_token = result.pop("token")
+        result["link"] = f"{self.access_link_base_url()}/set-password.html?token={raw_token}"
+        return result
+
+    def validate_access_link(self, query):
+        token = (query.get("token") or [""])[0]
+        return repo.access_token_status(token)
+
+    def complete_access_link(self, payload):
+        return repo.complete_access_token(payload.get("token"), payload.get("password"))
 
     def role_id_for(self, connection, role_name):
         return repo.role_id_for(connection, role_name)

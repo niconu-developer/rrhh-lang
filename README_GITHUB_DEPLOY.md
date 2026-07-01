@@ -52,6 +52,7 @@ cp .env.example .env
 ```text
 PLANNER_PUBLIC_PORT=8766
 PLANNER_BASE_PATH=/rrhh
+PLANNER_PUBLIC_BASE_URL=https://app.lang.uy/rrhh
 PLANNER_ADMIN_PASSWORD=una-clave-segura
 POSTGRES_PASSWORD=una-clave-segura-de-base
 DATABASE_URL=postgresql://lang_rrhh:una-clave-segura-de-base@rrhh-db:5432/lang_rrhh

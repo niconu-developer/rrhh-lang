@@ -21,6 +21,7 @@ IDENTITY_TABLES = {
     "incidencias",
     "jornales",
     "sesiones",
+    "tokens_acceso",
     "rostros_personas",
     "reconocimientos_faciales_log",
 }
