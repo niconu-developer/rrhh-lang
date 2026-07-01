@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   email TEXT,
   persona_id INTEGER REFERENCES personas(id),
   rol_app_id INTEGER NOT NULL REFERENCES roles_app(id),
-  activo INTEGER NOT NULL DEFAULT 1
+  activo INTEGER NOT NULL DEFAULT 1,
+  password_inicializada INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_persona_unique

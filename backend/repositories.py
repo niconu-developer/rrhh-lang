@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from .database import IS_POSTGRES, connect, rows, one
 from .security import hash_password, token_hash, verify_password
-from .settings import ACCESS_LINK_TTL_HOURS, SESSION_TTL_HOURS
+from .settings import ACCESS_LINK_TTL_HOURS, FIRST_ACCESS_SECURITY_CODE, SESSION_TTL_HOURS
 from .utils import app_config_json
 
 
@@ -872,9 +872,67 @@ def reset_user_password(email, password):
         """, (clean_email, clean_email)).fetchone()
         if not user:
             return False
-        connection.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (hash_password(password), user["id"]))
+        connection.execute("""
+            UPDATE usuarios
+            SET password_hash = ?,
+                password_inicializada = 1
+            WHERE id = ?
+        """, (hash_password(password), user["id"]))
         connection.commit()
         return True
+
+
+def complete_first_access(email, password, security_code):
+    clean_email = str(email or "").strip().lower()
+    clean_code = str(security_code or "").strip()
+    password = str(password or "").strip()
+    expected_code = str(FIRST_ACCESS_SECURITY_CODE or "").strip()
+    if not clean_email or not password or not clean_code:
+        return {"ok": False, "error": "Completá mail, contraseña y código de seguridad"}
+    if len(password) < 8:
+        return {"ok": False, "error": "La contraseña debe tener al menos 8 caracteres"}
+    if not expected_code or not secrets.compare_digest(clean_code, expected_code):
+        return {"ok": False, "error": "Código de seguridad inválido"}
+    with connect() as connection:
+        user = connection.execute("""
+            SELECT
+              usuarios.id,
+              usuarios.usuario,
+              usuarios.email,
+              usuarios.activo,
+              usuarios.password_inicializada,
+              usuarios.persona_id,
+              personas.nombre AS persona
+            FROM usuarios
+            LEFT JOIN personas ON personas.id = usuarios.persona_id
+            WHERE lower(coalesce(usuarios.email, '')) = ?
+               OR lower(usuarios.usuario) = ?
+        """, (clean_email, clean_email)).fetchone()
+        if not user or int(user["activo"] or 0) != 1:
+            return {"ok": False, "error": "No encontramos un usuario activo con ese mail"}
+        if not user["persona_id"]:
+            return {"ok": False, "error": "El usuario técnico no usa primer ingreso"}
+        if int(user["password_inicializada"] or 0) == 1:
+            return {"ok": False, "error": "La contraseña ya fue creada. Ingresá desde la pantalla de acceso"}
+        connection.execute("""
+            UPDATE usuarios
+            SET password_hash = ?,
+                password_inicializada = 1
+            WHERE id = ?
+        """, (hash_password(password), user["id"]))
+        connection.execute("UPDATE sesiones SET activa = 0 WHERE usuario_id = ?", (user["id"],))
+        connection.execute("""
+            UPDATE tokens_acceso
+            SET activo = 0
+            WHERE usuario_id = ?
+              AND activo = 1
+        """, (user["id"],))
+        connection.commit()
+        return {
+            "ok": True,
+            "email": user["email"] or user["usuario"],
+            "persona": user["persona"] or user["usuario"],
+        }
 
 
 def _utc_now_text():
@@ -906,6 +964,7 @@ def _access_token_user(connection, payload):
           usuarios.usuario,
           usuarios.email,
           usuarios.activo,
+          usuarios.password_inicializada,
           usuarios.persona_id,
           personas.nombre AS persona,
           roles_app.nombre AS rol_app
@@ -922,6 +981,8 @@ def _access_token_user(connection, payload):
         raise ValueError("El usuario no tiene mail asociado")
     if email and str(user["email"] or "").strip().lower() != email:
         raise ValueError("Guardá los cambios de mail antes de generar el link")
+    if int(user["password_inicializada"] or 0) == 1:
+        raise ValueError("La contraseña ya fue creada para este usuario")
     return user
 
 
@@ -977,6 +1038,7 @@ def _read_access_token(connection, raw_token):
           usuarios.usuario,
           usuarios.email,
           usuarios.activo AS usuario_activo,
+          usuarios.password_inicializada,
           personas.nombre AS persona,
           roles_app.nombre AS rol_app
         FROM tokens_acceso
@@ -997,6 +1059,8 @@ def access_token_status(raw_token):
             return {"ok": False, "error": "Este link ya fue usado"}
         if int(row["usuario_activo"] or 0) != 1:
             return {"ok": False, "error": "El usuario está desactivado"}
+        if int(row["password_inicializada"] or 0) == 1:
+            return {"ok": False, "error": "La contraseña ya fue creada"}
         if str(row["fecha_expiracion"] or "") <= _utc_now_text():
             return {"ok": False, "error": "El link venció"}
         return {
@@ -1021,11 +1085,14 @@ def complete_access_token(raw_token, password):
             return {"ok": False, "error": "Este link ya fue usado"}
         if int(row["usuario_activo"] or 0) != 1:
             return {"ok": False, "error": "El usuario está desactivado"}
+        if int(row["password_inicializada"] or 0) == 1:
+            return {"ok": False, "error": "La contraseña ya fue creada"}
         if str(row["fecha_expiracion"] or "") <= _utc_now_text():
             return {"ok": False, "error": "El link venció"}
         connection.execute("""
             UPDATE usuarios
-            SET password_hash = ?
+            SET password_hash = ?,
+                password_inicializada = 1
             WHERE id = ?
         """, (hash_password(password), row["usuario_id"]))
         connection.execute("""
@@ -1154,8 +1221,10 @@ def save_usuario_for_persona(connection, persona_id, access_payload):
         raise ValueError("Ese correo ya tiene acceso")
 
     password = str(access_payload.get("password", "")).strip()
+    password_initialized = 1
     if not existing and not password:
         password = secrets.token_urlsafe(24)
+        password_initialized = 0
 
     rol_app_id = app_role_id_for(connection, access_payload.get("rol_app") or "usuario")
     active = int(bool(access_payload.get("activo", True)))
@@ -1164,7 +1233,7 @@ def save_usuario_for_persona(connection, persona_id, access_payload):
         if password:
             connection.execute("""
                 UPDATE usuarios
-                SET usuario = ?, password_hash = ?, email = ?, rol_app_id = ?, activo = ?
+                SET usuario = ?, password_hash = ?, email = ?, rol_app_id = ?, activo = ?, password_inicializada = 1
                 WHERE id = ?
             """, (username, hash_password(password), email, rol_app_id, active, existing["id"]))
         else:
@@ -1176,9 +1245,9 @@ def save_usuario_for_persona(connection, persona_id, access_payload):
         return
 
     connection.execute("""
-        INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (username, hash_password(password), email, persona_id, rol_app_id, active))
+        INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo, password_inicializada)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (username, hash_password(password), email, persona_id, rol_app_id, active, password_initialized))
 
 
 def save_persona(payload, persona_id=None):
@@ -1575,7 +1644,7 @@ def save_usuario(payload, user_id=None):
             if password:
                 connection.execute("""
                     UPDATE usuarios
-                    SET usuario = ?, password_hash = ?, email = ?, persona_id = ?, rol_app_id = ?, activo = ?
+                    SET usuario = ?, password_hash = ?, email = ?, persona_id = ?, rol_app_id = ?, activo = ?, password_inicializada = 1
                     WHERE id = ?
                 """, (username, hash_password(password), email, persona_id, role_id, active, user_id))
             else:

@@ -96,6 +96,8 @@ def route_get(handler, path, query):
 def route_post(handler, path, payload):
     if path == "/api/login":
         return handler.login(payload)
+    if path == "/api/first-access":
+        return handler.first_access(payload)
     if path == "/api/password-reset":
         return handler.reset_password(payload)
     if path == "/api/access-links":

@@ -183,6 +183,7 @@ def migrate_passwords_to_hash(connection):
 
 
 def ensure_identity_model(connection):
+    ensure_column(connection, "usuarios", "password_inicializada", "INTEGER NOT NULL DEFAULT 1")
     legacy_admin = connection.execute("SELECT id FROM roles_operativos WHERE nombre = 'Administracion'").fetchone()
     current_admin = connection.execute("SELECT id FROM roles_operativos WHERE nombre = 'Admin'").fetchone()
     if legacy_admin and not current_admin:
@@ -952,7 +953,7 @@ ROLE_MODULES = {
 
 
 PUBLIC_GET_PATHS = {"/api/health", "/api/access-links/validate"}
-PUBLIC_POST_PATHS = {"/api/login", "/api/password-reset", "/api/access-links/complete"}
+PUBLIC_POST_PATHS = {"/api/login", "/api/first-access", "/api/access-links/complete"}
 INTEGRATION_GET_PATHS = {"/api/integraciones/personal"}
 
 
@@ -1272,6 +1273,13 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         if not email or not password:
             raise ValueError("Correo y contraseña son obligatorios")
         return {"ok": repo.reset_user_password(email, password)}
+
+    def first_access(self, payload):
+        return repo.complete_first_access(
+            payload.get("email"),
+            payload.get("password"),
+            payload.get("security_code") or payload.get("codigo_seguridad"),
+        )
 
     def access_link_base_url(self):
         if PUBLIC_BASE_URL:

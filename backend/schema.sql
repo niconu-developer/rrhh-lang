@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   persona_id INTEGER,
   rol_app_id INTEGER NOT NULL,
   activo INTEGER NOT NULL DEFAULT 1,
+  password_inicializada INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (persona_id) REFERENCES personas(id),
   FOREIGN KEY (rol_app_id) REFERENCES roles_app(id)
 );
