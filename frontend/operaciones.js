@@ -6,9 +6,11 @@ const OPERATION_API_BASE = apiBase();
 const operationElements = {
   from: document.querySelector("#operationFrom"),
   to: document.querySelector("#operationTo"),
+  today: document.querySelector("#operationToday"),
   person: document.querySelector("#operationPerson"),
   status: document.querySelector("#operationStatus"),
   count: document.querySelector("#operationCount"),
+  pagination: document.querySelector("#operationPagination"),
   selectAll: document.querySelector("#selectAllOperations"),
   approveSelection: document.querySelector("#approveOperations"),
   rejectSelection: document.querySelector("#rejectOperations"),
@@ -17,15 +19,9 @@ const operationElements = {
   closeDetail: document.querySelector("#closeOperationModal"),
   detailTitle: document.querySelector("#operationModalTitle"),
   detailBody: document.querySelector("#operationDetailBody"),
-  editDetail: document.querySelector("#editOperationDetail"),
   approveDetail: document.querySelector("#approveOperationDetail"),
   rejectDetail: document.querySelector("#rejectOperationDetail"),
-  editModal: document.querySelector("#operationEditModal"),
   editForm: document.querySelector("#operationEditForm"),
-  editType: document.querySelector("#operationEditType"),
-  editBand: document.querySelector("#operationEditBand"),
-  editValue: document.querySelector("#operationEditValue"),
-  cancelEdit: document.querySelector("#cancelOperationEdit"),
   rejectModal: document.querySelector("#operationRejectModal"),
   rejectReason: document.querySelector("#operationRejectReason"),
   cancelReject: document.querySelector("#cancelOperationReject"),
@@ -33,25 +29,28 @@ const operationElements = {
   toast: document.querySelector("#toast"),
 };
 
+const OPERATION_PAGE_SIZE = 50;
 let operationRows = [];
 let selectedOperationIds = new Set();
 let selectedOperation = null;
 let pendingRejectIds = [];
+let operationPage = 1;
+let operationsLoading = false;
 let operationConfig = {
   operationBands: [...DEFAULT_OPERATION_BANDS],
   operationTariffs: [],
 };
 
 async function initOperations() {
-  setCurrentMonthOperationRange();
+  setTodayOperationRange();
   await loadOperationConfig();
   await refreshOperations();
 }
 
-function setCurrentMonthOperationRange() {
-  const today = new Date();
-  operationElements.from.value = inputDateValue(new Date(today.getFullYear(), today.getMonth(), 1));
-  operationElements.to.value = inputDateValue(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+function setTodayOperationRange() {
+  const today = inputDateValue(new Date());
+  operationElements.from.value = today;
+  operationElements.to.value = today;
 }
 
 async function operationApiGet(path) {
@@ -73,14 +72,26 @@ async function operationApiPost(path, payload) {
 
 async function refreshOperations() {
   try {
-    const rows = await operationApiGet("/operaciones");
+    setOperationsLoading(true);
+    const { from, to } = selectedOperationRange();
+    const query = new URLSearchParams({
+      desde: inputDateValue(from),
+      hasta: inputDateValue(to),
+    });
+    const status = operationElements.status.value || "pending";
+    if (status && status !== "todos") query.set("estado", status);
+    const rows = await operationApiGet(`/operaciones?${query.toString()}`);
     operationRows = rows.map(normalizeOperation);
     selectedOperationIds.clear();
+    operationPage = 1;
     renderOperations();
   } catch (error) {
     showOperationToast(error.message || "No se pudieron cargar las operaciones");
     operationElements.body.innerHTML = `<tr><td colspan="9">No se pudo conectar con la base local.</td></tr>`;
     updateSelectionControls([]);
+    renderOperationPagination(0);
+  } finally {
+    setOperationsLoading(false);
   }
 }
 
@@ -131,6 +142,10 @@ function normalizeOperation(row) {
     note: row.observacion || "",
     status: row.estado || "pending",
     rejectionReason: row.motivo_rechazo || "",
+    planStatus: row.plan_estado || "VACIO",
+    planStart: row.plan_hora_inicio || "",
+    planEnd: row.plan_hora_fin || "",
+    planActivity: row.plan_actividad_ubicacion || "",
   };
 }
 
@@ -138,13 +153,22 @@ function renderOperations() {
   const rows = filteredOperations();
   syncSelectionWithRows(rows);
   renderOperationTotals(rows);
+  const pageRows = paginatedOperationRows(rows);
   if (!rows.length) {
     operationElements.body.innerHTML = `<tr><td colspan="9">Sin operaciones para los filtros seleccionados.</td></tr>`;
     updateSelectionControls(rows);
+    renderOperationPagination(0);
     return;
   }
-  operationElements.body.innerHTML = rows
-    .map((row) => `<tr class="${selectedOperationIds.has(row.id) ? "selected" : ""}">
+  let lastDate = "";
+  operationElements.body.innerHTML = pageRows
+    .flatMap((row) => {
+      const rowDate = operationDateKey(row);
+      const dateHeader = rowDate !== lastDate
+        ? `<tr class="operation-date-row"><td colspan="9">${formatFullOperationDate(row.timestamp)}</td></tr>`
+        : "";
+      lastDate = rowDate;
+      return [dateHeader, `<tr class="${selectedOperationIds.has(row.id) ? "selected" : ""}">
       <td class="select-column" data-toggle-operation="${row.id}">
         <input
           type="checkbox"
@@ -153,8 +177,8 @@ function renderOperations() {
           ${selectedOperationIds.has(row.id) ? "checked" : ""}
         />
       </td>
-      <td>${formatOperationDate(row.timestamp)}</td>
       <td>${escapeHtml(row.person)}</td>
+      <td>${operationPlanCell(row)}</td>
       <td><strong>${escapeHtml(row.type)}</strong><br><span class="muted">${escapeHtml(row.band || "Sin franja")}</span></td>
       <td>${escapeHtml(row.reference || "Sin proyecto")}<br><span class="muted">${escapeHtml(row.note || "")}</span></td>
       <td>${formatMoney(row.value)}</td>
@@ -162,28 +186,77 @@ function renderOperations() {
       <td>${escapeHtml(row.rejectionReason || "-")}</td>
       <td class="approval-actions-cell">
         <div class="table-actions">
-          <button class="ghost-button small" data-view-operation="${row.id}" type="button">Ver detalles</button>
-          <button class="ghost-button small" data-edit-operation="${row.id}" type="button">Editar</button>
+          <button class="ghost-button small" data-view-operation="${row.id}" type="button">Detalles / editar</button>
           <button class="ghost-button small" data-approve-operation="${row.id}" type="button" ${row.status === "approved" ? "disabled" : ""}>Aprobar</button>
           <button class="ghost-button small" data-reject-operation="${row.id}" type="button" ${row.status === "rejected" ? "disabled" : ""}>Rechazar</button>
         </div>
       </td>
-    </tr>`)
+    </tr>`];
+    })
+    .filter(Boolean)
     .join("");
   updateSelectionControls(rows);
+  renderOperationPagination(rows.length);
+}
+
+function paginatedOperationRows(rows) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / OPERATION_PAGE_SIZE));
+  operationPage = Math.min(Math.max(1, operationPage), totalPages);
+  const start = (operationPage - 1) * OPERATION_PAGE_SIZE;
+  return rows.slice(start, start + OPERATION_PAGE_SIZE);
+}
+
+function renderOperationPagination(totalRows) {
+  if (!operationElements.pagination) return;
+  if (!totalRows) {
+    operationPage = 1;
+    operationElements.pagination.innerHTML = `
+      <span>0-0 de 0</span>
+      <div class="pagination-actions">
+        <button class="ghost-button small" data-operation-page="prev" type="button" disabled>Anterior</button>
+        <strong>Página 1 de 1</strong>
+        <button class="ghost-button small" data-operation-page="next" type="button" disabled>Siguiente</button>
+      </div>
+    `;
+    return;
+  }
+  const totalPages = Math.max(1, Math.ceil(totalRows / OPERATION_PAGE_SIZE));
+  const start = (operationPage - 1) * OPERATION_PAGE_SIZE + 1;
+  const end = Math.min(totalRows, operationPage * OPERATION_PAGE_SIZE);
+  operationElements.pagination.innerHTML = `
+    <span>${start}-${end} de ${totalRows}</span>
+    <div class="pagination-actions">
+      <button class="ghost-button small" data-operation-page="prev" type="button" ${operationPage <= 1 ? "disabled" : ""}>Anterior</button>
+      <strong>Página ${operationPage} de ${totalPages}</strong>
+      <button class="ghost-button small" data-operation-page="next" type="button" ${operationPage >= totalPages ? "disabled" : ""}>Siguiente</button>
+    </div>
+  `;
+}
+
+function setOperationsLoading(isLoading) {
+  operationsLoading = isLoading;
+  if (isLoading) {
+    operationElements.body.innerHTML = `
+      <tr>
+        <td class="loading-row" colspan="9">
+          <span class="loading-inline"><i></i>Cargando operaciones...</span>
+        </td>
+      </tr>
+    `;
+    renderOperationPagination(0);
+  }
+  if (operationElements.today) operationElements.today.disabled = isLoading;
 }
 
 function filteredOperations() {
   const { from, to } = selectedOperationRange();
   const personQuery = operationElements.person.value;
-  const status = operationElements.status.value || "pending";
   return operationRows
     .filter((row) => {
       const date = parseTimestampDate(row.timestamp);
       const matchesRange = dateInRange(date, from, to);
       const matchesPerson = matchesMultiSearchQuery(row.person, personQuery, normalizeSearchText);
-      const matchesStatus = status === "todos" || row.status === status;
-      return matchesRange && matchesPerson && matchesStatus;
+      return matchesRange && matchesPerson;
     })
     .sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)) || a.person.localeCompare(b.person));
 }
@@ -193,45 +266,76 @@ function renderOperationTotals(rows) {
   operationElements.count.textContent = `${rows.length} operaciones · ${formatMoney(total)}`;
 }
 
-function openOperationDetail(id) {
+async function openOperationDetail(id) {
   selectedOperation = operationRows.find((row) => row.id === String(id));
   if (!selectedOperation) return;
   operationElements.detailTitle.textContent = `${selectedOperation.person} · ${formatOperationDate(selectedOperation.timestamp)}`;
-  operationElements.detailBody.innerHTML = `
-    ${detailItem("Persona", selectedOperation.person)}
-    ${detailItem("Fecha", formatOperationDate(selectedOperation.timestamp))}
-    ${detailItem("Tipo", selectedOperation.type)}
-    ${detailItem("Franja", selectedOperation.band || "-")}
-    ${detailItem("Valor", formatMoney(selectedOperation.value))}
-    ${detailItem("Proyecto", selectedOperation.reference || "-")}
-    ${detailItem("Observación", selectedOperation.note || "-")}
-    ${detailItem("Estado", operationStatusLabel(selectedOperation.status))}
-    ${selectedOperation.rejectionReason ? detailItem("Motivo rechazo", selectedOperation.rejectionReason) : ""}
-  `;
-  operationElements.editDetail.disabled = false;
+  operationElements.detailBody.innerHTML = `<div class="loading-row"><span class="loading-inline"><i></i>Cargando detalle...</span></div>`;
   operationElements.approveDetail.disabled = selectedOperation.status === "approved";
   operationElements.rejectDetail.disabled = selectedOperation.status === "rejected";
   operationElements.detailModal.classList.add("open");
   operationElements.detailModal.setAttribute("aria-hidden", "false");
+  const context = await loadOperationDayContext(selectedOperation).catch(() => []);
+  renderOperationDetailEditor(context);
 }
 
-function openOperationEdit(id) {
-  selectedOperation = operationRows.find((row) => row.id === String(id));
+async function loadOperationDayContext(operation) {
+  const date = operationDateKey(operation);
+  if (!date || !operation.personId) return [];
+  return operationApiGet(`/aprobaciones?desde=${date}&hasta=${date}&persona=${operation.personId}`);
+}
+
+function renderOperationDetailEditor(contextRows = []) {
   if (!selectedOperation) return;
   const tariffOptions = operationEditTariffs(selectedOperation);
-  operationElements.editType.innerHTML = tariffOptions.length
-    ? tariffOptions.map((tariff) => `<option value="${tariff.id}">${escapeHtml(operationTariffLabel(tariff))}</option>`).join("")
-    : `<option value="">Sin tarifas activas</option>`;
-  operationElements.editBand.innerHTML = operationConfig.operationBands
-    .map((band) => `<option value="${escapeHtml(band)}">${escapeHtml(band)}</option>`)
-    .join("");
-  operationElements.editType.value = tariffOptions.some((tariff) => String(tariff.id) === selectedOperation.tariffId)
+  const selectedTariff = tariffOptions.some((tariff) => String(tariff.id) === selectedOperation.tariffId)
     ? selectedOperation.tariffId
     : String(tariffOptions[0]?.id || "");
-  operationElements.editBand.value = operationConfig.operationBands.includes(selectedOperation.band) ? selectedOperation.band : operationConfig.operationBands[0] || selectedOperation.band;
+  const selectedBand = operationConfig.operationBands.includes(selectedOperation.band) ? selectedOperation.band : operationConfig.operationBands[0] || selectedOperation.band;
+  operationElements.detailBody.innerHTML = `
+    <section class="operation-detail-section">
+      <span>Operación enviada</span>
+      <div class="operation-detail-edit-grid">
+        <label>Categoría
+          <select id="operationEditType">
+            ${tariffOptions.length
+              ? tariffOptions.map((tariff) => `<option value="${tariff.id}" ${String(tariff.id) === String(selectedTariff) ? "selected" : ""}>${escapeHtml(operationTariffLabel(tariff))}</option>`).join("")
+              : `<option value="">Sin tarifas activas</option>`}
+          </select>
+        </label>
+        <label>Franja
+          <select id="operationEditBand">
+            ${operationConfig.operationBands.map((band) => `<option value="${escapeHtml(band)}" ${band === selectedBand ? "selected" : ""}>${escapeHtml(band)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Valor estimado
+          <div class="operation-value-box" id="operationEditValue">${formatMoney(operationValueForSelection(selectedBand, selectedTariff))}</div>
+        </label>
+        <article>
+          <span>Proyecto</span>
+          <strong>${escapeHtml(selectedOperation.reference || "Sin proyecto")}</strong>
+          ${selectedOperation.note ? `<small>${escapeHtml(selectedOperation.note)}</small>` : ""}
+        </article>
+        <article>
+          <span>Estado</span>
+          <strong>${escapeHtml(operationStatusLabel(selectedOperation.status))}</strong>
+          ${selectedOperation.rejectionReason ? `<small>${escapeHtml(selectedOperation.rejectionReason)}</small>` : ""}
+        </article>
+      </div>
+    </section>
+    <section class="operation-detail-section operation-day-layout">
+      <article class="operation-day-plan">
+        <span>Plan semanal</span>
+        <strong>${escapeHtml(operationPlanText(selectedOperation))}</strong>
+        <small>${escapeHtml(selectedOperation.planActivity || "Sin especificar")}</small>
+      </article>
+      <article class="operation-day-segments">
+        ${renderOperationDayContext(contextRows)}
+      </article>
+    </section>
+  `;
+  operationElements.editForm.dataset.operationId = selectedOperation.id;
   renderOperationEditValue();
-  operationElements.editModal.classList.add("open");
-  operationElements.editModal.setAttribute("aria-hidden", "false");
 }
 
 function operationEditTariffs(operation) {
@@ -255,28 +359,26 @@ function operationTariffLabel(tariff) {
   return `${tariff.categoria || "Sin categoría"} · ${tariff.tipo || "Sin tipo"}`;
 }
 
-function closeOperationEdit() {
-  operationElements.editModal.classList.remove("open");
-  operationElements.editModal.setAttribute("aria-hidden", "true");
-}
-
 function renderOperationEditValue() {
   if (!selectedOperation) return;
-  const value = operationValueForSelection(operationElements.editBand.value);
-  operationElements.editValue.textContent = `Valor estimado: ${formatMoney(value)}`;
+  const value = operationValueForSelection();
+  const target = document.querySelector("#operationEditValue");
+  if (target) target.textContent = formatMoney(value);
 }
 
-function operationValueForSelection(band) {
-  const tariff = operationEditTariffs(selectedOperation).find((item) => String(item.id) === String(operationElements.editType.value));
-  return operationTariffValueForBand(tariff, band);
+function operationValueForSelection(band = null, tariffId = null) {
+  const selectedBand = band || document.querySelector("#operationEditBand")?.value || selectedOperation?.band;
+  const selectedTariffId = tariffId || document.querySelector("#operationEditType")?.value || selectedOperation?.tariffId;
+  const tariff = operationEditTariffs(selectedOperation).find((item) => String(item.id) === String(selectedTariffId));
+  return operationTariffValueForBand(tariff, selectedBand);
 }
 
 async function saveOperationEdit(event) {
   event.preventDefault();
   if (!selectedOperation) return;
-  const tariffId = operationElements.editType.value;
-  const band = operationElements.editBand.value;
-  const value = operationValueForSelection(band);
+  const tariffId = document.querySelector("#operationEditType")?.value || "";
+  const band = document.querySelector("#operationEditBand")?.value || "";
+  const value = operationValueForSelection(band, tariffId);
   await updateOperation(selectedOperation.id, {
     operacion_tarifa_id: tariffId ? Number(tariffId) : null,
     franja: band,
@@ -284,7 +386,6 @@ async function saveOperationEdit(event) {
     estado: selectedOperation.status,
   });
   showOperationToast("Operación actualizada");
-  closeOperationEdit();
   closeOperationDetail();
   await refreshOperations();
 }
@@ -423,6 +524,71 @@ function formatOperationDate(value) {
   });
 }
 
+function formatFullOperationDate(value) {
+  const date = parseTimestampDate(value);
+  if (!date) return "Sin fecha";
+  return date.toLocaleDateString("es-UY", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function operationDateKey(row) {
+  return String(row.timestamp || "").slice(0, 10);
+}
+
+function operationPlanCell(row) {
+  const text = operationPlanText(row);
+  const detail = row.planActivity || (row.planStatus !== "NORMAL" ? "" : "Sin especificar");
+  return `<div class="operation-plan-cell">
+    <strong>${escapeHtml(text)}</strong>
+    ${detail ? `<span>${escapeHtml(detail)}</span>` : ""}
+  </div>`;
+}
+
+function operationPlanText(row) {
+  if (row.planStatus !== "NORMAL") return row.planStatus || "VACIO";
+  return `${row.planStart || "--"} - ${row.planEnd || "--"}`;
+}
+
+function renderOperationDayContext(contextRows = []) {
+  const row = contextRows[0];
+  if (!row) return `<div class="operation-context-empty">Sin jornada registrada para este día.</div>`;
+  const segments = Array.isArray(row.tramos) && row.tramos.length ? row.tramos : [];
+  const segmentRows = segments.length
+    ? segments.map((segment, index) => operationContextSegment(segment, index + 1)).join("")
+    : `<div class="operation-context-line empty">
+        <span>1</span>
+        <strong>Sin tramo completo</strong>
+        <span>${escapeHtml(row.entrada_hora || "Sin entrada")}</span>
+        <span>${escapeHtml(row.salida_hora || "Sin salida")}</span>
+        <span>${escapeHtml(row.entrada_actividad || row.salida_actividad || row.actividad_ubicacion || "-")}</span>
+      </div>`;
+  return `<div class="operation-context-table">
+    <div class="operation-context-head">
+      <span>Tramo</span>
+      <span>Tipo</span>
+      <span>Entrada</span>
+      <span>Salida</span>
+      <span>Proyecto</span>
+    </div>
+    ${segmentRows}
+  </div>`;
+}
+
+function operationContextSegment(segment, index) {
+  const project = segment.entrada_actividad || segment.salida_actividad || "Sin proyecto";
+  return `<div class="operation-context-line">
+    <span>${index}</span>
+    <strong>Reloj</strong>
+    <span>${escapeHtml(segment.entrada_hora || "--")}</span>
+    <span>${escapeHtml(segment.salida_hora || "--")}</span>
+    <span>${escapeHtml(project)}</span>
+  </div>`;
+}
+
 function formatMoney(value) {
   return `$${Math.round(Number(value || 0)).toLocaleString("es-UY")}`;
 }
@@ -463,9 +629,21 @@ function showOperationToast(message) {
   window.setTimeout(() => operationElements.toast.classList.remove("visible"), 2200);
 }
 
-[operationElements.from, operationElements.to].forEach((element) => element.addEventListener("change", renderOperations));
-[operationElements.person, operationElements.status].forEach((element) => {
-  element.addEventListener(element.type === "search" ? "input" : "change", renderOperations);
+[operationElements.from, operationElements.to].forEach((element) => element.addEventListener("change", refreshOperations));
+operationElements.today?.addEventListener("click", () => {
+  setTodayOperationRange();
+  refreshOperations();
+});
+operationElements.person.addEventListener("input", () => {
+  operationPage = 1;
+  renderOperations();
+});
+operationElements.status.addEventListener("change", refreshOperations);
+operationElements.pagination?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-operation-page]");
+  if (!button || operationsLoading) return;
+  operationPage += button.dataset.operationPage === "next" ? 1 : -1;
+  renderOperations();
 });
 
 operationElements.selectAll.addEventListener("change", () => toggleAllVisibleOperations(operationElements.selectAll.checked));
@@ -475,7 +653,6 @@ operationElements.body.addEventListener("click", (event) => {
   const select = event.target.closest("[data-select-operation]");
   const selectCell = event.target.closest("[data-toggle-operation]");
   const view = event.target.closest("[data-view-operation]");
-  const edit = event.target.closest("[data-edit-operation]");
   const approve = event.target.closest("[data-approve-operation]");
   const reject = event.target.closest("[data-reject-operation]");
 
@@ -483,8 +660,7 @@ operationElements.body.addEventListener("click", (event) => {
     const checkbox = selectCell.querySelector("[data-select-operation]");
     if (checkbox) toggleOperationSelection(selectCell.dataset.toggleOperation, !checkbox.checked);
   }
-  if (view) openOperationDetail(view.dataset.viewOperation);
-  if (edit) openOperationEdit(edit.dataset.editOperation);
+  if (view) openOperationDetail(view.dataset.viewOperation).catch((error) => showOperationToast(error.message || "No se pudo cargar el detalle"));
   if (approve) approveOperations([approve.dataset.approveOperation]).catch((error) => showOperationToast(error.message));
   if (reject) openRejectModal([reject.dataset.rejectOperation]);
 });
@@ -504,15 +680,11 @@ operationElements.approveDetail.addEventListener("click", () => {
 operationElements.rejectDetail.addEventListener("click", () => {
   if (selectedOperation) openRejectModal([selectedOperation.id]);
 });
-operationElements.editDetail.addEventListener("click", () => {
-  if (selectedOperation) openOperationEdit(selectedOperation.id);
+operationElements.detailBody.addEventListener("change", (event) => {
+  if (event.target.closest("#operationEditType") || event.target.closest("#operationEditBand")) {
+    renderOperationEditValue();
+  }
 });
-operationElements.cancelEdit.addEventListener("click", closeOperationEdit);
-operationElements.editModal.addEventListener("click", (event) => {
-  if (event.target === operationElements.editModal) closeOperationEdit();
-});
-operationElements.editType.addEventListener("change", renderOperationEditValue);
-operationElements.editBand.addEventListener("change", renderOperationEditValue);
 operationElements.editForm.addEventListener("submit", (event) => saveOperationEdit(event).catch((error) => showOperationToast(error.message)));
 operationElements.cancelReject.addEventListener("click", closeRejectModal);
 operationElements.rejectModal.addEventListener("click", (event) => {

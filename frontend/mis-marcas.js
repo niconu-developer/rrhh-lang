@@ -103,15 +103,12 @@ async function refreshMonth() {
   const { from, to } = monthRange(visibleMonth);
   const [monthMarks, allOperations, monthTurns] = await Promise.all([
     api(`/marcas?persona=${encodeURIComponent(operator.nombre)}&desde=${from}&hasta=${addIsoDays(to, 1)}`),
-    api("/operaciones"),
+    api(`/operaciones?persona=${encodeURIComponent(operator.id)}&desde=${from}&hasta=${to}`),
     api(`/turnos?desde=${from}&hasta=${to}`),
   ]);
   marks = monthMarks;
   turns = monthTurns.filter((turn) => turn.persona === operator.nombre);
-  operations = allOperations.filter((operation) => {
-    const date = String(operation.fecha_hora || "").slice(0, 10);
-    return operation.persona === operator.nombre && date >= from && date <= to;
-  });
+  operations = allOperations;
   render();
 }
 

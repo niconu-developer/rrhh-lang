@@ -8,7 +8,7 @@ ON CONFLICT (nombre) DO NOTHING;
 
 INSERT INTO configuracion (clave, valor) VALUES
   ('operation_bands', '["Hasta 4 horas", "4 a 8 horas", "8 a 12 horas"]'),
-  ('role_permissions', '{"admin":{"modules":["incidencias","aprobaciones","operaciones","liquidacion","importacion","mis-marcas","plan","dashboard","reportes","personal","marcas","reloj","config"]},"rrhh":{"modules":["incidencias","aprobaciones","operaciones","liquidacion","importacion","mis-marcas","plan","dashboard","reportes","personal","marcas","reloj"]},"usuario":{"modules":["mis-marcas","marcas"]}}')
+  ('role_permissions', '{"admin":{"modules":["plan","dashboard","aprobaciones","operaciones","reportes","analisis","liquidacion","personal","config","marcas","mis-marcas"]},"rrhh":{"modules":["plan","dashboard","aprobaciones","operaciones","reportes","analisis","liquidacion","personal","marcas","mis-marcas"]},"usuario":{"modules":["mis-marcas","marcas"]}}')
 ON CONFLICT (clave) DO NOTHING;
 
 INSERT INTO operacion_tarifas (categoria, tipo, hasta_4hs, de_4_a_8hs, de_8_a_12hs, activo)
@@ -278,11 +278,6 @@ INSERT INTO ubicaciones (
   ('LOGISTICA', NULL, NULL, NULL, 500, 0, ''),
   ('FUERA DE RANGO', NULL, NULL, NULL, 500, 1, '')
 ON CONFLICT (nombre) DO NOTHING;
-
-INSERT INTO proyectos (nombre, activo) VALUES
-  ('LOGISTICA', 1),
-  ('DEPOSITO', 1)
-ON CONFLICT (nombre) DO UPDATE SET activo = 1;
 
 WITH asignaciones_operacion(persona, categoria, tipo) AS (
   VALUES

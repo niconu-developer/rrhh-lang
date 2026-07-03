@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Validación de jornales</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260616-mobile-header2" />
+    <link rel="stylesheet" href="./css/global.css?v=20260703-turn-plus1" />
     <link rel="stylesheet" href="./css/pages/aprobaciones.css?v=20260610-approval-header1" />
   </head>
   <body>
@@ -32,6 +32,9 @@
         <div class="report-filters approval-filters">
           <label>Desde<input id="approvalFrom" type="date" /></label>
           <label>Hasta<input id="approvalTo" type="date" /></label>
+          <div class="filter-button-slot">
+            <button class="ghost-button" id="approvalToday" type="button">Hoy</button>
+          </div>
           <label>Persona o rol<input id="approvalPerson" type="search" placeholder="Buscar: lucas, brai, logistico" autocomplete="off" /></label>
           <label>Estado
             <select id="approvalStatus">
@@ -39,8 +42,18 @@
               <option value="REQUIERE_REVISION">Requiere revisión</option>
               <option value="todos">Todos los estados</option>
               <option value="APROBADA">Validados</option>
-              <option value="VALIDADA_CON_INCIDENCIA">Validados con incidencia</option>
+              <option value="VALIDADA_CON_INCIDENCIA">Validados con observación</option>
               <option value="RECHAZADA">Rechazados</option>
+            </select>
+          </label>
+          <label>Tipo observación
+            <select id="approvalObservationType">
+              <option value="todos">Todos</option>
+            </select>
+          </label>
+          <label>Severidad
+            <select id="approvalObservationSeverity">
+              <option value="todos">Todas</option>
             </select>
           </label>
           <label>Orden
@@ -55,17 +68,17 @@
             <button class="primary-button" id="approveSelection" type="button" disabled>Aprobar selección</button>
           </div>
         </div>
+        <div class="table-pagination" id="approvalPagination" aria-live="polite"></div>
       </section>
 
       <section class="report-panel">
         <div class="dashboard-table-wrap">
-          <table class="dashboard-table report-preview-table">
+          <table class="dashboard-table report-preview-table approvals-table">
             <thead>
               <tr>
                 <th class="select-column">
                   <input id="selectAllApprovals" type="checkbox" aria-label="Seleccionar todas las jornadas visibles" />
                 </th>
-                <th>Fecha</th>
                 <th>Persona</th>
                 <th>Turno previsto</th>
                 <th>Entrada</th>
@@ -82,7 +95,7 @@
     </main>
 
     <div class="modal-backdrop" id="approvalModal" aria-hidden="true">
-      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="approvalModalTitle">
+      <section class="person-modal approval-detail-modal" role="dialog" aria-modal="true" aria-labelledby="approvalModalTitle">
         <div class="modal-head">
           <div>
             <p class="muted">Jornada</p>
@@ -96,6 +109,25 @@
           <button class="ghost-button" id="rejectApprovalDetail" type="button">Rechazar</button>
           <button class="primary-button" id="approveApprovalDetail" type="button">Aprobar</button>
         </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="approvalTurnsModal" aria-hidden="true">
+      <section class="person-modal approval-turns-modal" role="dialog" aria-modal="true" aria-labelledby="approvalTurnsTitle">
+        <div class="modal-head">
+          <div>
+            <p class="muted">Marcas del día</p>
+            <h2 id="approvalTurnsTitle">Editar turnos</h2>
+          </div>
+          <button class="ghost-button small" id="closeApprovalTurns" type="button">Cerrar</button>
+        </div>
+        <div id="approvalTurnsBody"></div>
+        <div class="approval-turn-add-row">
+          <button class="ghost-button approval-turn-add-button" id="addApprovalTurnMark" type="button" aria-label="Agregar siguiente marca">+</button>
+        </div>
+        <label class="approval-turns-observation">Observación de edición
+          <textarea id="approvalTurnsObservation" rows="2" placeholder="Justificación de carga o edición manual"></textarea>
+        </label>
       </section>
     </div>
 
@@ -136,8 +168,8 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="./api-client.js?v=20260610-arch1"></script>
-    <script src="./shared-data.js?v=20260610-opcats1"></script>
+    <script src="./shared-data.js?v=20260702-observaciones1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./aprobaciones.js?v=20260610-no-work-approval1"></script>
+    <script src="./aprobaciones.js?v=20260703-observacion-opcional1"></script>
   </body>
 </html>

@@ -20,7 +20,6 @@ TABLES = [
     "turnos",
     "marcas",
     "operaciones",
-    "facturacion",
     "incidencias",
     "jornales",
     "sesiones",

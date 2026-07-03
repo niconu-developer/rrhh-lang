@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Validación de operaciones</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260616-mobile-header2" />
-    <link rel="stylesheet" href="./css/pages/operaciones.css?v=20260610-ops-jornales-format2" />
+    <link rel="stylesheet" href="./css/global.css?v=20260703-turn-plus1" />
+    <link rel="stylesheet" href="./css/pages/operaciones.css?v=20260703-detalle-editar3" />
   </head>
   <body>
     <header class="topbar">
@@ -32,6 +32,9 @@
         <div class="report-filters operation-validation-filters">
           <label>Desde<input id="operationFrom" type="date" /></label>
           <label>Hasta<input id="operationTo" type="date" /></label>
+          <div class="filter-button-slot">
+            <button class="ghost-button" id="operationToday" type="button">Hoy</button>
+          </div>
           <label>Persona<input id="operationPerson" type="search" placeholder="Buscar personas: lucas, brai" autocomplete="off" /></label>
           <label>Estado
             <select id="operationStatus">
@@ -46,6 +49,7 @@
             <button class="primary-button" id="approveOperations" type="button" disabled>Aprobar selección</button>
           </div>
         </div>
+        <div class="table-pagination" id="operationPagination" aria-live="polite"></div>
       </section>
 
       <section class="report-panel">
@@ -56,8 +60,8 @@
                 <th class="select-column">
                   <input id="selectAllOperations" type="checkbox" aria-label="Seleccionar todas las operaciones visibles" />
                 </th>
-                <th>Fecha</th>
                 <th>Persona</th>
+                <th>Plan semanal</th>
                 <th>Operación</th>
                 <th>Proyecto</th>
                 <th>Valor</th>
@@ -81,32 +85,14 @@
           </div>
           <button class="ghost-button small" id="closeOperationModal" type="button">Cerrar</button>
         </div>
-        <div class="incident-detail-grid" id="operationDetailBody"></div>
+        <form class="operation-detail-editor" id="operationEditForm">
+          <div id="operationDetailBody"></div>
+        </form>
         <div class="modal-actions">
-          <button class="ghost-button" id="editOperationDetail" type="button">Editar tipo/franja</button>
           <button class="ghost-button" id="rejectOperationDetail" type="button">Rechazar</button>
           <button class="primary-button" id="approveOperationDetail" type="button">Aprobar</button>
+          <button class="primary-button" type="submit">Guardar cambios</button>
         </div>
-      </section>
-    </div>
-
-    <div class="modal-backdrop" id="operationEditModal" aria-hidden="true">
-      <section class="person-modal incident-modal" role="dialog" aria-modal="true" aria-labelledby="operationEditTitle">
-        <div class="modal-head">
-          <div>
-            <p class="muted">Corrección</p>
-            <h2 id="operationEditTitle">Editar tipo y franja</h2>
-          </div>
-        </div>
-        <form class="edit-form" id="operationEditForm">
-          <label>Categoría<select id="operationEditType"></select></label>
-          <label>Franja<select id="operationEditBand"></select></label>
-          <div class="comparison" id="operationEditValue">Valor estimado: $0</div>
-          <div class="modal-actions">
-            <button class="ghost-button" id="cancelOperationEdit" type="button">Cancelar</button>
-            <button class="primary-button" type="submit">Guardar cambios</button>
-          </div>
-        </form>
       </section>
     </div>
 
@@ -130,6 +116,6 @@
     <script src="./api-client.js?v=20260610-arch1"></script>
     <script src="./shared-data.js?v=20260610-operation-tariffs1"></script>
     <script src="./auth-session.js?v=20260611-sso1"></script>
-    <script src="./operaciones.js?v=20260610-operation-tariffs1"></script>
+    <script src="./operaciones.js?v=20260703-detalle-editar3"></script>
   </body>
 </html>

@@ -23,7 +23,6 @@ TABLES = [
     "operacion_tarifas",
     "persona_operacion_tarifas",
     "ubicaciones",
-    "facturacion",
     "configuracion",
 ]
 
@@ -45,4 +44,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

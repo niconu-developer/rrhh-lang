@@ -149,7 +149,7 @@ async function refreshPayroll() {
   payroll.status.textContent = "Calculando";
   const [approvalRows, operationRows] = await Promise.all([
     payrollApi(`/aprobaciones?desde=${from}&hasta=${to}`),
-    payrollApi("/operaciones"),
+    payrollApi(`/operaciones?desde=${from}&hasta=${to}`),
   ]);
   jornals = approvalRows;
   operations = operationRows;
@@ -230,7 +230,7 @@ function approvalLabel(row) {
   if (isExpectedNoWorkApproval(row)) return "No requiere";
   if (status === "APROBADA" && row.modo_aprobacion === "AUTO") return "Validado auto";
   if (status === "APROBADA") return "Validado manual";
-  if (status === "VALIDADA_CON_INCIDENCIA") return "Validado con incidencia";
+  if (status === "VALIDADA_CON_INCIDENCIA") return "Validado con observación";
   if (status === "REQUIERE_REVISION") return "Requiere revisión";
   if (status === "RECHAZADA") return "Rechazado";
   return "Pendiente";

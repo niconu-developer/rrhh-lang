@@ -133,18 +133,6 @@ CREATE TABLE IF NOT EXISTS persona_operacion_tarifas (
   FOREIGN KEY (tarifa_id) REFERENCES operacion_tarifas(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS facturacion (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  orden TEXT NOT NULL,
-  fecha TEXT NOT NULL,
-  monto REAL NOT NULL DEFAULT 0,
-  referencia TEXT,
-  lugar TEXT,
-  observacion TEXT,
-  fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS ubicaciones (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT NOT NULL UNIQUE,
@@ -155,17 +143,6 @@ CREATE TABLE IF NOT EXISTS ubicaciones (
   genera_incidencia INTEGER NOT NULL DEFAULT 0,
   direccion TEXT
 );
-
-CREATE TABLE IF NOT EXISTS proyectos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL UNIQUE,
-  activo INTEGER NOT NULL DEFAULT 1,
-  fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_proyectos_activo
-ON proyectos(activo);
 
 CREATE TABLE IF NOT EXISTS incidencias (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,6 +168,38 @@ CREATE TABLE IF NOT EXISTS incidencias (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_incidencias_clave_unique
 ON incidencias(clave);
+
+CREATE TABLE IF NOT EXISTS observaciones_jornal (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  incidencia_id INTEGER UNIQUE,
+  jornal_id INTEGER,
+  persona_id INTEGER,
+  fecha TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  severidad TEXT NOT NULL DEFAULT 'INFO',
+  detalle TEXT,
+  estado TEXT NOT NULL DEFAULT 'PENDIENTE',
+  origen TEXT NOT NULL DEFAULT 'SISTEMA',
+  referencia_tipo TEXT,
+  referencia_id INTEGER,
+  minutos_desfasaje INTEGER,
+  resuelta INTEGER NOT NULL DEFAULT 0,
+  fecha_resolucion TEXT,
+  aprobado_por_usuario_id INTEGER,
+  aprobado_por_usuario TEXT,
+  observacion_aprobacion TEXT,
+  fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (incidencia_id) REFERENCES incidencias(id),
+  FOREIGN KEY (persona_id) REFERENCES personas(id),
+  FOREIGN KEY (aprobado_por_usuario_id) REFERENCES usuarios(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_observaciones_jornal_fecha
+ON observaciones_jornal(fecha);
+
+CREATE INDEX IF NOT EXISTS idx_observaciones_jornal_persona_fecha
+ON observaciones_jornal(persona_id, fecha);
 
 CREATE TABLE IF NOT EXISTS jornales (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

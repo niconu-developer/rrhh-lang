@@ -1,0 +1,256 @@
+PROMPT PARA INTEGRAR RRHH LANG COMO MODULO
+
+Necesito integrar este proyecto de RRHH/LANG como un modulo dentro de una plataforma mayor existente.
+
+El sistema actual esta construido con:
+- Backend Python.
+- PostgreSQL como base principal.
+- Frontend vanilla: HTML, CSS y JS sin framework.
+- API REST servida desde el backend.
+- Soporte para funcionar bajo subpath, por ejemplo /rrhh.
+- Autenticacion local existente, pero el objetivo es que el modulo use la autenticacion del sistema principal.
+
+Objetivo de integracion:
+Convertir este sistema en un modulo interno del sistema principal, manteniendo su logica funcional, pero adaptando navegacion, autenticacion, permisos y layout general para que conviva dentro de la plataforma madre.
+
+Flujo funcional principal:
+1. Plan semanal programa.
+2. Relojes validan marcas y operadores envian operaciones.
+3. RRHH valida horas y operaciones.
+4. RRHH chequea reportes y paga sueldos.
+5. Dashboard y analisis permiten ver metricas.
+
+PLAN SEMANAL
+
+El Plan Semanal es el componente mas critico del sistema. Debe tratarse como una grilla operativa tipo planilla, no como un formulario comun. Su comportamiento de teclado, seleccion, copiado/pegado, estados, publicacion de dias, edicion directa y exportacion es parte central del producto y no debe simplificarse ni reemplazarse sin una alternativa equivalente.
+
+Comportamientos especificos del Plan Semanal que NO se deben romper:
+
+1. Navegacion con teclado
+- Cada turno funciona como una celda.
+- Las flechas del teclado permiten moverse entre turnos:
+  - izquierda/derecha: dias anteriores o siguientes de la misma persona.
+  - arriba/abajo: misma fecha, persona anterior o siguiente.
+- Enter permite editar la celda seleccionada.
+- Escape cancela la edicion.
+- Tab guarda la edicion actual y avanza hacia abajo, a la siguiente persona del mismo dia.
+- Delete/Supr deja el turno en estado VACIO.
+
+2. Edicion directa
+- Los turnos se editan directamente en la grilla, sin depender de la barra lateral.
+- Durante edicion, el espacio de la celda puede ampliarse visualmente.
+- Campos editables:
+  - hora de inicio.
+  - hora de fin.
+  - actividad / ubicacion.
+- El formato horario es 24 horas, sin AM/PM.
+- La actividad / ubicacion se guarda siempre en mayusculas.
+- Si la actividad queda vacia, el sistema usa LOGISTICA.
+- Si se crea un turno por defecto desde una celda vacia, usa:
+  - 09:00 - 18:00.
+  - DEPOSITO.
+
+3. Turnos nocturnos
+- Si la hora de fin es menor que la hora de inicio, se interpreta que el turno termina al dia siguiente.
+- No debe bloquearse como error.
+- Ejemplo: 18:00 - 02:00 es valido.
+
+4. Seleccion de turnos
+- Click selecciona una celda.
+- Shift permite seleccionar multiples turnos, pero solo en horizontal:
+  - misma persona.
+  - dias consecutivos.
+- Se puede seleccionar arrastrando con el mouse.
+- La seleccion multiple no debe permitir saltos ni mezclar personas distintas.
+- Al seleccionar un dia completo desde el encabezado, no debe quedar seleccionado un turno individual.
+
+5. Copiar y pegar
+- Click derecho permite copiar y pegar turnos.
+- Tambien deben funcionar atajos:
+  - Ctrl+C / Cmd+C para copiar.
+  - Ctrl+V / Cmd+V para pegar.
+- Se puede copiar un turno o varios dias consecutivos de una misma persona.
+- Se puede pegar el mismo turno en varios dias consecutivos.
+- Se puede copiar desde una semana y pegar en otra.
+- El pegado debe hacerse en la celda o rango actualmente seleccionado, no en la celda original desde donde se copio.
+- El contenido copiado queda marcado visualmente en celeste claro.
+- El contenido recien pegado queda marcado por unos segundos en amarillo tenue.
+- El color de "copiado" no desaparece despues del primer pegado.
+
+6. Deshacer / rehacer
+- Ctrl+Z / Cmd+Z deshace el ultimo cambio.
+- Ctrl+Shift+Z / Cmd+Shift+Z rehace el cambio.
+- Debe aplicar a ediciones directas, pegados y cambios de estado.
+
+7. Menu contextual
+- El menu contextual del turno permite elegir estados y acciones.
+- Orden esperado:
+  - LIBRE.
+  - COPIAR.
+  - PEGAR.
+  - LICENCIA.
+  - SUSPENDIDO.
+  - JORNADA NORMAL.
+  - AUSENTE.
+- Los estados sin horario son:
+  - LIBRE.
+  - LICENCIA.
+  - SUSPENDIDO.
+  - LIC. MEDICA.
+  - AUSENTE.
+- JORNADA NORMAL habilita horario y actividad / ubicacion.
+
+8. Estados visuales
+- LIBRE: verde.
+- LICENCIA: celeste.
+- SUSPENDIDO: amarillo tenue.
+- LIC. MEDICA: verde oscuro con texto blanco.
+- AUSENTE: estado propio, usado cuando la persona tenia turno previsto pero no trabajo.
+- VACIO: sin turno cargado.
+- La seleccion activa debe tener un borde visible y mas grueso que los bordes normales.
+
+9. Semanas nuevas
+- Las semanas nuevas se crean vacias de lunes a viernes.
+- Sabado y domingo se crean como LIBRE.
+- Excepcion: personas con horario fijo cargado en Personal.
+- Las personas con horario fijo se crean con sus horarios predeterminados.
+- Los horarios fijos pueden variar por dia de semana o indicar LIBRE.
+- Una semana ya modificada no debe resetearse.
+
+10. Publicacion de dias
+- La publicacion es por dia, no por semana.
+- Publicar un dia solo habilita que ese dia sea visible desde el reloj.
+- Editar el plan despues de publicar no debe despublicar automaticamente.
+- Los dias publicados deben verse con una marca visual verde tenue.
+- Si el dia ya esta publicado, el boton "Publicar dia" no debe aparecer.
+- Antes de publicar debe aparecer confirmacion.
+
+11. Barra lateral / panel derecho
+- Si se selecciona una persona, muestra resumen de esa persona.
+- Si se selecciona un dia, muestra resumen del dia.
+- Si se selecciona el mes o bloque general, permite edicion por lotes.
+- Ya no debe usarse para editar turno individual, porque la edicion es directa en la celda.
+- El resumen del dia agrupa personas por mismo horario y actividad / ubicacion.
+
+12. Resumen y exportacion
+- Se puede exportar resumen semanal o rango de dias en JPG.
+- Se puede exportar un dia en JPG.
+- El resumen visual debe respetar el formato de grilla del plan semanal.
+- El resumen del dia debe mostrar nombres arriba y horario / actividad abajo.
+- El JPG debe tener marco/borde exterior.
+
+13. Filtro y busqueda
+- No debe existir filtro separado de rol en el plan semanal.
+- Debe haber un unico buscador que filtre en tiempo real por:
+  - nombre de persona.
+  - rol operativo.
+- Los separadores entre personas se basan en rol operativo.
+- Solo aparecen en el plan los roles operativos configurados como visibles en plan semanal.
+
+14. Roles operativos visibles
+- Los roles operativos son configurables.
+- Algunos roles pueden no aparecer en el plan semanal.
+- Por defecto, Administracion/Admin no deberia aparecer en el plan semanal.
+
+RELOJ Y RELOJ FACIAL
+
+- Permiten registrar marcas de entrada y salida.
+- Las marcas se guardan con tipo:
+  - RELOJ WEB.
+  - RELOJ FACIAL.
+  - MARCA MANUAL ADMIN.
+- El reloj usa geolocalizacion del dispositivo.
+- El reloj facial valida identidad usando datos biometricos cargados por persona.
+- Las marcas son privadas para el usuario, pero visibles para RRHH/Admin.
+- El reloj muestra el resumen del dia publicado.
+- El proyecto se elige desde valores fijos y valores derivados del plan del dia.
+
+VALIDACION DE JORNALES
+
+- Reemplaza el viejo modulo de incidencias como centro operativo de revision.
+- Debe mostrar jornadas por fecha/persona.
+- Debe comparar plan semanal vs marcas reales.
+- Debe permitir:
+  - Ver detalles.
+  - Editar/agregar/anular marcas.
+  - Marcar ausente.
+  - Aprobar.
+  - Aprobar con observacion.
+- Las observaciones/incidencias deben quedar registradas como informacion auxiliar del jornal, no como modulo operativo separado.
+- Si una jornada esta libre/licencia/suspendida y no hay marcas, no requiere validacion.
+- Si hay marcas en un dia sin plan, debe poder pasarse al plan semanal.
+- Una marca anulada queda registrada para trazabilidad, pero no debe contar en calculos.
+
+VALIDACION DE OPERACIONES
+
+- Los operadores pueden cargar operaciones.
+- RRHH/Admin puede aprobar, rechazar o editar categoria/franja.
+- No existe estado archivado.
+- Una operacion aprobada puede luego ser rechazada, con motivo obligatorio.
+- Las operaciones aprobadas impactan en liquidacion/sueldos.
+- La vista de detalles/edicion debe mostrar tambien el plan semanal y los tramos de jornada del mismo dia.
+
+PERSONAL
+
+- Personas y usuarios estan unificados.
+- Cada persona tiene:
+  - ID interno privado de 3 cifras.
+  - Nombre.
+  - Email como identificador publico.
+  - Rol operativo.
+  - Rol de sistema.
+  - Estado activo/acceso.
+  - Valor hora.
+  - Horas acordadas.
+  - Datos biometricos.
+  - Documentos.
+  - Categorias de operacion habilitadas.
+- El admin o RRHH dan de alta usuarios.
+- El primer ingreso permite setear contrasena solo si todavia no tiene contrasena.
+
+CONFIGURACION
+
+- Parametriza roles operativos, permisos, ubicaciones, tolerancias y valores generales.
+- Los precios/categorias de operaciones deben vivir conceptualmente cerca de Personal, porque estan asociados a operadores.
+
+DASHBOARD / ANALISIS / REPORTES / LIQUIDACION
+
+- Dashboard es vista diaria operativa.
+- Analisis es tablero mensual/KPI.
+- Reportes exportan CSV.
+- Liquidacion calcula sobre horas validadas y operaciones aprobadas.
+
+AUTENTICACION
+
+- El sistema principal debe ser la fuente de verdad.
+- El modulo RRHH debe validar sesion usando la cookie del sistema principal cuando corresponda.
+- El matching de usuario debe hacerse por email.
+- El rol final aplicado dentro de RRHH debe venir del modelo local/mapeado de RRHH, no necesariamente del rol externo.
+- No compartir SESSION_SECRET si se puede evitar.
+- Ideal: validar contra endpoint del sistema principal, por ejemplo /api/auth/me, reenviando la cookie.
+
+BASE DE DATOS
+
+- Mantener PostgreSQL.
+- Revisar backend/schema.postgres.sql.
+- No duplicar tablas de usuarios si el sistema principal ya tiene usuarios; mapear personas RRHH por email.
+- Preservar trazabilidad:
+  - marcas manuales.
+  - marcas anuladas.
+  - aprobaciones.
+  - responsable de aprobacion.
+  - fecha/hora de aprobacion.
+  - observaciones.
+  - motivo de rechazo de operaciones.
+
+COSAS QUE PUEDEN ELIMINARSE O NO PORTAR COMO MODULO INDEPENDIENTE
+
+- Modulo viejo de Incidencias como navegacion propia.
+- Facturacion.
+- Importacion de datos.
+- Login visual propio, si el sistema principal ya maneja login.
+- Home propia, si el modulo vive dentro de navegacion madre.
+
+CONDICION IMPORTANTE
+
+No arrancar por estetica ni por framework. Arrancar por autenticacion, rutas bajo /rrhh, API y base de datos. El plan semanal es el modulo mas sensible y debe protegerse con pruebas funcionales antes de reescribirlo.

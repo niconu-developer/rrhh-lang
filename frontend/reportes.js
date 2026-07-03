@@ -20,16 +20,16 @@ const reportTypes = [
   { id: "nomina", label: "Nómina por persona" },
   { id: "marcas", label: "Marcas de reloj" },
   { id: "operaciones", label: "Operaciones" },
-  { id: "incidencias", label: "Incidencias" },
+  { id: "incidencias", label: "Observaciones" },
   { id: "control", label: "Planificado vs real" },
   { id: "documentacion", label: "Documentación" },
 ];
 const REPORT_COLUMNS = {
-  nomina: ["Persona", "Rol", "Fecha", "Prevision", "Entrada", "Salida", "Horas previstas", "Horas trabajadas", "Estado validación", "Incidencia", "Operaciones aprobadas", "Costo operaciones", "Costo horas trabajadas"],
-  marcas: ["Persona", "Fecha", "Tipo marca", "Hora", "Registro", "Estado validación", "Validado por", "Fecha validación", "Actividad / ubicación", "Ubicación detectada", "Genera incidencia", "Motivo incidencia"],
+  nomina: ["Persona", "Rol", "Fecha", "Prevision", "Entrada", "Salida", "Horas previstas", "Horas trabajadas", "Estado validación", "Observación", "Operaciones aprobadas", "Costo operaciones", "Costo horas trabajadas"],
+  marcas: ["Persona", "Fecha", "Tipo marca", "Hora", "Registro", "Estado validación", "Validado por", "Fecha validación", "Actividad / ubicación", "Ubicación detectada", "Genera observación", "Motivo observación"],
   operaciones: ["Operador", "Fecha", "Tipo operación", "Franja", "Valor", "Proyecto", "Observacion", "Estado", "Motivo rechazo"],
   incidencias: ["Persona", "Fecha", "Tipo", "Severidad", "Detalle", "Minutos desfasaje", "Estado", "Origen"],
-  control: ["Persona", "Fecha", "Horario previsto", "Actividad / ubicación", "Entrada real", "Salida real", "Horas trabajadas", "Estado validación", "Tipo entrada", "Tipo salida", "Incidencia"],
+  control: ["Persona", "Fecha", "Horario previsto", "Actividad / ubicación", "Entrada real", "Salida real", "Horas trabajadas", "Estado validación", "Tipo entrada", "Tipo salida", "Observación"],
   documentacion: ["Persona", "Rol", "Libreta conducir", "Vencimiento libreta", "Estado libreta", "Vencimiento carné salud", "Estado carné salud"],
 };
 
@@ -56,7 +56,7 @@ const report = {
 async function initReports() {
   const savedFilters = loadReportFilters();
   report.type.innerHTML = reportTypes.map((item) => `<option value="${item.id}">${item.label}</option>`).join("");
-  report.status.innerHTML = `<option value="todos">Todos</option><option value="incidencias">Solo incidencias</option><option value="pending">Operaciones pendientes</option><option value="approved">Operaciones aprobadas</option><option value="rejected">Operaciones rechazadas</option>`;
+  report.status.innerHTML = `<option value="todos">Todos</option><option value="incidencias">Solo observaciones</option><option value="pending">Operaciones pendientes</option><option value="approved">Operaciones aprobadas</option><option value="rejected">Operaciones rechazadas</option>`;
   selectedReportMonth = monthStartFromSavedFilters(savedFilters);
   syncReportMonthRange();
   report.person.value = savedFilters.person || "";
@@ -108,14 +108,14 @@ async function reportApiPost(path, payload) {
 async function refreshReportData() {
   const { from, to } = selectedRange();
   const query = `desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}`;
-  await reportApiPost("/incidencias/generar", { desde: inputDateValue(from), hasta: inputDateValue(to) });
+  await reportApiPost("/observaciones-jornal/generar", { desde: inputDateValue(from), hasta: inputDateValue(to) });
   const [personas, turnos, jornales, marcas, operaciones, incidencias] = await Promise.all([
     reportApiGet("/personas"),
     reportApiGet(`/turnos?${query}`),
     reportApiGet(`/jornales?${query}`),
     reportApiGet(`/marcas?${query}`),
-    reportApiGet("/operaciones"),
-    reportApiGet(`/incidencias?${query}`),
+    reportApiGet(`/operaciones?${query}`),
+    reportApiGet(`/observaciones-jornal?${query}`),
   ]);
   allReportPersonnel = normalizeReportPersonnel(personas);
   const ownReportPersonnel = allReportPersonnel.filter((person) => person.name === reportUser?.personName);
@@ -272,7 +272,7 @@ function buildPayrollReport() {
       "Horas previstas": plannedHours,
       "Horas trabajadas": workedHours,
       "Estado validación": jornal?.approvalStatus || "PENDIENTE",
-      Incidencia: data.incident.text,
+      Observación: data.incident.text,
       "Operaciones aprobadas": approvedOps.length,
       "Costo operaciones": operationCost,
       "Costo horas trabajadas": Number(person.hourlyRate || 0) * workedHours,
@@ -297,8 +297,8 @@ function buildMarksReport() {
       "Fecha validación": mark.approvedAt || "",
       "Actividad / ubicación": mark.activity,
       "Ubicación detectada": mark.detectedLocation || "",
-      "Genera incidencia": mark.locationMatched === false || mark.locationGeneratesIncident === true ? "SI" : "NO",
-      "Motivo incidencia": mark.locationIncidentReason || "",
+      "Genera observación": mark.locationMatched === false || mark.locationGeneratesIncident === true ? "SI" : "NO",
+      "Motivo observación": mark.locationIncidentReason || "",
     }));
   return { title: "Marcas de reloj", rows };
 }
@@ -344,7 +344,7 @@ function buildIncidentsReport() {
       Estado: Number(incident.resuelta || 0) ? "Resuelta" : "Pendiente",
       Origen: incident.origen || "",
     }));
-  return { title: "Incidencias", rows };
+  return { title: "Observaciones", rows };
 }
 
 function buildControlReport() {
@@ -365,7 +365,7 @@ function buildControlReport() {
       "Estado validación": jornal?.approvalStatus || "PENDIENTE",
       "Tipo entrada": markType(data.dayMarks, "Entrada"),
       "Tipo salida": markType(data.dayMarks, "Salida"),
-      Incidencia: data.incident.text,
+      Observación: data.incident.text,
     };
   }));
   return filterIncidenceRows({ title: "Planificado vs real", rows });
@@ -392,7 +392,7 @@ function filterIncidenceRows(reportData) {
   if (reportStatusValue() !== "incidencias") return reportData;
   return {
     ...reportData,
-    rows: reportData.rows.filter(reportData.predicate || ((row) => row.Incidencia && row.Incidencia !== "Sin incidencia")),
+    rows: reportData.rows.filter(reportData.predicate || ((row) => row.Observación && row.Observación !== "Sin observación")),
   };
 }
 
@@ -499,11 +499,11 @@ function plannedShiftForDate(person, date) {
 
 function incidentForDay(shift, dayMarks) {
   const label = shift.label?.toUpperCase?.() || "";
-  if ((label === "SIN PREVISIÓN" || label === "VACIO") && !dayMarks.length) return { text: "Sin incidencia" };
+  if ((label === "SIN PREVISIÓN" || label === "VACIO") && !dayMarks.length) return { text: "Sin observación" };
   if (shift.noSchedule && dayMarks.length) return { text: "Marca en estado sin horario" };
   if (!shift.noSchedule && (!hasMark(dayMarks, "Entrada") || !hasMark(dayMarks, "Salida"))) return { text: "Turno sin marca completa" };
-  if (dayMarks.some((mark) => mark.locationMatched === false || mark.locationGeneratesIncident === true)) return { text: "Incidencia de ubicación" };
-  return { text: "Sin incidencia" };
+  if (dayMarks.some((mark) => mark.locationMatched === false || mark.locationGeneratesIncident === true)) return { text: "Observación de ubicación" };
+  return { text: "Sin observación" };
 }
 
 function documentStatus(dateValue, notRequired) {

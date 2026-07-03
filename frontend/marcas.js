@@ -5,6 +5,7 @@ const MARKS_API_BASE = apiBase();
 
 const MARK_STATUSES = ["LIBRE", "LICENCIA", "SUSPENDIDO", "LIC. MEDICA", "AUSENTE", "VACIO"];
 const DEFAULT_OPERATION_BANDS_LOCAL = ["Hasta 4 horas", "4 a 8 horas", "8 a 12 horas"];
+const FIXED_PROJECT_OPTIONS = ["DEPOSITO", "ADMINISTRACION", "LOGISTICA", "MANTENIMIENTO"];
 
 const elements = {
   entryButton: document.querySelector("#entryButton"),
@@ -49,14 +50,16 @@ function renderKioskSessionActions(target) {
 let operator = null;
 let todayShift = { noSchedule: true, status: "SIN PREVISIÓN", activity: "SIN PREVISIÓN", location: "SIN PREVISIÓN" };
 let todayTurnsCache = [];
+let currentDayTurnsCache = [];
 let recentMarks = [];
 let activeEntryAt = null;
 let confirmationTimeout = null;
 let visiblePlanDate = currentIsoDate();
 let appDbConfig = {};
 let operationTariffs = [];
-let projects = [];
+let operationProjectTurnsCache = [];
 let dbLocations = [];
+let markInProgress = false;
 let currentLocationStatus = {
   label: "Ubicación pendiente",
   matched: false,
@@ -173,18 +176,16 @@ function escapeMarkup(value) {
 async function loadInitialData() {
   const user = currentUser();
   if (!user?.personName) throw new Error("Tu usuario no tiene una persona asociada");
-  const [people, configRows, locationRows, projectRows, tariffRows] = await Promise.all([
+  const [people, configRows, locationRows, tariffRows] = await Promise.all([
     api("/personas"),
     api("/configuracion"),
     api("/ubicaciones"),
-    api("/proyectos?activos=1"),
     api("/operacion-tarifas?activas=1"),
   ]);
   operator = people.find((person) => person.nombre === user.personName);
   if (!operator) throw new Error("No encontré tu persona en la base");
   appDbConfig = normalizeDbConfig(configRows);
   dbLocations = normalizeDbLocations(locationRows);
-  projects = projectRows;
   operationTariffs = tariffRows;
   visiblePlanDate = currentIsoDate();
   elements.operationDate.value = currentIsoDate();
@@ -207,9 +208,11 @@ async function refreshDbData() {
         api(`/marcas?persona=${encodeURIComponent(operator.nombre)}&desde=${yesterday}&hasta=${today}`),
       ]);
   todayShift = parseShiftFromTurn(todayTurns.find((turn) => turn.persona === operator.nombre));
+  currentDayTurnsCache = todayTurns;
   todayTurnsCache = visibleTurns;
   recentMarks = marks;
   activeEntryAt = activeEntryFromMarks(recentMarks);
+  operationProjectTurnsCache = elements.operationDate.value === today ? todayTurns : operationProjectTurnsCache;
   renderShift();
   renderDaySummary();
 
@@ -228,24 +231,54 @@ function render() {
 
 function renderMarkAccess() {
   const hasProject = Boolean(elements.markProject?.value);
-  elements.entryButton.disabled = !hasProject;
-  elements.exitButton.disabled = !hasProject;
+  const hasActiveEntry = Boolean(activeEntryAt);
+  elements.entryButton.disabled = markInProgress || !hasProject || hasActiveEntry;
+  elements.exitButton.disabled = markInProgress || !hasProject || !hasActiveEntry;
+  elements.entryButton.title = hasActiveEntry ? "Ya tenés una entrada activa. Marcá salida." : "";
+  elements.exitButton.title = hasActiveEntry ? "" : "Primero marcá entrada.";
 }
 
 function renderProjectSelectors() {
-  const renderSelect = (select) => {
+  const markOptions = projectOptionsForTurns(currentDayTurnsCache);
+  const operationOptions = projectOptionsForTurns(operationProjectTurnsCache.length ? operationProjectTurnsCache : currentDayTurnsCache);
+  const renderSelect = (select, options) => {
     if (!select) return;
     const current = select.value;
-    select.innerHTML = `<option value="">Seleccionar proyecto</option>${projects
-      .map((project) => `<option value="${escapeMarkup(project.nombre)}">${escapeMarkup(project.nombre)}</option>`)
+    select.innerHTML = `<option value="">Seleccionar proyecto</option>${options
+      .map((project) => `<option value="${escapeMarkup(project)}">${escapeMarkup(project)}</option>`)
       .join("")}`;
     if ([...select.options].some((option) => option.value === current)) {
       select.value = current;
     }
   };
-  renderSelect(elements.markProject);
-  renderSelect(elements.operationProject);
+  renderSelect(elements.markProject, markOptions);
+  renderSelect(elements.operationProject, operationOptions);
   renderMarkAccess();
+}
+
+function normalizeProjectOption(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, " ");
+}
+
+function projectOptionsForTurns(turns) {
+  const values = new Set(FIXED_PROJECT_OPTIONS);
+  (turns || []).forEach((turn) => {
+    const status = normalizeStatus(turn.estado);
+    const activity = normalizeProjectOption(turn.actividad_ubicacion);
+    if (!activity || MARK_STATUSES.includes(status)) return;
+    values.add(activity);
+  });
+  return [...values].sort((left, right) => {
+    const leftFixed = FIXED_PROJECT_OPTIONS.includes(left);
+    const rightFixed = FIXED_PROJECT_OPTIONS.includes(right);
+    if (leftFixed && rightFixed) return FIXED_PROJECT_OPTIONS.indexOf(left) - FIXED_PROJECT_OPTIONS.indexOf(right);
+    if (leftFixed) return -1;
+    if (rightFixed) return 1;
+    return left.localeCompare(right, "es");
+  });
 }
 
 function renderShift() {
@@ -420,25 +453,44 @@ async function registerMark(type) {
     showToast("Elegí un proyecto antes de marcar");
     return;
   }
-  const locationStatus = await resolveCurrentLocation();
-  await api("/marcas", {
-    method: "POST",
-    body: JSON.stringify({
-      persona: operator.nombre,
-      rol_operativo: operator.rol_operativo,
-      fecha_hora: formatDbDateTime(),
-      tipo: type,
-      tipo_marca: "Por usuario",
-      actividad_ubicacion: project,
-      ubicacion_detectada: locationStatus.label,
-      latitud: locationStatus.coords?.latitude ?? null,
-      longitud: locationStatus.coords?.longitude ?? null,
-      genera_incidencia: Boolean(locationStatus.locationGeneratesIncident || locationStatus.matched === false),
-    }),
-  });
-  await refreshDbData();
-  showMarkConfirmation(type, locationStatus.label);
-  showToast(`${type} registrada`);
+  const normalizedType = normalizeStatus(type);
+  if (normalizedType === "ENTRADA" && activeEntryAt) {
+    showToast("Ya tenés una entrada activa. Marcá salida.");
+    return;
+  }
+  if (normalizedType === "SALIDA" && !activeEntryAt) {
+    showToast("Primero marcá entrada.");
+    return;
+  }
+  if (markInProgress) return;
+  markInProgress = true;
+  renderMarkAccess();
+  try {
+    const locationStatus = await resolveCurrentLocation();
+    await api("/marcas", {
+      method: "POST",
+      body: JSON.stringify({
+        persona: operator.nombre,
+        rol_operativo: operator.rol_operativo,
+        fecha_hora: formatDbDateTime(),
+        tipo: type,
+        tipo_marca: "Por usuario",
+        actividad_ubicacion: project,
+        ubicacion_detectada: locationStatus.label,
+        latitud: locationStatus.coords?.latitude ?? null,
+        longitud: locationStatus.coords?.longitude ?? null,
+        genera_incidencia: Boolean(locationStatus.locationGeneratesIncident || locationStatus.matched === false),
+      }),
+    });
+    await refreshDbData();
+    showMarkConfirmation(type, locationStatus.label);
+    showToast(`${type} registrada`);
+  } catch (error) {
+    showToast(error.message || "No se pudo registrar la marca");
+  } finally {
+    markInProgress = false;
+    renderMarkAccess();
+  }
 }
 
 function showMarkConfirmation(type, locationLabel) {
@@ -490,6 +542,16 @@ async function submitOperation(event) {
   showToast("Operación enviada");
 }
 
+async function refreshOperationProjectOptions() {
+  const date = elements.operationDate.value || currentIsoDate();
+  try {
+    operationProjectTurnsCache = await api(`/turnos?desde=${date}&hasta=${date}`);
+  } catch (error) {
+    operationProjectTurnsCache = [];
+  }
+  renderProjectSelectors();
+}
+
 function showToast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add("visible");
@@ -499,6 +561,7 @@ function showToast(message) {
 elements.entryButton.addEventListener("click", () => registerMark("Entrada"));
 elements.exitButton.addEventListener("click", () => registerMark("Salida"));
 elements.markProject?.addEventListener("change", renderMarkAccess);
+elements.operationDate?.addEventListener("change", refreshOperationProjectOptions);
 elements.operationForm.addEventListener("submit", submitOperation);
 elements.previousPlanDay.addEventListener("click", () => moveVisiblePlanDate(-1));
 elements.todayPlanDay.addEventListener("click", goTodayPlanDate);

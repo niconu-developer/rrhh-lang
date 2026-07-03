@@ -52,6 +52,7 @@ def list_personas():
           usuarios.usuario,
           usuarios.email AS usuario_email,
           usuarios.activo AS usuario_activo,
+          usuarios.password_inicializada,
           roles_app.nombre AS rol_app,
           (
             SELECT {tariff_ids_sql}
@@ -108,6 +109,7 @@ def list_usuarios():
           usuarios.usuario,
           usuarios.email,
           usuarios.activo,
+          usuarios.password_inicializada,
           personas.nombre AS persona,
           roles_app.nombre AS rol_app
         FROM usuarios
@@ -129,59 +131,49 @@ def list_ubicaciones():
     return rows("SELECT * FROM ubicaciones ORDER BY nombre")
 
 
-def list_proyectos(active_only=False):
-    where = "WHERE activo = 1" if active_only else ""
-    return rows(f"SELECT * FROM proyectos {where} ORDER BY activo DESC, nombre")
-
-
-def save_proyecto(payload, project_id=None):
-    name = str(payload.get("nombre") or payload.get("name") or "").strip().upper()
-    if not name:
-        raise ValueError("El nombre del proyecto es obligatorio")
-    active = int(bool(payload.get("activo", True)))
-    with connect() as connection:
-        if project_id:
-            existing = connection.execute("SELECT id FROM proyectos WHERE id = ?", (project_id,)).fetchone()
-            if not existing:
-                raise ValueError("Proyecto no encontrado")
-            connection.execute("""
-                UPDATE proyectos
-                SET nombre = ?, activo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """, (name, active, project_id))
+def list_operaciones(filters=None):
+    filters = filters or {}
+    where = []
+    params = []
+    date_from = filters.get("desde")
+    date_to = filters.get("hasta")
+    person = filters.get("persona")
+    status = filters.get("estado")
+    if date_from:
+        where.append("substr(operaciones.fecha_hora, 1, 10) >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("substr(operaciones.fecha_hora, 1, 10) <= ?")
+        params.append(date_to)
+    if person:
+        if str(person).isdigit():
+            where.append("operaciones.persona_id = ?")
+            params.append(int(person))
         else:
-            connection.execute("""
-                INSERT INTO proyectos (nombre, activo)
-                VALUES (?, ?)
-                ON CONFLICT(nombre) DO UPDATE SET activo = excluded.activo, fecha_actualizacion = CURRENT_TIMESTAMP
-            """, (name, active))
-        connection.commit()
-    return {"ok": True, "proyectos": list_proyectos()}
-
-
-def delete_proyecto(project_id):
-    with connect() as connection:
-        connection.execute("""
-            UPDATE proyectos
-            SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP
-            WHERE id = ?
-        """, (project_id,))
-        connection.commit()
-    return {"ok": True, "proyectos": list_proyectos()}
-
-
-def list_operaciones():
-    return rows("""
+            where.append("personas.nombre = ?")
+            params.append(person)
+    if status and status not in {"todos", "todas", "all"}:
+        where.append("operaciones.estado = ?")
+        params.append(status)
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    return rows(f"""
         SELECT
           operaciones.*,
           personas.nombre AS persona,
           operacion_tarifas.categoria AS tarifa_categoria,
-          operacion_tarifas.tipo AS tarifa_tipo
+          operacion_tarifas.tipo AS tarifa_tipo,
+          turnos.estado AS plan_estado,
+          turnos.hora_inicio AS plan_hora_inicio,
+          turnos.hora_fin AS plan_hora_fin,
+          turnos.actividad_ubicacion AS plan_actividad_ubicacion
         FROM operaciones
         JOIN personas ON personas.id = operaciones.persona_id
         LEFT JOIN operacion_tarifas ON operacion_tarifas.id = operaciones.operacion_tarifa_id
+        LEFT JOIN turnos ON turnos.persona_id = operaciones.persona_id
+          AND turnos.fecha = substr(operaciones.fecha_hora, 1, 10)
+        {where_sql}
         ORDER BY operaciones.fecha_hora DESC
-    """)
+    """, tuple(params))
 
 
 def list_operacion_tarifas(active_only=False):
@@ -192,24 +184,6 @@ def list_operacion_tarifas(active_only=False):
         {where}
         ORDER BY activo DESC, tipo, categoria
     """)
-
-
-def list_facturacion(date_from=None, date_to=None):
-    where = []
-    params = []
-    if date_from:
-        where.append("fecha >= ?")
-        params.append(date_from)
-    if date_to:
-        where.append("fecha <= ?")
-        params.append(date_to)
-    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
-    return rows(f"""
-        SELECT *
-        FROM facturacion
-        {where_sql}
-        ORDER BY fecha DESC, orden
-    """, tuple(params))
 
 
 def list_configuracion():
@@ -761,6 +735,85 @@ def list_incidencias(date_from=None, date_to=None, status=None):
     return result
 
 
+def list_observaciones_jornal(date_from=None, date_to=None, status=None, persona=None):
+    where = []
+    params = []
+    if date_from:
+        where.append("observaciones_jornal.fecha >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("observaciones_jornal.fecha <= ?")
+        params.append(date_to)
+    if status == "pendientes":
+        where.append("observaciones_jornal.resuelta = 0")
+    if status == "resueltas":
+        where.append("observaciones_jornal.resuelta = 1")
+    if persona:
+        if str(persona).isdigit():
+            where.append("observaciones_jornal.persona_id = ?")
+            params.append(int(persona))
+        else:
+            where.append("personas.nombre = ?")
+            params.append(persona)
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+    result = rows("""
+        SELECT
+          observaciones_jornal.incidencia_id AS id,
+          observaciones_jornal.id AS observacion_jornal_id,
+          observaciones_jornal.incidencia_id,
+          observaciones_jornal.jornal_id,
+          observaciones_jornal.persona_id,
+          observaciones_jornal.fecha,
+          observaciones_jornal.tipo,
+          observaciones_jornal.severidad,
+          observaciones_jornal.detalle,
+          observaciones_jornal.estado,
+          observaciones_jornal.origen,
+          observaciones_jornal.referencia_tipo,
+          observaciones_jornal.referencia_id,
+          observaciones_jornal.minutos_desfasaje,
+          observaciones_jornal.resuelta,
+          observaciones_jornal.fecha_resolucion,
+          observaciones_jornal.aprobado_por_usuario_id,
+          observaciones_jornal.aprobado_por_usuario,
+          observaciones_jornal.observacion_aprobacion,
+          observaciones_jornal.fecha_creacion,
+          observaciones_jornal.fecha_actualizacion,
+          personas.nombre AS persona,
+          marca.fecha_hora AS marca_fecha_hora,
+          marca.tipo AS marca_tipo,
+          marca.actividad_ubicacion AS marca_actividad_ubicacion,
+          marca.ubicacion_detectada AS marca_ubicacion_detectada,
+          marca.latitud AS marca_latitud,
+          marca.longitud AS marca_longitud,
+          COALESCE(turno.estado, turno_fecha.estado) AS turno_estado,
+          COALESCE(turno.hora_inicio, turno_fecha.hora_inicio) AS turno_hora_inicio,
+          COALESCE(turno.hora_fin, turno_fecha.hora_fin) AS turno_hora_fin,
+          COALESCE(turno.actividad_ubicacion, turno_fecha.actividad_ubicacion) AS turno_actividad_ubicacion,
+          (
+            SELECT GROUP_CONCAT(marca_ordenada.descripcion, ' · ')
+            FROM (
+              SELECT marcas_dia.tipo || ' ' || substr(marcas_dia.fecha_hora, 12, 5) AS descripcion
+              FROM marcas AS marcas_dia
+              WHERE marcas_dia.persona_id = observaciones_jornal.persona_id
+                AND date(marcas_dia.fecha_hora) = date(observaciones_jornal.fecha)
+                AND COALESCE(marcas_dia.anulada, 0) = 0
+              ORDER BY marcas_dia.fecha_hora
+            ) AS marca_ordenada
+          ) AS marcas_horarios
+        FROM observaciones_jornal
+        LEFT JOIN personas ON personas.id = observaciones_jornal.persona_id
+        LEFT JOIN marcas AS marca ON observaciones_jornal.referencia_tipo = 'marca' AND marca.id = observaciones_jornal.referencia_id AND COALESCE(marca.anulada, 0) = 0
+        LEFT JOIN turnos AS turno ON observaciones_jornal.referencia_tipo = 'turno' AND turno.id = observaciones_jornal.referencia_id
+        LEFT JOIN turnos AS turno_fecha ON turno_fecha.persona_id = observaciones_jornal.persona_id AND turno_fecha.fecha = observaciones_jornal.fecha
+        {where_sql}
+        ORDER BY observaciones_jornal.fecha DESC
+    """.format(where_sql=where_sql), tuple(params))
+    for observation in result:
+        apply_incident_actions(observation)
+    return result
+
+
 def apply_incident_actions(incident):
     resolved = bool(int(incident.get("resuelta") or 0))
     requires_plan = incident.get("tipo") == "MARCA_EN_ESTADO_SIN_HORARIO"
@@ -860,26 +913,6 @@ def username_by_id(connection, user_id):
         return None
     row = connection.execute("SELECT usuario FROM usuarios WHERE id = ?", (user_id,)).fetchone()
     return row["usuario"] if row else None
-
-
-def reset_user_password(email, password):
-    clean_email = str(email or "").strip().lower()
-    with connect() as connection:
-        user = connection.execute("""
-            SELECT id FROM usuarios
-            WHERE lower(coalesce(email, '')) = ?
-               OR lower(usuario) = ?
-        """, (clean_email, clean_email)).fetchone()
-        if not user:
-            return False
-        connection.execute("""
-            UPDATE usuarios
-            SET password_hash = ?,
-                password_inicializada = 1
-            WHERE id = ?
-        """, (hash_password(password), user["id"]))
-        connection.commit()
-        return True
 
 
 def complete_first_access(email, password, security_code):
@@ -1168,6 +1201,7 @@ def read_persona(connection, persona_id):
           usuarios.usuario,
           usuarios.email AS usuario_email,
           usuarios.activo AS usuario_activo,
+          usuarios.password_inicializada,
           roles_app.nombre AS rol_app
         FROM personas
         LEFT JOIN roles_operativos ON roles_operativos.id = personas.rol_operativo_id
@@ -1515,103 +1549,12 @@ def save_configuracion(payload):
         return {"ok": True}
 
 
-def save_facturacion(payload, invoice_id=None):
-    orden = str(payload.get("orden") or "").strip()
-    fecha = str(payload.get("fecha") or "").strip()
-    monto = float(payload.get("monto") or 0)
-    referencia = str(payload.get("referencia") or "").strip() or None
-    lugar = str(payload.get("lugar") or "").strip() or None
-    observacion = str(payload.get("observacion") or "").strip() or None
-    if not orden:
-        raise ValueError("La orden es obligatoria")
-    if not fecha:
-        raise ValueError("La fecha es obligatoria")
-    if monto < 0:
-        raise ValueError("El monto no puede ser negativo")
-    with connect() as connection:
-        if invoice_id:
-            existing = connection.execute("SELECT id FROM facturacion WHERE id = ?", (invoice_id,)).fetchone()
-            if not existing:
-                raise ValueError("Registro de facturación no encontrado")
-            connection.execute("""
-                UPDATE facturacion
-                SET orden = ?,
-                    fecha = ?,
-                    monto = ?,
-                    referencia = ?,
-                    lugar = ?,
-                    observacion = ?,
-                    fecha_actualizacion = CURRENT_TIMESTAMP
-                WHERE id = ?
-            """, (orden, fecha, monto, referencia, lugar, observacion, invoice_id))
-        else:
-            connection.execute("""
-                INSERT INTO facturacion (orden, fecha, monto, referencia, lugar, observacion)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (orden, fecha, monto, referencia, lugar, observacion))
-        connection.commit()
-        return {"ok": True, "facturacion": list_facturacion()}
-
-
-def import_facturacion(rows_to_import):
-    imported = 0
-    updated = 0
-    errors = []
-    with connect() as connection:
-        for index, payload in enumerate(rows_to_import, start=1):
-            try:
-                orden = str(payload.get("orden") or "").strip()
-                fecha = str(payload.get("fecha") or "").strip()
-                monto = float(payload.get("monto") or 0)
-                referencia = str(payload.get("referencia") or "").strip() or None
-                lugar = str(payload.get("lugar") or "").strip() or None
-                observacion = str(payload.get("observacion") or "").strip() or None
-                if not orden:
-                    raise ValueError("orden vacía")
-                if not fecha:
-                    raise ValueError("fecha vacía")
-                if monto < 0:
-                    raise ValueError("monto negativo")
-                existing = connection.execute(
-                    "SELECT id FROM facturacion WHERE orden = ? AND fecha = ?",
-                    (orden, fecha),
-                ).fetchone()
-                if existing:
-                    connection.execute("""
-                        UPDATE facturacion
-                        SET monto = ?,
-                            referencia = ?,
-                            lugar = ?,
-                            observacion = ?,
-                            fecha_actualizacion = CURRENT_TIMESTAMP
-                        WHERE id = ?
-                    """, (monto, referencia, lugar, observacion, existing["id"]))
-                    updated += 1
-                else:
-                    connection.execute("""
-                        INSERT INTO facturacion (orden, fecha, monto, referencia, lugar, observacion)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """, (orden, fecha, monto, referencia, lugar, observacion))
-                    imported += 1
-            except Exception as error:
-                errors.append({"fila": index, "error": str(error)})
-        connection.commit()
-    return {"ok": True, "importadas": imported, "actualizadas": updated, "errores": errors}
-
-
-def delete_facturacion(invoice_id):
-    with connect() as connection:
-        connection.execute("DELETE FROM facturacion WHERE id = ?", (invoice_id,))
-        connection.commit()
-        return {"ok": True}
-
-
 def save_usuario(payload, user_id=None):
     email = str(payload.get("email") or payload.get("usuario") or "").strip().lower()
     username = email
     password = str(payload.get("password", "")).strip()
-    if not email or (not user_id and not password):
-        raise ValueError("Correo y contraseña son obligatorios")
+    if not email:
+        raise ValueError("Correo obligatorio")
     with connect() as connection:
         existing = connection.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,)).fetchone() if user_id else None
         if user_id and not existing:
@@ -1623,6 +1566,8 @@ def save_usuario(payload, user_id=None):
             persona_id = None
         technical_users = {"admin", "admin@empresa.local"}
         is_technical_user = username.lower() in technical_users
+        if is_technical_user and not user_id and not password:
+            raise ValueError("El admin técnico requiere contraseña")
         if not persona_id and not is_technical_user:
             raise ValueError("Todo usuario debe estar vinculado a una persona, salvo admin")
         if persona_id and is_technical_user:
@@ -1654,9 +1599,13 @@ def save_usuario(payload, user_id=None):
                     WHERE id = ?
                 """, (username, email, persona_id, role_id, active, user_id))
         else:
+            password_initialized = 1
+            if not password:
+                password = secrets.token_urlsafe(24)
+                password_initialized = 0
             connection.execute("""
-                INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO usuarios (usuario, password_hash, email, persona_id, rol_app_id, activo, password_inicializada)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 username,
                 hash_password(password),
@@ -1664,6 +1613,7 @@ def save_usuario(payload, user_id=None):
                 persona_id,
                 role_id,
                 active,
+                password_initialized,
             ))
         connection.commit()
         return {"ok": True}
@@ -1752,6 +1702,24 @@ def normalize_user_id(value):
     return int(value) if str(value or "").isdigit() else None
 
 
+def active_entry_before_mark(connection, persona_id, fecha_hora):
+    open_entry = None
+    for mark in connection.execute("""
+        SELECT id, tipo, fecha_hora
+        FROM marcas
+        WHERE persona_id = ?
+          AND COALESCE(anulada, 0) = 0
+          AND fecha_hora <= ?
+        ORDER BY fecha_hora, id
+    """, (persona_id, fecha_hora)).fetchall():
+        mark_type = str(mark["tipo"] or "").strip().lower()
+        if mark_type == "entrada":
+            open_entry = mark
+        elif mark_type == "salida":
+            open_entry = None
+    return open_entry
+
+
 def create_marca(connection, payload):
     persona_id = payload.get("persona_id")
     if not persona_id:
@@ -1773,9 +1741,18 @@ def create_marca(connection, payload):
     mark_source = payload.get("tipo_marca", "Por usuario")
     if payload.get("registrada_por_admin"):
         mark_source = "Marca manual admin"
+    mark_type = str(payload.get("tipo") or "").strip().lower()
+    if mark_type not in {"entrada", "salida"}:
+        raise ValueError("Tipo de marca inválido")
     activity_location = str(payload.get("actividad_ubicacion") or "").strip().upper()
     if mark_source in {"Por usuario", "Por reloj facial"} and not activity_location:
         raise ValueError("Elegí un proyecto antes de marcar")
+    if mark_source in {"Por usuario", "Por reloj facial"}:
+        active_entry = active_entry_before_mark(connection, persona_id, payload["fecha_hora"])
+        if mark_type == "entrada" and active_entry:
+            raise ValueError("Ya hay una entrada activa. Primero marcá salida.")
+        if mark_type == "salida" and not active_entry:
+            raise ValueError("No hay una entrada activa para marcar salida.")
     cursor = connection.execute("""
         INSERT INTO marcas (
           persona_id,
@@ -1795,7 +1772,7 @@ def create_marca(connection, payload):
           fecha_modificacion,
           modificado_por_usuario_id,
           observacion_modificacion
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'APROBADA' THEN CURRENT_TIMESTAMP ELSE NULL END, ?, ?, CASE WHEN ? IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'APROBADA' THEN CURRENT_TIMESTAMP ELSE NULL END, ?, ?, CASE WHEN ?::text IS NULL THEN NULL ELSE CURRENT_TIMESTAMP END, ?, ?)
     """, (
         persona_id,
         payload["fecha_hora"],

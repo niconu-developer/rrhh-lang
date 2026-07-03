@@ -1,6 +1,4 @@
 from backend import repositories as repo
-from backend.database import connect
-from backend.services import IncidenciasService
 
 
 def query_value(query, *names):
@@ -39,14 +37,15 @@ def route_get(handler, path, query):
         return repo.list_roles_operativos()
     if path == "/api/ubicaciones":
         return repo.list_ubicaciones()
-    if path == "/api/proyectos":
-        return repo.list_proyectos(query_value(query, "activos", "activas") in {"1", "true", "si"})
     if path == "/api/operaciones":
-        return repo.list_operaciones()
+        return repo.list_operaciones({
+            "desde": query_value(query, "desde", "from"),
+            "hasta": query_value(query, "hasta", "to"),
+            "persona": query_value(query, "persona"),
+            "estado": query_value(query, "estado"),
+        })
     if path == "/api/operacion-tarifas":
         return repo.list_operacion_tarifas(query_value(query, "activas") in {"1", "true", "si"})
-    if path == "/api/facturacion":
-        return repo.list_facturacion(query_value(query, "desde", "from"), query_value(query, "hasta", "to"))
     if path == "/api/configuracion":
         return repo.list_configuracion()
     if path == "/api/relojes-faciales":
@@ -81,15 +80,12 @@ def route_get(handler, path, query):
             query_value(query, "desde", "from"),
             query_value(query, "hasta", "to"),
         )
-    if path == "/api/incidencias":
+    if path == "/api/observaciones-jornal":
         date_from = query_value(query, "desde", "from")
         date_to = query_value(query, "hasta", "to")
         status = query_value(query, "estado")
-        if date_from and date_to:
-            with connect() as connection:
-                IncidenciasService.generate_for_range(connection, date_from, date_to)
-                connection.commit()
-        return repo.list_incidencias(date_from, date_to, status)
+        person = query_value(query, "persona")
+        return repo.list_observaciones_jornal(date_from, date_to, status, person)
     raise ValueError(f"Endpoint GET no implementado: {path}")
 
 
@@ -98,14 +94,10 @@ def route_post(handler, path, payload):
         return handler.login(payload)
     if path == "/api/first-access":
         return handler.first_access(payload)
-    if path == "/api/password-reset":
-        return handler.reset_password(payload)
     if path == "/api/access-links":
         return handler.create_access_link(payload)
     if path == "/api/access-links/complete":
         return handler.complete_access_link(payload)
-    if path == "/api/importacion/marcas":
-        return handler.import_marcas(payload)
 
     parts = path.strip("/").split("/")
     if path == "/api/personas":
@@ -114,8 +106,6 @@ def route_post(handler, path, payload):
         return handler.save_rol_operativo(payload)
     if path == "/api/ubicaciones":
         return handler.save_ubicacion(payload)
-    if path == "/api/proyectos":
-        return repo.save_proyecto(payload)
     if path == "/api/configuracion":
         return handler.save_configuracion(payload)
     if path == "/api/relojes-faciales":
@@ -142,10 +132,6 @@ def route_post(handler, path, payload):
         return handler.save_ubicacion(payload, int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "ubicaciones"] and parts[3] == "delete":
         return handler.delete_ubicacion(int(parts[2]))
-    if len(parts) == 3 and parts[:2] == ["api", "proyectos"]:
-        return repo.save_proyecto(payload, int(parts[2]))
-    if len(parts) == 4 and parts[:2] == ["api", "proyectos"] and parts[3] == "delete":
-        return repo.delete_proyecto(int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "usuarios"] and parts[3] == "toggle":
         return handler.toggle_usuario(int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "relojes-faciales"] and parts[3] == "toggle":
@@ -166,14 +152,14 @@ def route_post(handler, path, payload):
         return handler.update_marca(int(parts[2]), payload)
     if path == "/api/aprobaciones":
         return handler.update_aprobaciones(payload)
-    if path == "/api/incidencias/generar":
-        return handler.generate_incidencias(payload)
-    if path == "/api/incidencias/resolver":
-        return handler.resolve_incidencias(payload)
-    if path == "/api/incidencias/pasar-a-plan":
-        return handler.pass_incidencias_to_plan(payload)
-    if path == "/api/incidencias/marcar-ausente":
-        return handler.mark_incidencias_absent(payload)
+    if path == "/api/observaciones-jornal/generar":
+        return handler.generate_observaciones_jornal(payload)
+    if path == "/api/observaciones-jornal/resolver":
+        return handler.resolve_observaciones_jornal(payload)
+    if path == "/api/observaciones-jornal/pasar-a-plan":
+        return handler.pass_observaciones_to_plan(payload)
+    if path == "/api/observaciones-jornal/marcar-ausente":
+        return handler.mark_observaciones_absent(payload)
     if path == "/api/operaciones":
         return handler.create_operacion(payload)
     if len(parts) == 3 and parts[:2] == ["api", "operaciones"]:
@@ -184,10 +170,4 @@ def route_post(handler, path, payload):
         return repo.save_operacion_tarifa(payload, int(parts[2]))
     if len(parts) == 4 and parts[:2] == ["api", "operacion-tarifas"] and parts[3] == "delete":
         return repo.delete_operacion_tarifa(int(parts[2]))
-    if path == "/api/facturacion":
-        return repo.save_facturacion(payload)
-    if len(parts) == 3 and parts[:2] == ["api", "facturacion"]:
-        return repo.save_facturacion(payload, int(parts[2]))
-    if len(parts) == 4 and parts[:2] == ["api", "facturacion"] and parts[3] == "delete":
-        return repo.delete_facturacion(int(parts[2]))
     raise ValueError(f"Endpoint POST no implementado: {path}")

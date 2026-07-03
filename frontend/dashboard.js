@@ -173,10 +173,10 @@ async function refreshDashboardData() {
   const from = monthStart;
   const to = addDays(monthEnd, 1);
   const query = `desde=${inputDateValue(from)}&hasta=${inputDateValue(to)}`;
-  await dashboardApiPost("/incidencias/generar", {
+  await dashboardApiPost("/observaciones-jornal/generar", {
     desde: inputDateValue(from),
     hasta: inputDateValue(to),
-  }).catch((error) => console.warn("No se pudieron recalcular incidencias", error));
+  }).catch((error) => console.warn("No se pudieron recalcular observaciones", error));
   const personas = await dashboardApiGet("/personas");
   const [configRows, operationTariffs, turnos, marcas, operaciones, incidencias, aprobaciones] = await Promise.all([
     dashboardApiGet("/configuracion").catch((error) => {
@@ -195,12 +195,12 @@ async function refreshDashboardData() {
       console.warn("No se pudieron cargar marcas del dashboard", error);
       return [];
     }),
-    dashboardApiGet("/operaciones").catch((error) => {
+    dashboardApiGet(`/operaciones?${query}`).catch((error) => {
       console.warn("No se pudieron cargar operaciones del dashboard", error);
       return [];
     }),
-    dashboardApiGet(`/incidencias?${query}&estado=pendientes`).catch((error) => {
-      console.warn("No se pudieron cargar incidencias del dashboard", error);
+    dashboardApiGet(`/observaciones-jornal?${query}&estado=pendientes`).catch((error) => {
+      console.warn("No se pudieron cargar observaciones del dashboard", error);
       return [];
     }),
     dashboardApiGet(`/aprobaciones?${query}`).catch((error) => {
@@ -367,7 +367,7 @@ function incidentTypeLabel(type) {
     TRAMO_OBSERVADO: "Tramo observado",
     DESFASAJE_ENTRADA: "Desfasaje de entrada",
     DESFASAJE_SALIDA: "Desfasaje de salida",
-  }[type] || type || "Incidencia";
+  }[type] || type || "Observación";
 }
 
 function renderDashboard() {
@@ -423,7 +423,7 @@ function renderPeriodKpis(container, metrics, scope) {
   const canSeeCosts = hasDashboardPermission("dashboardCosts");
   const alertCount = metrics.yellowAlerts + metrics.redAlerts;
   const items = [
-    { label: "Incidencias", value: metrics.incidents, action: metrics.incidents > 0 ? `<button class="ghost-button tiny" data-dashboard-modal="incidents" data-scope="${scope}" type="button">Ver</button>` : "" },
+    { label: "Observaciones", value: metrics.incidents, action: metrics.incidents > 0 ? `<button class="ghost-button tiny" data-dashboard-modal="incidents" data-scope="${scope}" type="button">Ver</button>` : "" },
     { label: "Alertas", value: alertCount, action: alertCount > 0 ? `<button class="ghost-button tiny" data-dashboard-modal="alerts" data-scope="${scope}" type="button">Ver</button>` : "" },
     { label: "Horas planificadas", value: formatHours(metrics.plannedHours) },
     { label: "Horas trabajadas", value: formatHours(metrics.workedHours) },
@@ -740,10 +740,6 @@ async function saveManualMarkPair() {
     window.alert("Las fechas de entrada y salida son requeridas");
     return;
   }
-  if (!observation) {
-    window.alert("La observación es obligatoria para cargar marcas manuales");
-    return;
-  }
   const basePayload = {
     persona_id: dash.markEditPersonId.value,
     actividad_ubicacion: dash.markPairActivity.value.trim().toUpperCase(),
@@ -785,8 +781,8 @@ function openIncidentModal() {
   dash.incidentSelectAll.disabled = !visibleItems.length;
   dash.resolveSelectedIncidents.disabled = true;
   dash.incidentResolutionList.innerHTML = visibleItems.length
-    ? `<p class="incident-modal-note">Aprobar una incidencia confirma que fue revisada y la quita de pendientes del tablero.</p>${visibleItems.map((item) => `<article class="incident-resolution-item selectable ${item.severity}">
-      <input class="incident-batch-check" type="checkbox" value="${item.id}" aria-label="Seleccionar incidencia de ${item.title}" />
+    ? `<p class="incident-modal-note">Aprobar una observación confirma que fue revisada y la quita de pendientes del tablero.</p>${visibleItems.map((item) => `<article class="incident-resolution-item selectable ${item.severity}">
+      <input class="incident-batch-check" type="checkbox" value="${item.id}" aria-label="Seleccionar observación de ${item.title}" />
       <div>
         <span>${item.type}</span>
         <strong>${item.title}</strong>
@@ -800,7 +796,7 @@ function openIncidentModal() {
         <button class="primary-button small" data-resolve-incident="${item.id}" type="button" ${incidentActionAllowed(item, "aprobar") ? "" : `disabled title="${escapeHtml(item.approvalBlock || "No disponible")}"`}>Aprobar</button>
       </div>
     </article>`).join("")}`
-    : `<article class="incident-resolution-item empty"><div><strong>Sin incidencias pendientes</strong><p>No hay elementos para mostrar con este filtro.</p></div></article>`;
+    : `<article class="incident-resolution-item empty"><div><strong>Sin observaciones pendientes</strong><p>No hay elementos para mostrar con este filtro.</p></div></article>`;
   dash.incidentModal.classList.add("open");
   dash.incidentModal.setAttribute("aria-hidden", "false");
 }
@@ -827,7 +823,7 @@ function incidentCanMarkAbsent(item) {
 }
 
 async function passIncidentToPlan(id) {
-  await dashboardApiPost("/incidencias/pasar-a-plan", {
+  await dashboardApiPost("/observaciones-jornal/pasar-a-plan", {
     ids: [Number(id)],
   });
   await refreshDashboard();
@@ -835,7 +831,7 @@ async function passIncidentToPlan(id) {
 }
 
 async function markIncidentAbsent(id) {
-  await dashboardApiPost("/incidencias/marcar-ausente", {
+  await dashboardApiPost("/observaciones-jornal/marcar-ausente", {
     ids: [Number(id)],
   });
   await refreshDashboard();
@@ -850,7 +846,7 @@ async function resolveIncident(id) {
   }
   const comment = approvalCommentPrompt();
   if (comment === null) return;
-  await dashboardApiPost("/incidencias/resolver", {
+  await dashboardApiPost("/observaciones-jornal/resolver", {
     ids: [Number(id)],
     usuario_id: dashboardUser?.id,
     observacion_aprobacion: comment,
@@ -860,7 +856,7 @@ async function resolveIncident(id) {
 }
 
 function approvalCommentPrompt() {
-  const comment = window.prompt("Comentario opcional para la aprobación de la incidencia");
+  const comment = window.prompt("Comentario opcional para la aprobación de la observación");
   return comment === null ? null : comment.trim();
 }
 
@@ -907,12 +903,12 @@ async function resolveSelectedIncidents() {
     .map((id) => dashboardIncidents.find((incident) => incident.id === String(id)))
     .filter((incident) => incident && incidentCanMarkAbsent(incident));
   if (blocked.length) {
-    window.alert("Hay incidencias seleccionadas que primero necesitan cargar una marca manual o marcar ausente.");
+    window.alert("Hay observaciones seleccionadas que primero necesitan cargar una marca manual o marcar ausente.");
     return;
   }
   const comment = approvalCommentPrompt();
   if (comment === null) return;
-  await dashboardApiPost("/incidencias/resolver", {
+  await dashboardApiPost("/observaciones-jornal/resolver", {
     ids: ids.map(Number),
     usuario_id: dashboardUser?.id,
     observacion_aprobacion: comment,
@@ -1018,7 +1014,7 @@ function jornalValidationCell(approval, incident) {
   const label = jornalApprovalLabel(approval);
   const className = jornalApprovalClass(approval);
   const markIds = Array.isArray(approval.marcas_ids) ? approval.marcas_ids.filter(Boolean) : [];
-  const hasIncident = incident?.text && incident.text !== "Sin incidencia";
+  const hasIncident = incident?.text && !["Sin incidencia", "Sin observación"].includes(incident.text);
   const canValidate = !["APROBADA", "VALIDADA_CON_INCIDENCIA"].includes(approval.estado_aprobacion) && markIds.length > 0 && hasDashboardPermission("dashboardAllPersonnel");
   return `<div class="table-actions">
     <span class="mark-pill ${className}">${label}</span>
@@ -1044,7 +1040,7 @@ function jornalApprovalClass(approval) {
 function jornalApprovalLabel(approval) {
   if (isExpectedNoWorkApproval(approval)) return "No requiere";
   if (approval.estado_aprobacion === "APROBADA" && approval.modo_aprobacion === "AUTO") return "Auto";
-  if (approval.estado_aprobacion === "VALIDADA_CON_INCIDENCIA") return "Con incidencia";
+  if (approval.estado_aprobacion === "VALIDADA_CON_INCIDENCIA") return "Con observación";
   if (approval.estado_aprobacion === "REQUIERE_REVISION") return "Revisar";
   if (approval.estado_aprobacion === "APROBADA") return "Manual";
   if (approval.estado_aprobacion === "RECHAZADA") return "Rechazado";
@@ -1307,12 +1303,12 @@ function plannedShiftForDate(person, date) {
 
 function incidentForDay(shift, dayMarks) {
   const label = shift.label?.toUpperCase?.() || "";
-  if ((label === "SIN PREVISIÓN" || label === "VACIO") && !dayMarks.length) return { text: "Sin incidencia", className: "status-ok" };
+  if ((label === "SIN PREVISIÓN" || label === "VACIO") && !dayMarks.length) return { text: "Sin observación", className: "status-ok" };
   if (shift.noSchedule && dayMarks.length) return { text: "Marca en estado sin horario", className: "status-danger" };
   if (!shift.noSchedule && !dayMarks.length) return { text: "Turno sin marca", className: "status-warn" };
   if (!shift.noSchedule && (!hasMarkType(dayMarks, "Entrada") || !hasMarkType(dayMarks, "Salida"))) return { text: "Marca incompleta", className: "status-warn" };
   if (buildMarkPairs(dayMarks).some((item) => item.kind === "unpaired")) return { text: "Marca incompleta", className: "status-warn" };
-  return { text: "Sin incidencia", className: "status-ok" };
+  return { text: "Sin observación", className: "status-ok" };
 }
 
 function markTypeLabel(mark) {

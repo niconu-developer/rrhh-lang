@@ -21,6 +21,7 @@ const personElements = {
   accessFields: document.querySelector("#accessFields"),
   accessPassword: document.querySelector("#accessPasswordInput"),
   accessRole: document.querySelector("#accessRoleInput"),
+  accessPasswordStatus: document.querySelector("#accessPasswordStatus"),
   accessLinkButton: document.querySelector("#generateAccessLinkButton"),
   accessLinkCopy: document.querySelector("#copyAccessLinkButton"),
   accessLinkOutput: document.querySelector("#accessLinkOutput"),
@@ -106,6 +107,7 @@ function apiPersonToLocal(person) {
       email: person.email || person.usuario_email || "",
       roleId: normalizeApplicationRole(person.rol_app || "usuario"),
       active: hasAccess ? Number(person.usuario_activo) !== 0 : false,
+      passwordInitialized: hasAccess ? Number(person.password_inicializada) !== 0 : false,
     },
     operationTariffIds: parseOperationTariffIds(person.operacion_tarifa_ids),
   };
@@ -425,6 +427,13 @@ function updateAccessFieldsState() {
   });
 }
 
+function renderAccessPasswordStatus(person = null) {
+  if (!personElements.accessPasswordStatus) return;
+  const status = person ? personAccessStatus(person) : { label: "Sin usuario creado", className: "off" };
+  personElements.accessPasswordStatus.textContent = status.label === "Activo" ? "Contraseña creada" : status.label;
+  personElements.accessPasswordStatus.className = `access-status ${status.className}`;
+}
+
 function renderFixedRows(schedule) {
   personElements.fixedRows.innerHTML = schedule
     .map((day, index) => `<div class="fixed-row" data-index="${index}">
@@ -466,6 +475,7 @@ function renderPersonList() {
     .map((person) => {
       const documentText = documentationText(person);
       const operatorText = personCanSubmitOperations(person) ? formatOperatorCategory(person.operationTariffIds) : "No";
+      const accessStatus = personAccessStatus(person);
       return `<tr class="${person.active ? "" : "inactive"}">
       <td>${person.privateId || "-"}</td>
       <td><strong>${person.name}</strong></td>
@@ -473,7 +483,7 @@ function renderPersonList() {
       <td>${person.operatorType}</td>
       <td>${operatorText}</td>
       <td>${documentText}</td>
-      <td><span class="access-status ${person.active ? "ok" : "off"}">${person.active ? "Activo" : "Inactivo"}</span></td>
+      <td><span class="access-status ${accessStatus.className}">${accessStatus.label}</span></td>
       <td>
         <div class="table-actions">
         <button class="ghost-button small" data-edit="${person.id}" type="button">Editar</button>
@@ -499,8 +509,18 @@ function personSortValue(person, key) {
   if (key === "role") return person.operatorType || "";
   if (key === "operator") return personCanSubmitOperations(person) ? formatOperatorCategory(person.operationTariffIds) : "No";
   if (key === "documentation") return documentationText(person);
-  if (key === "status") return person.active ? "Activo" : "Inactivo";
+  if (key === "status") return personAccessStatus(person).label;
   return "";
+}
+
+function personAccessStatus(person) {
+  if (!person.active || !person.access?.active) {
+    return { label: "Inactivo", className: "off" };
+  }
+  if (!person.access?.passwordInitialized) {
+    return { label: "Primer ingreso pendiente", className: "pending" };
+  }
+  return { label: "Activo", className: "ok" };
 }
 
 function personCanSubmitOperations(person) {
@@ -570,6 +590,8 @@ function matchesPersonFilter(person, query) {
     person.scheduleMode === "fixed" ? "horario fijo" : "horario variable",
     person.access?.email,
     person.access?.enabled ? "con acceso" : "sin acceso",
+    personAccessStatus(person).label,
+    person.access?.passwordInitialized ? "clave creada contraseña creada" : "primer ingreso pendiente sin clave",
     person.active ? "activo" : "inactivo",
     person.driverLicenseType,
     person.driverLicenseExpiry,
@@ -744,6 +766,7 @@ function resetPersonForm() {
   personElements.active.checked = true;
   personElements.accessPassword.value = "";
   personElements.accessRole.value = "usuario";
+  renderAccessPasswordStatus();
   resetAccessLinkOutput();
   selectedPersonFaces = [];
   renderPersonFaces();
@@ -771,6 +794,7 @@ async function editPerson(id) {
   personElements.active.checked = person.active;
   personElements.accessPassword.value = "";
   personElements.accessRole.value = person.access?.roleId || "usuario";
+  renderAccessPasswordStatus(person);
   resetAccessLinkOutput();
   renderFixedRows(person.fixedSchedule || defaultFixedSchedule());
   selectedPersonFaces = [];

@@ -74,7 +74,28 @@ class AprobacionesService:
             for entry, exit_mark in pairs
         )
         paired_marks = [mark for pair in pairs for mark in pair]
-        return round(worked_hours, 2), paired_marks
+        return round(worked_hours, 2), paired_marks, pairs
+
+    @staticmethod
+    def mark_segments(marks):
+        pending_entry = None
+        segments = []
+        for mark in sorted(marks, key=lambda item: item["fecha_hora"]):
+            mark_type = str(mark["tipo"] or "").lower()
+            if mark_type == "entrada":
+                if pending_entry is not None:
+                    segments.append((pending_entry, None))
+                pending_entry = mark
+                continue
+            if mark_type == "salida":
+                if pending_entry is not None:
+                    segments.append((pending_entry, mark))
+                    pending_entry = None
+                else:
+                    segments.append((None, mark))
+        if pending_entry is not None:
+            segments.append((pending_entry, None))
+        return segments
 
     @staticmethod
     def approval_tolerance_minutes(connection):
@@ -229,11 +250,12 @@ class AprobacionesService:
             turn_status = str(turno["estado"] or "VACIO").upper()
             shift_marks, entries, exits = AprobacionesService.shift_marks(turno, marks_by_person_day)
             entry, exit_mark = AprobacionesService.selected_entry_exit(turno, entries, exits)
-            worked_hours, paired_marks = AprobacionesService.paired_mark_hours(shift_marks)
+            worked_hours, paired_marks, paired_pairs = AprobacionesService.paired_mark_hours(shift_marks)
+            mark_segments = AprobacionesService.mark_segments(shift_marks)
             planned_hours = 0
             if turn_status == "NORMAL":
                 planned_hours = AprobacionesService.hours_between(turno["hora_inicio"], turno["hora_fin"])
-            approval_source_marks = paired_marks or [mark for mark in [entry, exit_mark] if mark]
+            approval_source_marks = shift_marks or [mark for mark in [entry, exit_mark] if mark]
             approval_marks = [mark for mark in approval_source_marks if (mark["estado_aprobacion"] or "PENDIENTE") in {"APROBADA", "VALIDADA_CON_INCIDENCIA"}]
             if turn_status in AprobacionesService.AUTO_EXPECTED_NO_WORK_STATES and not approval_source_marks:
                 approval_state = "APROBADA"
@@ -297,10 +319,14 @@ class AprobacionesService:
                 "entrada_fecha": date_from_db_datetime(entry["fecha_hora"]) if entry else None,
                 "entrada_hora": time_from_db_datetime(entry["fecha_hora"]) if entry else None,
                 "entrada_estado": entry["estado_aprobacion"] if entry else None,
+                "entrada_actividad": entry["actividad_ubicacion"] if entry else None,
+                "entrada_ubicacion": entry["ubicacion_detectada"] if entry else None,
                 "salida_id": exit_mark["id"] if exit_mark else None,
                 "salida_fecha": date_from_db_datetime(exit_mark["fecha_hora"]) if exit_mark else None,
                 "salida_hora": time_from_db_datetime(exit_mark["fecha_hora"]) if exit_mark else None,
                 "salida_estado": exit_mark["estado_aprobacion"] if exit_mark else None,
+                "salida_actividad": exit_mark["actividad_ubicacion"] if exit_mark else None,
+                "salida_ubicacion": exit_mark["ubicacion_detectada"] if exit_mark else None,
                 "estado_aprobacion": approval_state,
                 "modo_aprobacion": approval_mode,
                 "aprobado_por_usuario_id": approval_user_ids[0] if len(approval_user_ids) == 1 else None,
@@ -308,6 +334,32 @@ class AprobacionesService:
                 "fecha_aprobacion": max(approval_dates) if approval_dates else None,
                 "observacion_aprobacion": " / ".join(dict.fromkeys(approval_notes)) if approval_notes else None,
                 "marcas_ids": [mark["id"] for mark in approval_source_marks],
+                "marcas_detalle": [
+                    {
+                        "id": mark["id"],
+                        "tipo": mark["tipo"],
+                        "fecha": date_from_db_datetime(mark["fecha_hora"]),
+                        "hora": time_from_db_datetime(mark["fecha_hora"]),
+                        "actividad": mark["actividad_ubicacion"],
+                        "ubicacion": mark["ubicacion_detectada"],
+                    }
+                    for mark in shift_marks
+                ],
+                "tramos": [
+                    {
+                        "entrada_id": pair_entry["id"] if pair_entry else None,
+                        "entrada_fecha": date_from_db_datetime(pair_entry["fecha_hora"]) if pair_entry else None,
+                        "entrada_hora": time_from_db_datetime(pair_entry["fecha_hora"]) if pair_entry else None,
+                        "entrada_actividad": pair_entry["actividad_ubicacion"] if pair_entry else None,
+                        "entrada_ubicacion": pair_entry["ubicacion_detectada"] if pair_entry else None,
+                        "salida_id": pair_exit["id"] if pair_exit else None,
+                        "salida_fecha": date_from_db_datetime(pair_exit["fecha_hora"]) if pair_exit else None,
+                        "salida_hora": time_from_db_datetime(pair_exit["fecha_hora"]) if pair_exit else None,
+                        "salida_actividad": pair_exit["actividad_ubicacion"] if pair_exit else None,
+                        "salida_ubicacion": pair_exit["ubicacion_detectada"] if pair_exit else None,
+                    }
+                    for pair_entry, pair_exit in mark_segments
+                ],
                 "horas_previstas": round(planned_hours, 2),
                 "horas_trabajadas": worked_hours,
             })
@@ -428,6 +480,89 @@ class AprobacionesService:
         return {"ok": True, "marcas": changed, "estado": estado}
 
 
+class ObservacionesJornalService:
+    @staticmethod
+    def sync_from_incidencias(connection, date_from, date_to):
+        if not date_from or not date_to:
+            return {"ok": True, "observaciones": 0}
+        incident_rows = connection.execute("""
+            SELECT
+              incidencias.*,
+              jornales.id AS jornal_id,
+              aprobador.usuario AS aprobado_por_usuario
+            FROM incidencias
+            LEFT JOIN jornales
+              ON jornales.persona_id = incidencias.persona_id
+             AND jornales.fecha = incidencias.fecha
+            LEFT JOIN usuarios AS aprobador
+              ON aprobador.id = incidencias.aprobado_por_usuario_id
+            WHERE incidencias.fecha BETWEEN ? AND ?
+        """, (date_from, date_to)).fetchall()
+        for incident in incident_rows:
+            state = "RESUELTA" if int(incident["resuelta"] or 0) else "PENDIENTE"
+            connection.execute("""
+                INSERT INTO observaciones_jornal (
+                  incidencia_id,
+                  jornal_id,
+                  persona_id,
+                  fecha,
+                  tipo,
+                  severidad,
+                  detalle,
+                  estado,
+                  origen,
+                  referencia_tipo,
+                  referencia_id,
+                  minutos_desfasaje,
+                  resuelta,
+                  fecha_resolucion,
+                  aprobado_por_usuario_id,
+                  aprobado_por_usuario,
+                  observacion_aprobacion,
+                  fecha_creacion,
+                  fecha_actualizacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)
+                ON CONFLICT(incidencia_id) DO UPDATE SET
+                  jornal_id = excluded.jornal_id,
+                  persona_id = excluded.persona_id,
+                  fecha = excluded.fecha,
+                  tipo = excluded.tipo,
+                  severidad = excluded.severidad,
+                  detalle = excluded.detalle,
+                  estado = excluded.estado,
+                  origen = excluded.origen,
+                  referencia_tipo = excluded.referencia_tipo,
+                  referencia_id = excluded.referencia_id,
+                  minutos_desfasaje = excluded.minutos_desfasaje,
+                  resuelta = excluded.resuelta,
+                  fecha_resolucion = excluded.fecha_resolucion,
+                  aprobado_por_usuario_id = excluded.aprobado_por_usuario_id,
+                  aprobado_por_usuario = excluded.aprobado_por_usuario,
+                  observacion_aprobacion = excluded.observacion_aprobacion,
+                  fecha_actualizacion = CURRENT_TIMESTAMP
+            """, (
+                incident["id"],
+                incident["jornal_id"],
+                incident["persona_id"],
+                incident["fecha"],
+                incident["tipo"],
+                incident["severidad"],
+                incident["detalle"],
+                state,
+                incident["origen"],
+                incident["referencia_tipo"],
+                incident["referencia_id"],
+                incident["minutos_desfasaje"],
+                incident["resuelta"],
+                incident["fecha_resolucion"],
+                incident["aprobado_por_usuario_id"],
+                incident["aprobado_por_usuario"],
+                incident["observacion_aprobacion"],
+                incident["fecha_creacion"],
+            ))
+        return {"ok": True, "observaciones": len(incident_rows)}
+
+
 
 class IncidenciasService:
     @staticmethod
@@ -541,6 +676,7 @@ class IncidenciasService:
             FROM incidencias
             WHERE fecha BETWEEN ? AND ? AND resuelta = 0
         """, (date_from, date_to)).fetchone()["total"]
+        ObservacionesJornalService.sync_from_incidencias(connection, date_from, date_to)
         return {"ok": True, "incidencias": total, "pendientes": pendientes}
 
     @staticmethod
@@ -774,6 +910,11 @@ class IncidenciasService:
             WHERE id = ?
         """, [(user_id, observacion, item) for item in ids])
         touched_jornales = IncidenciasService.approve_marks_for_resolved_incidents(connection, ids, user_id, observacion)
+        touched_dates = sorted({row["fecha"] for row in connection.execute(f"""
+            SELECT fecha FROM incidencias WHERE id IN ({placeholders})
+        """, tuple(ids)).fetchall() if row["fecha"]})
+        for date_value in touched_dates:
+            ObservacionesJornalService.sync_from_incidencias(connection, date_value, date_value)
         return {"ok": True, "resueltas": len(ids), "touched_jornales": touched_jornales}
 
     @staticmethod

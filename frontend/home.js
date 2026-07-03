@@ -10,8 +10,8 @@ async function renderHome() {
   const moduleById = new Map(SYSTEM_MODULES.map((module) => [module.id, module]));
   const currentPerson = await loadCurrentPerson();
   const groups = [
-    { title: "Gestión", modules: ["plan", "incidencias", "aprobaciones", "operaciones"] },
-    { title: "Datos", modules: ["dashboard", "reportes", "analisis", "facturacion", "importacion", "liquidacion"] },
+    { title: "Gestión", modules: ["plan", "aprobaciones", "operaciones"] },
+    { title: "Datos", modules: ["dashboard", "reportes", "analisis", "liquidacion"] },
     { title: "Parámetros", modules: ["config", "personal"] },
     { title: "Recursos", modules: ["marcas", "mis-marcas"] },
   ];

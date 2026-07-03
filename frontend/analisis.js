@@ -14,16 +14,10 @@ const analysis = {
   operationCost: document.querySelector("#analysisOperationCost"),
   operationCount: document.querySelector("#analysisOperationCount"),
   totalCost: document.querySelector("#analysisTotalCost"),
-  revenue: document.querySelector("#analysisRevenue"),
-  revenueCount: document.querySelector("#analysisRevenueCount"),
-  costRevenueRatio: document.querySelector("#analysisCostRevenueRatio"),
-  revenuePerHour: document.querySelector("#analysisRevenuePerHour"),
   hourBands: document.querySelector("#analysisHourBands"),
   salaryBands: document.querySelector("#analysisSalaryBands"),
   rowsCount: document.querySelector("#analysisRowsCount"),
   peopleBody: document.querySelector("#analysisPeopleBody"),
-  billingRowsCount: document.querySelector("#analysisBillingRowsCount"),
-  billingWeeks: document.querySelector("#analysisBillingWeeks"),
   toast: document.querySelector("#toast"),
 };
 
@@ -48,7 +42,6 @@ let selectedMonth = monthKey(new Date());
 let peopleRows = [];
 let jornalRows = [];
 let operationRows = [];
-let billingRows = [];
 
 async function analysisApi(path) {
   const response = await fetch(`${ANALYSIS_API_BASE}${path}`);
@@ -149,19 +142,14 @@ async function refreshAnalysis() {
   analysis.monthLabel.textContent = formatMonthLabel(selectedMonth);
   analysis.nextMonth.disabled = selectedMonth >= monthKey(new Date());
   analysis.status.textContent = "Calculando";
-  const [people, jornals, operations, billing] = await Promise.all([
+  const [people, jornals, operations] = await Promise.all([
     analysisApi("/personas"),
     analysisApi(`/jornales?desde=${from}&hasta=${to}`),
-    analysisApi("/operaciones"),
-    analysisApi(`/facturacion?desde=${from}&hasta=${to}`),
+    analysisApi(`/operaciones?desde=${from}&hasta=${to}&estado=approved`),
   ]);
   peopleRows = people.filter((person) => Number(person.activo) !== 0);
   jornalRows = jornals;
-  operationRows = operations.filter((operation) => {
-    const date = String(operation.fecha_hora || "").slice(0, 10);
-    return date >= from && date <= to && operation.estado === "approved";
-  });
-  billingRows = billing;
+  operationRows = operations;
   renderAnalysis();
 }
 
@@ -172,25 +160,17 @@ function renderAnalysis() {
   const totalOperationCost = sumNumbers(rows.map((row) => row.operationCost));
   const operationsCount = sumNumbers(rows.map((row) => row.operationsCount));
   const totalCost = totalHourCost + totalOperationCost;
-  const totalRevenue = sumNumbers(billingRows.map((row) => row.monto));
-  const costRevenueRatio = totalRevenue > 0 ? (totalCost / totalRevenue) * 100 : 0;
-  const revenuePerHour = totalHours > 0 ? totalRevenue / totalHours : 0;
   analysis.people.textContent = rows.length;
   analysis.hours.textContent = `${formatHours(totalHours)} h`;
   analysis.hourCost.textContent = formatMoney(totalHourCost);
   analysis.operationCost.textContent = formatMoney(totalOperationCost);
   analysis.operationCount.textContent = `${operationsCount} operaciones`;
   analysis.totalCost.textContent = formatMoney(totalCost);
-  analysis.revenue.textContent = formatMoney(totalRevenue);
-  analysis.revenueCount.textContent = `${billingRows.length} órdenes`;
-  analysis.costRevenueRatio.textContent = formatPercent(costRevenueRatio);
-  analysis.revenuePerHour.textContent = formatMoney(revenuePerHour);
   analysis.rowsCount.textContent = `${rows.length} filas`;
   analysis.status.textContent = "Actualizado";
   renderBands(analysis.hourBands, HOUR_BANDS, rows, "hours");
   renderBands(analysis.salaryBands, SALARY_BANDS, rows, "totalCost");
   renderPeopleRows(rows);
-  renderBillingWeeks(rows);
 }
 
 function buildAnalysisRows() {
@@ -268,52 +248,6 @@ function renderPeopleRows(rows) {
       <td><span class="mark-pill severity-info">${row.hourBand.label}</span></td>
       <td><span class="mark-pill approved-auto">${row.salaryBand.label}</span></td>
     </tr>`)
-    .join("");
-}
-
-function renderBillingWeeks(rows) {
-  const peopleById = new Map(peopleRows.map((person) => [Number(person.id), person]));
-  const weeks = new Map();
-  const ensureWeek = (key) => {
-    if (!key) return null;
-    if (!weeks.has(key)) weeks.set(key, { key, revenue: 0, cost: 0, hours: 0 });
-    return weeks.get(key);
-  };
-  billingRows.forEach((row) => {
-    const week = ensureWeek(weekStartKey(row.fecha));
-    if (week) week.revenue += Number(row.monto || 0);
-  });
-  jornalRows.filter(isLiquidableJornal).forEach((row) => {
-    const week = ensureWeek(weekStartKey(row.fecha));
-    const person = peopleById.get(Number(row.persona_id));
-    if (week && person) {
-      const hours = Number(row.horas_trabajadas || 0);
-      week.hours += hours;
-      week.cost += hours * Number(person.valor_hora || 0);
-    }
-  });
-  operationRows.forEach((operation) => {
-    const week = ensureWeek(weekStartKey(operation.fecha_hora));
-    if (week) week.cost += Number(operation.valor || 0);
-  });
-  const rowsByWeek = [...weeks.values()].sort((a, b) => a.key.localeCompare(b.key));
-  analysis.billingRowsCount.textContent = `${rowsByWeek.length} semanas`;
-  if (!rowsByWeek.length) {
-    analysis.billingWeeks.innerHTML = `<tr><td colspan="5">Sin facturación cargada para el mes seleccionado.</td></tr>`;
-    return;
-  }
-  analysis.billingWeeks.innerHTML = rowsByWeek
-    .map((row) => {
-      const ratio = row.revenue > 0 ? (row.cost / row.revenue) * 100 : 0;
-      const revenuePerHour = row.hours > 0 ? row.revenue / row.hours : 0;
-      return `<tr>
-        <td>${weekLabel(row.key)}</td>
-        <td>${formatMoney(row.revenue)}</td>
-        <td>${formatMoney(row.cost)}</td>
-        <td>${row.revenue > 0 ? formatPercent(ratio) : "-"}</td>
-        <td><strong>${row.hours > 0 ? formatMoney(revenuePerHour) : "-"}</strong></td>
-      </tr>`;
-    })
     .join("");
 }
 

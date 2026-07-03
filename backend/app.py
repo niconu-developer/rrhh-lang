@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import csv
-import io
 import json
 import os
 import re
@@ -8,14 +6,12 @@ import secrets
 import hmac
 import sys
 import traceback
-import zipfile
 from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
-import xml.etree.ElementTree as ET
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -24,7 +20,7 @@ from backend import repositories as repo
 from backend import routes as api_routes
 from backend.database import IS_POSTGRES, connect, execute_script, one, rows
 from backend.security import hash_password, is_password_hash
-from backend.services import AprobacionesService, IncidenciasService
+from backend.services import AprobacionesService, IncidenciasService, ObservacionesJornalService
 from backend.settings import (
     ADMIN_BOOTSTRAP_PASSWORD,
     BACKEND_DIR,
@@ -69,7 +65,6 @@ def ensure_database():
             ensure_sessions_schema(connection)
             ensure_incidencias_schema(connection)
             ensure_jornales_schema(connection)
-            ensure_facturacion_schema(connection)
             ensure_operation_tarifas_schema(connection)
             ensure_column(connection, "relojes_faciales", "token_visible", "TEXT")
             ensure_column(connection, "relojes_faciales", "eliminado", "INTEGER NOT NULL DEFAULT 0")
@@ -81,10 +76,12 @@ def ensure_database():
             ensure_required_role_permissions(connection)
             ensure_identity_model(connection)
         ensure_email_identifiers(connection)
+        drop_obsolete_projects_table(connection)
         migrate_passwords_to_hash(connection)
         ensure_bootstrap_admin(connection)
         ensure_seed_named_admin(connection)
         ensure_private_person_codes(connection)
+        drop_obsolete_native_host_tables(connection)
         if RUN_DATA_SEED:
             seed_default_operation_tarifas(connection)
             seed_default_persona_operation_tarifas(connection)
@@ -94,6 +91,16 @@ def ensure_column(connection, table, column, definition):
     existing = [row["name"] for row in connection.execute(f"PRAGMA table_info({table})")]
     if column not in existing:
         connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def drop_obsolete_projects_table(connection):
+    connection.execute("DROP INDEX IF EXISTS idx_proyectos_activo")
+    connection.execute("DROP TABLE IF EXISTS proyectos")
+
+
+def drop_obsolete_native_host_tables(connection):
+    connection.execute("DROP INDEX IF EXISTS idx_facturacion_fecha")
+    connection.execute("DROP TABLE IF EXISTS facturacion")
 
 
 def ensure_reference_data(connection):
@@ -474,25 +481,6 @@ def ensure_jornales_schema(connection):
     """)
 
 
-def ensure_facturacion_schema(connection):
-    connection.execute("""
-        CREATE TABLE IF NOT EXISTS facturacion (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          orden TEXT NOT NULL,
-          fecha TEXT NOT NULL,
-          monto REAL NOT NULL DEFAULT 0,
-          referencia TEXT,
-          lugar TEXT,
-          observacion TEXT,
-          fecha_creacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          fecha_actualizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    ensure_column(connection, "facturacion", "referencia", "TEXT")
-    ensure_column(connection, "facturacion", "lugar", "TEXT")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_facturacion_fecha ON facturacion(fecha)")
-
-
 def ensure_operation_tarifas_schema(connection):
     connection.execute("""
         CREATE TABLE IF NOT EXISTS operacion_tarifas (
@@ -573,186 +561,6 @@ def read_body(handler):
     return json.loads(raw or "{}")
 
 
-def read_raw_body(handler):
-    length = int(handler.headers.get("Content-Length", "0"))
-    return handler.rfile.read(length) if length else b""
-
-
-def parse_multipart_file(content_type, raw):
-    boundary_match = re.search(r"boundary=(?P<boundary>[^;]+)", content_type or "")
-    if not boundary_match:
-        raise ValueError("No se detectó archivo para importar")
-    boundary = boundary_match.group("boundary").strip().strip('"').encode("utf-8")
-    for part in raw.split(b"--" + boundary):
-        if b"Content-Disposition:" not in part or b"\r\n\r\n" not in part:
-            continue
-        header_blob, body = part.split(b"\r\n\r\n", 1)
-        headers_text = header_blob.decode("utf-8", errors="ignore")
-        if 'name="archivo"' not in headers_text and 'name="file"' not in headers_text:
-            continue
-        filename_match = re.search(r'filename="([^"]*)"', headers_text)
-        filename = filename_match.group(1) if filename_match else "facturacion.csv"
-        return filename, body.rstrip(b"\r\n")
-    raise ValueError("No se detectó archivo para importar")
-
-
-def normalize_import_key(value):
-    return re.sub(
-        r"[^a-z0-9]+",
-        "",
-        str(value or "").strip().lower().replace("ñ", "n")
-        .encode("ascii", "ignore")
-        .decode("ascii"),
-    )
-
-
-FACTURACION_IMPORT_ALIASES = {
-    "orden": {"orden", "ordennro", "nroorden", "numeroorden", "numero"},
-    "fecha": {"fecha", "dia"},
-    "monto": {"monto", "importe", "valor", "total", "facturacion"},
-    "referencia": {"referencia", "ref", "cliente", "evento", "descripcion"},
-    "lugar": {"lugar", "ubicacion", "locacion", "sede"},
-    "observacion": {"observacion", "observaciones", "nota", "notas", "comentario", "comentarios"},
-}
-
-
-def map_facturacion_headers(headers):
-    mapped = {}
-    used_indexes = set()
-    normalized = [normalize_import_key(header) for header in headers]
-    for target, aliases in FACTURACION_IMPORT_ALIASES.items():
-        for index, header in enumerate(normalized):
-            if index in used_indexes:
-                continue
-            if header in aliases:
-                mapped[target] = index
-                used_indexes.add(index)
-                break
-    missing = [field for field in ("orden", "fecha", "monto", "referencia", "lugar") if field not in mapped]
-    if missing:
-        raise ValueError(f"Faltan columnas requeridas: {', '.join(missing)}")
-    return mapped
-
-
-def parse_import_amount(value):
-    raw = str(value or "").strip()
-    if not raw:
-        raise ValueError("monto vacío")
-    cleaned = raw.replace("$", "").replace(" ", "")
-    if "," in cleaned:
-        cleaned = cleaned.replace(".", "").replace(",", ".")
-    amount = float(cleaned)
-    if amount < 0:
-        raise ValueError("monto negativo")
-    return amount
-
-
-def parse_import_date(value):
-    raw = str(value or "").strip()
-    if not raw:
-        raise ValueError("fecha vacía")
-    if re.fullmatch(r"\d+(?:\.\d+)?", raw):
-        serial = float(raw)
-        if serial > 59:
-            return (datetime(1899, 12, 30) + timedelta(days=serial)).strftime("%Y-%m-%d")
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y"):
-        try:
-            return datetime.strptime(raw[:10], fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-    raise ValueError(f"fecha inválida: {raw}")
-
-
-def facturacion_rows_from_matrix(matrix):
-    clean_rows = [[str(cell or "").strip() for cell in row] for row in matrix]
-    clean_rows = [row for row in clean_rows if any(row)]
-    if not clean_rows:
-        raise ValueError("El archivo no tiene datos")
-    headers = clean_rows[0]
-    mapping = map_facturacion_headers(headers)
-    result = []
-    for row in clean_rows[1:]:
-        if not any(row):
-            continue
-        def cell(field):
-            index = mapping.get(field)
-            return row[index].strip() if index is not None and index < len(row) else ""
-        result.append({
-            "orden": cell("orden"),
-            "fecha": parse_import_date(cell("fecha")),
-            "monto": parse_import_amount(cell("monto")),
-            "referencia": cell("referencia"),
-            "lugar": cell("lugar"),
-            "observacion": cell("observacion"),
-        })
-    return result
-
-
-def parse_facturacion_csv(raw):
-    text = raw.decode("utf-8-sig", errors="replace")
-    if "\ufffd" in text:
-        text = raw.decode("latin-1")
-    sample = text[:2048]
-    try:
-        dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
-    except csv.Error:
-        dialect = csv.excel
-        dialect.delimiter = ";"
-    return facturacion_rows_from_matrix(list(csv.reader(io.StringIO(text), dialect)))
-
-
-def xlsx_cell_value(cell, shared_strings):
-    cell_type = cell.attrib.get("t")
-    if cell_type == "inlineStr":
-        node = cell.find(".//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t")
-        return node.text if node is not None else ""
-    value_node = cell.find("{http://schemas.openxmlformats.org/spreadsheetml/2006/main}v")
-    value = value_node.text if value_node is not None else ""
-    if cell_type == "s" and value:
-        return shared_strings[int(value)] if int(value) < len(shared_strings) else ""
-    return value or ""
-
-
-def parse_facturacion_xlsx(raw):
-    ns = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
-    with zipfile.ZipFile(io.BytesIO(raw)) as workbook:
-        shared_strings = []
-        if "xl/sharedStrings.xml" in workbook.namelist():
-            root = ET.fromstring(workbook.read("xl/sharedStrings.xml"))
-            for item in root.findall("m:si", ns):
-                shared_strings.append("".join(node.text or "" for node in item.findall(".//m:t", ns)))
-        sheet_name = "xl/worksheets/sheet1.xml"
-        if sheet_name not in workbook.namelist():
-            sheet_name = next((name for name in workbook.namelist() if name.startswith("xl/worksheets/sheet")), None)
-        if not sheet_name:
-            raise ValueError("No se encontró una hoja en el Excel")
-        root = ET.fromstring(workbook.read(sheet_name))
-        matrix = []
-        for row in root.findall(".//m:sheetData/m:row", ns):
-            cells = {}
-            max_index = 0
-            for cell in row.findall("m:c", ns):
-                ref = cell.attrib.get("r", "")
-                letters = re.sub(r"[^A-Z]", "", ref.upper())
-                index = 0
-                for letter in letters:
-                    index = index * 26 + (ord(letter) - ord("A") + 1)
-                index = max(index - 1, 0)
-                max_index = max(max_index, index)
-                cells[index] = xlsx_cell_value(cell, shared_strings)
-            matrix.append([cells.get(index, "") for index in range(max_index + 1)])
-    return facturacion_rows_from_matrix(matrix)
-
-
-def parse_facturacion_file(filename, raw):
-    lower = str(filename or "").lower()
-    if lower.endswith(".xlsx"):
-        return parse_facturacion_xlsx(raw)
-    if lower.endswith(".csv") or lower.endswith(".txt"):
-        return parse_facturacion_csv(raw)
-    raise ValueError("Formato no soportado. Usá CSV o XLSX")
-
-
 def parse_iso_date(value):
     try:
         return datetime.strptime(str(value), "%Y-%m-%d")
@@ -823,41 +631,6 @@ def shift_diff_minutes(real_time, expected_time):
     return direct
 
 
-def normalize_import_mark_payload(row):
-    if not isinstance(row, dict):
-        raise ValueError("Fila inválida")
-    normalized = {str(key).strip().lower(): value for key, value in row.items()}
-    persona = str(normalized.get("persona") or normalized.get("nombre") or "").strip()
-    if not persona:
-        raise ValueError("Persona requerida")
-    mark_type = str(normalized.get("tipo") or normalized.get("marca") or "").strip().capitalize()
-    if mark_type.lower() not in {"entrada", "salida"}:
-        raise ValueError("Tipo debe ser Entrada o Salida")
-    fecha_hora = str(normalized.get("fecha_hora") or "").strip()
-    if not fecha_hora:
-        fecha = str(normalized.get("fecha") or "").strip()
-        hora = str(normalized.get("hora") or "").strip()
-        if not fecha or not hora:
-            raise ValueError("Fecha y hora requeridas")
-        fecha_hora = local_date_time(fecha, hora)
-    elif "T" in fecha_hora:
-        fecha_hora = fecha_hora.replace("T", " ")
-    if len(fecha_hora) == 16:
-        fecha_hora = f"{fecha_hora}:00"
-    return {
-        "persona": persona,
-        "rol_operativo": str(normalized.get("rol_operativo") or "Operador").strip() or "Operador",
-        "fecha_hora": fecha_hora,
-        "tipo": mark_type,
-        "tipo_marca": str(normalized.get("tipo_marca") or normalized.get("origen") or "RELOJ WEB").strip() or "RELOJ WEB",
-        "actividad_ubicacion": str(normalized.get("actividad_ubicacion") or normalized.get("actividad") or normalized.get("ubicacion") or "LOGISTICA").strip() or "LOGISTICA",
-        "ubicacion_detectada": str(normalized.get("ubicacion_detectada") or normalized.get("ubicacion_marca") or "").strip(),
-        "latitud": normalized.get("latitud") or None,
-        "longitud": normalized.get("longitud") or None,
-        "genera_incidencia": str(normalized.get("genera_incidencia") or "").strip().lower() in {"1", "true", "si", "sí", "yes"},
-    }
-
-
 def app_config_json(connection, key, fallback):
     row = connection.execute("SELECT valor FROM configuracion WHERE clave = ?", (key,)).fetchone()
     if not row:
@@ -889,17 +662,35 @@ def ensure_role_permissions_module(connection, module_id, role_names):
         """, (json.dumps(permissions, ensure_ascii=False),))
 
 
+def remove_role_permissions_module(connection, module_id):
+    row = connection.execute("SELECT valor FROM configuracion WHERE clave = 'role_permissions'").fetchone()
+    try:
+        permissions = json.loads(row["valor"] or "{}") if row else {}
+    except (TypeError, json.JSONDecodeError):
+        permissions = {}
+    changed = False
+    for role_permissions in permissions.values():
+        modules = role_permissions.get("modules")
+        if isinstance(modules, list) and module_id in modules:
+            role_permissions["modules"] = [item for item in modules if item != module_id]
+            changed = True
+    if changed:
+        connection.execute("""
+            INSERT INTO configuracion (clave, valor)
+            VALUES ('role_permissions', ?)
+            ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor
+        """, (json.dumps(permissions, ensure_ascii=False),))
+
+
 def ensure_required_role_permissions(connection):
+    remove_role_permissions_module(connection, "incidencias")
     for module_id in [
         "plan",
         "dashboard",
-        "incidencias",
         "aprobaciones",
         "operaciones",
         "reportes",
         "analisis",
-        "facturacion",
-        "importacion",
         "liquidacion",
         "personal",
         "marcas",
@@ -911,12 +702,12 @@ def ensure_required_role_permissions(connection):
     ensure_role_permissions_module(connection, "config", ["admin"])
     ensure_role_permissions_module(connection, "marcas", ["usuario"])
     ensure_role_permissions_module(connection, "mis-marcas", ["usuario"])
-    ensure_role_permissions_module(connection, "incidencias", ["admin", "rrhh"])
     ensure_role_permissions_module(connection, "aprobaciones", ["admin", "rrhh"])
     ensure_role_permissions_module(connection, "operaciones", ["admin", "rrhh"])
     ensure_role_permissions_module(connection, "liquidacion", ["admin", "rrhh"])
-    ensure_role_permissions_module(connection, "importacion", ["admin", "rrhh"])
     ensure_role_permissions_module(connection, "mis-marcas", ["admin", "rrhh", "usuario"])
+    remove_role_permissions_module(connection, "facturacion")
+    remove_role_permissions_module(connection, "importacion")
 
 
 def persona_id_by_name(connection, name):
@@ -947,8 +738,8 @@ def ensure_persona_id(connection, name, role_name="Operador"):
 
 ROLE_MODULES = {
     "admin": {"*"},
-    "rrhh": {"personas", "roles-operativos", "ubicaciones", "proyectos", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "incidencias", "operaciones", "operacion-tarifas", "facturacion", "reportes", "importacion", "reconocimientos-faciales", "access-links"},
-    "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "proyectos", "configuracion"},
+    "rrhh": {"personas", "roles-operativos", "ubicaciones", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "observaciones-jornal", "operaciones", "operacion-tarifas", "reportes", "reconocimientos-faciales", "access-links"},
+    "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "configuracion"},
 }
 
 
@@ -971,7 +762,7 @@ def public_face_clock_request(method, path, query=None, payload=None):
     link = repo.validate_reloj_facial_token(raw_token, touch=method == "POST" and path in {"/api/marcas", "/api/reloj-facial/validar"})
     if not link:
         return None
-    if method == "GET" and path in {"/api/personas", "/api/ubicaciones", "/api/proyectos"}:
+    if method == "GET" and path in {"/api/personas", "/api/ubicaciones"}:
         return link
     if method == "GET" and path == "/api/turnos":
         return link
@@ -1036,6 +827,8 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             payload = self.route_get(route_path, query)
             self.send_json(payload)
         except Exception as error:
+            if "Endpoint GET no implementado" in str(error):
+                return self.send_error_json(str(error), 404)
             print(f"[api-error] GET {route_path}: {error}", file=sys.stderr)
             traceback.print_exc()
             self.send_error_json(str(error), 500)
@@ -1047,19 +840,14 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             return self.send_error_json("Endpoint no encontrado", 404)
         payload = {}
         try:
-            if route_path == "/api/facturacion/importar":
-                if not self.authorize_request("POST", route_path, query=parse_qs(parsed.query), payload=payload):
-                    return
-                filename, raw_file = parse_multipart_file(self.headers.get("Content-Type", ""), read_raw_body(self))
-                rows_to_import = parse_facturacion_file(filename, raw_file)
-                self.send_json(repo.import_facturacion(rows_to_import))
-                return
             payload = read_body(self)
             if not self.authorize_request("POST", route_path, query=parse_qs(parsed.query), payload=payload):
                 return
             response_payload = self.route_post(route_path, payload)
             self.send_json(response_payload)
         except Exception as error:
+            if "Endpoint POST no implementado" in str(error):
+                return self.send_error_json(str(error), 404)
             print(f"[api-error] POST {route_path}: {error}", file=sys.stderr)
             traceback.print_exc()
             self.send_error_json(str(error), 500)
@@ -1204,7 +992,6 @@ class PlannerHandler(SimpleHTTPRequestHandler):
                 "/api/turnos",
                 "/api/configuracion",
                 "/api/ubicaciones",
-                "/api/proyectos",
                 "/api/marcas",
                 "/api/operaciones",
                 "/api/operacion-tarifas",
@@ -1266,13 +1053,6 @@ class PlannerHandler(SimpleHTTPRequestHandler):
                 "externalAuth": bool(user.get("external_auth")),
             },
         }
-
-    def reset_password(self, payload):
-        email = str(payload.get("email", "")).strip().lower()
-        password = str(payload.get("password", "")).strip()
-        if not email or not password:
-            raise ValueError("Correo y contraseña son obligatorios")
-        return {"ok": repo.reset_user_password(email, password)}
 
     def first_access(self, payload):
         return repo.complete_first_access(
@@ -1372,13 +1152,21 @@ class PlannerHandler(SimpleHTTPRequestHandler):
 
     def read_aprobaciones(self, date_from, date_to, persona=None):
         with connect() as connection:
-            rows_out = AprobacionesService.read(connection, date_from, date_to, persona=persona)
+            persona_id = int(persona) if str(persona or "").isdigit() else None
+            persona_name = None if persona_id else persona
+            rows_out = AprobacionesService.read(connection, date_from, date_to, persona=persona_name, persona_id=persona_id)
+            if date_from and date_to:
+                ObservacionesJornalService.sync_from_incidencias(connection, date_from, date_to)
             connection.commit()
             return rows_out
 
     def read_jornales(self, date_from, date_to, persona=None):
         with connect() as connection:
-            AprobacionesService.read(connection, date_from, date_to, persona=persona)
+            persona_id = int(persona) if str(persona or "").isdigit() else None
+            persona_name = None if persona_id else persona
+            AprobacionesService.read(connection, date_from, date_to, persona=persona_name, persona_id=persona_id)
+            if date_from and date_to:
+                ObservacionesJornalService.sync_from_incidencias(connection, date_from, date_to)
             connection.commit()
             return repo.list_jornales(date_from, date_to, persona=persona)
 
@@ -1432,6 +1220,18 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             connection.commit()
             return {"ok": True, "turnos": result.get("turnos", 0)}
 
+    def generate_observaciones_jornal(self, payload):
+        return self.generate_incidencias(payload)
+
+    def resolve_observaciones_jornal(self, payload):
+        return self.resolve_incidencias(payload)
+
+    def pass_observaciones_to_plan(self, payload):
+        return self.pass_incidencias_to_plan(payload)
+
+    def mark_observaciones_absent(self, payload):
+        return self.mark_incidencias_absent(payload)
+
     def generate_incidencias_for_range(self, connection, date_from, date_to):
         return IncidenciasService.generate_for_range(connection, date_from, date_to)
 
@@ -1482,47 +1282,15 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             created = repo.create_marca(connection, payload)
             mark_day = date_from_db_datetime(payload["fecha_hora"])
             if payload.get("registrada_por_admin"):
-                IncidenciasService.resolve_person_day_system_incidents(
-                    connection,
-                    created["persona_id"],
-                    mark_day,
-                    repo.normalize_user_id(payload.get("usuario_id")),
-                    str(payload.get("observacion_modificacion") or "Carga manual admin").strip(),
-                )
-                self.sync_jornal_for_person_day(connection, created["persona_id"], mark_day)
+                affected_dates = [mark_day]
                 previous_day = parse_iso_date(mark_day)
                 if previous_day:
-                    self.refresh_mark_workflow(
-                        connection,
-                        created["persona_id"],
-                        [(previous_day - timedelta(days=1)).strftime("%Y-%m-%d")],
-                    )
+                    affected_dates.append((previous_day - timedelta(days=1)).strftime("%Y-%m-%d"))
+                self.refresh_mark_workflow(connection, created["persona_id"], affected_dates)
             else:
                 self.refresh_mark_workflow(connection, created["persona_id"], [mark_day])
             connection.commit()
             return {"id": created["id"]}
-
-    def import_marcas(self, payload):
-        rows_payload = payload.get("rows")
-        if not isinstance(rows_payload, list) or not rows_payload:
-            raise ValueError("No hay marcas para importar")
-        created_count = 0
-        errors = []
-        touched = {}
-        with connect() as connection:
-            for index, row in enumerate(rows_payload, start=1):
-                try:
-                    mark_payload = normalize_import_mark_payload(row)
-                    created = repo.create_marca(connection, mark_payload)
-                    created_count += 1
-                    mark_day = date_from_db_datetime(mark_payload["fecha_hora"])
-                    touched.setdefault(created["persona_id"], set()).add(mark_day)
-                except Exception as error:
-                    errors.append({"fila": index, "error": str(error)})
-            for persona_id, dates in touched.items():
-                self.refresh_mark_workflow(connection, persona_id, sorted(dates))
-            connection.commit()
-        return {"ok": True, "importadas": created_count, "errores": errors}
 
     def update_marca(self, marca_id, payload):
         mark_type = str(payload.get("tipo") or "").strip()
@@ -1598,6 +1366,7 @@ class PlannerHandler(SimpleHTTPRequestHandler):
     def sync_jornal_for_person_day(self, connection, persona_id, date_value):
         if persona_id and date_value:
             AprobacionesService.read(connection, date_value, date_value, persona_id=persona_id)
+            ObservacionesJornalService.sync_from_incidencias(connection, date_value, date_value)
 
     def create_operacion(self, payload):
         return repo.create_operacion(payload)
