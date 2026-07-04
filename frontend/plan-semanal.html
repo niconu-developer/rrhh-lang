@@ -14,7 +14,7 @@
       })();
     </script>
     <link rel="stylesheet" href="./css/global.css?v=20260704-embedded-prepaint1" />
-    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260704-dark-tone1" />
+    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260704-plan-height1" />
   </head>
   <body>
     <header class="topbar">
@@ -91,6 +91,7 @@
           <button class="tab active" data-tab="operador" type="button">Operador</button>
           <button class="tab" data-tab="dia" type="button">Día</button>
           <button class="tab" data-tab="lotes" type="button">Lotes</button>
+          <button class="tab" data-tab="ia" type="button" hidden>IA</button>
         </nav>
 
         <section class="tab-panel" id="diaPanel">
@@ -197,6 +198,18 @@
           </div>
         </section>
 
+        <section class="tab-panel" id="iaPanel">
+          <div class="person-card ai-panel-head">
+            <div class="avatar">IA</div>
+            <div>
+              <p class="muted">Sugerencias desde Operación</p>
+              <h2 id="aiSuggestionTitle">Elegí un día</h2>
+              <p id="aiSuggestionMeta">Usá la varita del encabezado para buscar asignaciones.</p>
+            </div>
+          </div>
+          <div class="ai-suggestions-list" id="aiSuggestionsList"></div>
+        </section>
+
       </aside>
     </main>
 
@@ -264,6 +277,6 @@
     <script src="./api-client.js?v=20260704-sso1"></script>
     <script src="./shared-data.js?v=20260610-opcats1"></script>
     <script src="./auth-session.js?v=20260704-sso1"></script>
-    <script src="./app.js?v=20260704-sso1"></script>
+    <script src="./app.js?v=20260704-ai-suggestions1"></script>
   </body>
 </html>

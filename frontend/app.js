@@ -55,6 +55,10 @@ let undoStack = [];
 let redoStack = [];
 let monthlyPersonCache = new Map();
 let monthlyPersonLoadingKey = "";
+let aiSuggestions = [];
+let aiSuggestionsDayIndex = null;
+let aiSuggestionsLoading = false;
+let aiSuggestionsError = "";
 
 const elements = {
   head: document.querySelector("#scheduleHead"),
@@ -88,6 +92,9 @@ const elements = {
   bulkEndInput: document.querySelector("#bulkEndInput"),
   bulkActivityInput: document.querySelector("#bulkActivityInput"),
   bulkPreviewBox: document.querySelector("#bulkPreviewBox"),
+  aiSuggestionTitle: document.querySelector("#aiSuggestionTitle"),
+  aiSuggestionMeta: document.querySelector("#aiSuggestionMeta"),
+  aiSuggestionsList: document.querySelector("#aiSuggestionsList"),
   dayAvatar: document.querySelector("#dayAvatar"),
   daySummaryTitle: document.querySelector("#daySummaryTitle"),
   daySummaryCount: document.querySelector("#daySummaryCount"),
@@ -721,6 +728,14 @@ function escapeAttr(value) {
     .replace(/>/g, "&gt;");
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function minutesFromTime(value) {
   if (!value) return null;
   const [hours, minutes] = value.split(":").map(Number);
@@ -758,6 +773,244 @@ function isEditingCell(personIndex, dayIndex) {
 
 function isEmptyShift(shift) {
   return shift.noSchedule && normalizeStatus(shift.status) === "VACIO";
+}
+
+function aiNormalizeName(value) {
+  return normalizeSearchText(value).replace(/[^a-z0-9]/g, "");
+}
+
+function findPlannerPersonIndexByName(name) {
+  const target = aiNormalizeName(name);
+  if (!target) return -1;
+  return people.findIndex((person) => {
+    const personName = aiNormalizeName(person.name);
+    return personName === target || personName.includes(target) || target.includes(personName);
+  });
+}
+
+function formatAiDate(day) {
+  return `${day.label} ${day.date}`;
+}
+
+function eventAssignments(event) {
+  return Array.isArray(event?.staff_assignments) ? event.staff_assignments : [];
+}
+
+async function parentAppApi(path) {
+  const response = await fetch(path, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = null;
+  }
+  if (!response.ok) {
+    const error = new Error(payload?.error || "No se pudo leer datos del sistema madre");
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+
+async function loadParentEventsForDay(day) {
+  const date = inputDateValue(day.fullDate);
+  return parentAppApi(`/api/events?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`);
+}
+
+function buildAiSuggestion({ event, assignment, dayIndex }) {
+  const personIndex = findPlannerPersonIndexByName(assignment.person_name);
+  const start = normalizeTime(event.start_time || "");
+  const end = normalizeTime(event.end_time || "");
+  const place = normalizeActivity(event.place || event.name || "OPERACION");
+  const existing = personIndex >= 0 ? getShift(personIndex, dayIndex) : null;
+  const hasExisting = existing ? !isEmptyShift(existing) : false;
+  const existingLabel = existing?.noSchedule
+    ? existing.status
+    : existing
+      ? `${compactTime(existing.start)}-${compactTime(existing.end)} ${existing.activity}`
+      : "";
+
+  return {
+    id: `${event.id}-${assignment.id || assignment.person_name}-${dayIndex}`,
+    dayIndex,
+    eventId: event.id,
+    eventName: event.name || "Evento",
+    eventPlace: event.place || "",
+    personIndex,
+    personName: assignment.person_name || "Sin persona",
+    role: assignment.role || "",
+    draftStart: start,
+    draftEnd: end,
+    draftActivity: place,
+    existingLabel,
+    hasExisting,
+    status: personIndex >= 0 ? "pending" : "unmatched",
+  };
+}
+
+function suggestionStatusLabel(suggestion) {
+  if (suggestion.status === "applied") return "Aplicada";
+  if (suggestion.status === "discarded") return "Descartada";
+  if (suggestion.status === "unmatched") return "Sin persona en plan";
+  if (suggestion.hasExisting) return "Revisa conflicto";
+  return "Lista para aplicar";
+}
+
+function renderAiPanel() {
+  if (!elements.aiSuggestionTitle || !elements.aiSuggestionsList) return;
+  const day = aiSuggestionsDayIndex == null ? null : days[aiSuggestionsDayIndex];
+  elements.aiSuggestionTitle.textContent = day ? `IA · ${formatAiDate(day)}` : "Elegí un día";
+
+  if (aiSuggestionsLoading) {
+    elements.aiSuggestionMeta.textContent = "Buscando asignaciones de Operación...";
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">Cargando sugerencias del sistema madre.</div>`;
+    return;
+  }
+
+  if (aiSuggestionsError) {
+    elements.aiSuggestionMeta.textContent = "No se pudieron traer sugerencias.";
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state error">${escapeHtml(aiSuggestionsError)}</div>`;
+    return;
+  }
+
+  if (!day) {
+    elements.aiSuggestionMeta.textContent = "Usá la varita del encabezado para buscar asignaciones.";
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">Las sugerencias se muestran por día, antes de aplicarse.</div>`;
+    return;
+  }
+
+  const pendingCount = aiSuggestions.filter((suggestion) => suggestion.status === "pending").length;
+  elements.aiSuggestionMeta.textContent = `${aiSuggestions.length} sugerencias encontradas · ${pendingCount} pendientes`;
+
+  if (!aiSuggestions.length) {
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">No encontramos personas asignadas en Operación para este día.</div>`;
+    return;
+  }
+
+  elements.aiSuggestionsList.innerHTML = aiSuggestions
+    .map((suggestion) => {
+      const disabled = suggestion.status !== "pending";
+      const statusClass = suggestion.hasExisting ? "warning" : suggestion.status;
+      const existing = suggestion.hasExisting
+        ? `<p class="ai-existing">Actual: ${escapeHtml(suggestion.existingLabel)}</p>`
+        : "";
+      return `<article class="ai-suggestion-card ${statusClass}" data-ai-suggestion="${escapeAttr(suggestion.id)}">
+        <div class="ai-suggestion-top">
+          <div>
+            <strong>${escapeHtml(suggestion.personName)}</strong>
+            <span>${escapeHtml(suggestion.role || "Operación")}</span>
+          </div>
+          <em>${suggestionStatusLabel(suggestion)}</em>
+        </div>
+        <div class="ai-suggestion-fields">
+          <label>
+            Entrada
+            <input class="ai-suggestion-start" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftStart))}" ${disabled ? "disabled" : ""} />
+          </label>
+          <label>
+            Salida
+            <input class="ai-suggestion-end" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftEnd))}" ${disabled ? "disabled" : ""} />
+          </label>
+          <label class="ai-suggestion-activity-field">
+            Texto
+            <input class="ai-suggestion-activity" type="text" value="${escapeAttr(suggestion.draftActivity)}" ${disabled ? "disabled" : ""} />
+          </label>
+        </div>
+        <div class="ai-suggestion-source">
+          <span>Base: Operación</span>
+          <span>${escapeHtml(suggestion.eventName)}</span>
+          <span>${escapeHtml(suggestion.eventPlace || suggestion.draftActivity)}</span>
+        </div>
+        ${existing}
+        <div class="ai-suggestion-actions">
+          <button class="ghost-button small" type="button" data-ai-action="discard" ${disabled ? "disabled" : ""}>No</button>
+          <button class="primary-button small" type="button" data-ai-action="apply" ${disabled || suggestion.personIndex < 0 ? "disabled" : ""}>Sí</button>
+        </div>
+      </article>`;
+    })
+    .join("");
+}
+
+async function suggestDayWithAi(dayIndex) {
+  aiSuggestionsDayIndex = dayIndex;
+  aiSuggestions = [];
+  aiSuggestionsError = "";
+  aiSuggestionsLoading = true;
+  setSideMode("ai", "ia");
+  renderAiPanel();
+  try {
+    const day = days[dayIndex];
+    const events = await loadParentEventsForDay(day);
+    const suggestions = [];
+    events.forEach((event) => {
+      eventAssignments(event)
+        .filter((assignment) => String(assignment?.phase || "").toLowerCase() === "evento" && assignment.person_name && assignment.person_name !== "X")
+        .forEach((assignment) => {
+          suggestions.push(buildAiSuggestion({ event, assignment, dayIndex }));
+        });
+    });
+    aiSuggestions = suggestions;
+    aiSuggestionsError = "";
+    showToast(suggestions.length ? `${suggestions.length} sugerencias listas para revisar` : "Sin sugerencias para ese día");
+  } catch (error) {
+    aiSuggestions = [];
+    aiSuggestionsError = error?.status === 401 || error?.status === 403
+      ? "Tu sesión del sistema madre no tiene acceso a los eventos."
+      : (error?.message || "No se pudieron leer los eventos del sistema madre.");
+    showToast("No se pudieron generar sugerencias");
+  } finally {
+    aiSuggestionsLoading = false;
+    renderAiPanel();
+  }
+}
+
+function updateAiSuggestionDraft(card) {
+  const suggestion = aiSuggestions.find((item) => item.id === card?.dataset.aiSuggestion);
+  if (!suggestion || suggestion.status !== "pending") return;
+  suggestion.draftStart = normalizeTime(card.querySelector(".ai-suggestion-start")?.value || "");
+  suggestion.draftEnd = normalizeTime(card.querySelector(".ai-suggestion-end")?.value || "");
+  suggestion.draftActivity = normalizeActivity(card.querySelector(".ai-suggestion-activity")?.value || "");
+}
+
+function applyAiSuggestion(suggestion) {
+  if (!suggestion || suggestion.personIndex < 0 || suggestion.status !== "pending") return;
+  const before = people[suggestion.personIndex].shifts[suggestion.dayIndex];
+  const after = serializeShift({
+    free: false,
+    start: suggestion.draftStart,
+    end: suggestion.draftEnd,
+    activity: normalizeActivity(suggestion.draftActivity || suggestion.eventPlace || suggestion.eventName || "OPERACION"),
+  });
+  pushUndo([{ personIndex: suggestion.personIndex, dayIndex: suggestion.dayIndex, before, after }], "sugerencia IA");
+  people[suggestion.personIndex].shifts[suggestion.dayIndex] = after;
+  selected = { personIndex: suggestion.personIndex, dayIndex: suggestion.dayIndex };
+  setSingleSelectedCell(suggestion.personIndex, suggestion.dayIndex);
+  suggestion.status = "applied";
+  saveWeeks();
+  render();
+  setSideMode("ai", "ia");
+  showToast("Sugerencia aplicada");
+}
+
+function handleAiSuggestionClick(event) {
+  const actionButton = event.target.closest("[data-ai-action]");
+  if (!actionButton) return;
+  const card = actionButton.closest("[data-ai-suggestion]");
+  updateAiSuggestionDraft(card);
+  const suggestion = aiSuggestions.find((item) => item.id === card?.dataset.aiSuggestion);
+  if (!suggestion) return;
+  if (actionButton.dataset.aiAction === "discard") {
+    suggestion.status = "discarded";
+    renderAiPanel();
+    showToast("Sugerencia descartada");
+    return;
+  }
+  if (actionButton.dataset.aiAction === "apply") {
+    applyAiSuggestion(suggestion);
+  }
 }
 
 function setSingleSelectedCell(personIndex, dayIndex) {
@@ -891,6 +1144,7 @@ function render() {
   updateDaySummary();
   renderMobileDayPlanner();
   updateBulkEditor();
+  renderAiPanel();
 }
 
 function updateExportSelectors() {
@@ -913,9 +1167,12 @@ function renderHead() {
       ${days.map((day, index) => {
         const publishedClass = publishedPlanDates.has(inputDateValue(day.fullDate)) ? " published-day" : "";
         return `<th class="day-head${publishedClass}">
-        <button class="day-head-button" type="button" data-day-detail="${index}">
-          ${day.label}<span>${day.date}</span>
-        </button>
+        <div class="day-head-inner">
+          <button class="day-head-button" type="button" data-day-detail="${index}">
+            ${day.label}<span>${day.date}</span>
+          </button>
+          <button class="ai-day-button" type="button" data-ai-day="${index}" title="Sugerir con IA" aria-label="Sugerir con IA para ${day.label} ${day.date}">✦</button>
+        </div>
       </th>`;
       }).join("")}
     </tr>
@@ -1862,7 +2119,7 @@ function openTab(tabName) {
 }
 
 function setSideMode(mode, activeTab) {
-  const visibleTabs = mode === "day" ? ["dia"] : mode === "bulk" ? ["lotes"] : ["operador"];
+  const visibleTabs = mode === "day" ? ["dia"] : mode === "bulk" ? ["lotes"] : mode === "ai" ? ["ia"] : ["operador"];
   document.querySelector(".side-panel")?.setAttribute("data-side-mode", mode);
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.hidden = !visibleTabs.includes(tab.dataset.tab);
@@ -2119,6 +2376,17 @@ elements.table.addEventListener("click", (event) => {
     suppressNextShiftClick = false;
     return;
   }
+  const aiDayButton = event.target.closest(".ai-day-button");
+  if (aiDayButton) {
+    selectedDayDetailIndex = Number(aiDayButton.dataset.aiDay);
+    selected.dayIndex = selectedDayDetailIndex;
+    selectedCells = new Set();
+    selectionAnchor = null;
+    render();
+    suggestDayWithAi(selectedDayDetailIndex);
+    return;
+  }
+
   const dayButton = event.target.closest(".day-head-button");
   if (dayButton) {
     selectedDayDetailIndex = Number(dayButton.dataset.dayDetail);
@@ -2356,6 +2624,11 @@ elements.mobileDayList?.addEventListener("click", (event) => {
 
 elements.copyShiftButton.addEventListener("click", copyContextShift);
 elements.pasteShiftButton.addEventListener("click", () => pasteContextShift());
+elements.aiSuggestionsList?.addEventListener("click", handleAiSuggestionClick);
+elements.aiSuggestionsList?.addEventListener("input", (event) => {
+  const card = event.target.closest("[data-ai-suggestion]");
+  updateAiSuggestionDraft(card);
+});
 elements.search.addEventListener("input", render);
 elements.bulkEditForm.addEventListener("submit", applyBulkEdit);
 elements.bulkRoleInput.addEventListener("change", updateBulkPreview);
@@ -2374,6 +2647,10 @@ elements.summaryTo.addEventListener("change", () => {
 elements.week.addEventListener("change", () => {
   setActiveWeek(Number(elements.week.value));
   setSingleSelectedCell(selected.personIndex, selected.dayIndex);
+  aiSuggestions = [];
+  aiSuggestionsDayIndex = null;
+  aiSuggestionsLoading = false;
+  aiSuggestionsError = "";
   loadMonthlyPersonData().catch(() => {});
   render();
   showToast(copiedShift ? "Semana actualizada. Podés pegar lo copiado" : "Semana actualizada");
