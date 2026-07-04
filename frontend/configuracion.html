@@ -4,8 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Configuración</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260703-integrated-dark2" />
-    <link rel="stylesheet" href="./css/pages/configuracion.css?v=20260611-density-pass1" />
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var embedded = params.get("embedded") === "1" || window.self !== window.top;
+        var theme = params.get("theme") === "light" ? "light" : "dark";
+        document.documentElement.classList.toggle("rrhh-embedded-root", embedded);
+        document.documentElement.classList.add("rrhh-parent-theme-" + theme);
+      })();
+    </script>
+    <link rel="stylesheet" href="./css/global.css?v=20260704-embedded-prepaint1" />
+    <link rel="stylesheet" href="./css/pages/configuracion.css?v=20260704-light-config1" />
   </head>
   <body>
     <header class="topbar">
@@ -158,8 +167,8 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="./api-client.js?v=20260704-sso1"></script>
-    <script src="./shared-data.js?v=20260702-observaciones1"></script>
-    <script src="./auth-session.js?v=20260704-sso1"></script>
-    <script src="./configuracion.js?v=20260702-remove-projects1"></script>
+    <script src="./shared-data.js?v=20260704-config-access1"></script>
+    <script src="./auth-session.js?v=20260704-rrhh-sections1"></script>
+    <script src="./configuracion.js?v=20260704-config-access1"></script>
   </body>
 </html>

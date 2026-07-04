@@ -138,7 +138,7 @@ function loadDashboardOperations() {
 }
 
 function canEditDashboardMarks() {
-  return dashboardUser?.roleId === "admin";
+  return ["admin", "rrhh"].includes(dashboardUser?.roleId);
 }
 
 async function dashboardApiGet(path) {
@@ -667,7 +667,7 @@ function setMarkModalMode(mode) {
 function openMarkCreateModal(personId, dateValue, defaultType = "Entrada", defaultTime = "09:00", defaultActivity = "", mode = "single", exitTime = "18:00", options = {}) {
   if (!canEditDashboardMarks()) return;
   setMarkModalMode(mode);
-  dash.markEditTitle.textContent = mode === "pair" ? "Cargar marcas manuales" : "Agregar marca";
+  dash.markEditTitle.textContent = mode === "pair" ? "Editar turnos" : "Agregar marca";
   dash.markEditId.value = "";
   dash.markEditPersonId.value = personId;
   dash.markEditType.value = defaultType;
@@ -1174,8 +1174,10 @@ function markCreateButton(person, date, shift, dayMarks) {
   const activity = shift.noSchedule ? "" : shift.activity;
   const mode = dayMarks.length ? "single" : "pair";
   return `<button
-    class="ghost-button tiny mark-add-button"
+    class="ghost-button tiny mark-add-button${mode === "pair" ? " mark-add-button-plus" : ""}"
     type="button"
+    aria-label="${mode === "pair" ? "Agregar turno manual" : "Agregar marca"}"
+    title="${mode === "pair" ? "Agregar turno manual" : "Agregar marca"}"
     data-create-mark="true"
     data-person-id="${person.id}"
     data-date="${inputDateValue(date)}"
@@ -1184,7 +1186,7 @@ function markCreateButton(person, date, shift, dayMarks) {
     data-exit-time="${exitTime}"
     data-mode="${mode}"
     data-activity="${escapeHtml(activity)}"
-  >${mode === "pair" ? "CARGA MANUAL" : "Agregar marca"}</button>`;
+  >${mode === "pair" ? "+" : "Agregar marca"}</button>`;
 }
 
 function markActions(person, date, shift, dayMarks) {

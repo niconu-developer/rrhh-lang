@@ -39,6 +39,8 @@ function redirectTopLevelRrhhPageToMotherApp() {
     "analisis.html": "analisis",
     "liquidacion.html": "liquidacion",
     "personal.html": "../configuracion/personal",
+    "mis-marcas.html": "mis-marcas",
+    "marcas.html": "reloj",
     "configuracion.html": "configuracion",
   };
   const section = sectionByFile[file];

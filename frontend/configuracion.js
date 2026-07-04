@@ -1,5 +1,6 @@
 if (!requireModuleAccess("config")) throw new Error("Acceso no autorizado");
-if (currentUser()?.roleId !== "admin") {
+const configUser = currentUser();
+if (configUser && !["admin", "rrhh"].includes(configUser.roleId)) {
   window.location.href = "./index.html";
   throw new Error("Solo administrador");
 }

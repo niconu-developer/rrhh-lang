@@ -1,0 +1,285 @@
+html.rrhh-parent-theme-light {
+  --dashboard-page-bg: #f3f6fa;
+  --dashboard-panel-bg: #ffffff;
+  --dashboard-panel-soft: #f7f9fc;
+  --dashboard-border: #d7dee8;
+  --dashboard-border-strong: #c6d0de;
+  --dashboard-text: #1e2430;
+  --dashboard-muted: #647084;
+  --dashboard-heading: #171b24;
+  --dashboard-accent: #2f6be6;
+  --dashboard-accent-soft: #eaf1ff;
+  --dashboard-row: #fbfcfe;
+  --dashboard-row-alt: #f5f8fc;
+}
+
+html.rrhh-parent-theme-dark {
+  --dashboard-page-bg: #0b1018;
+  --dashboard-panel-bg: #141b27;
+  --dashboard-panel-soft: #1b2433;
+  --dashboard-border: #2f3c55;
+  --dashboard-border-strong: #3c4e70;
+  --dashboard-text: #edf3ff;
+  --dashboard-muted: #a6b2c6;
+  --dashboard-heading: #ffffff;
+  --dashboard-accent: #79a8ff;
+  --dashboard-accent-soft: #1c315c;
+  --dashboard-row: #111824;
+  --dashboard-row-alt: #17202f;
+}
+
+html.rrhh-parent-theme-light body,
+html.rrhh-parent-theme-dark body {
+  background: var(--dashboard-page-bg) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root .dashboard-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 18px 20px 28px;
+  background: var(--dashboard-page-bg);
+}
+
+html.rrhh-embedded-root .dashboard-title-panel,
+html.rrhh-embedded-root .dashboard-period-card,
+html.rrhh-embedded-root .operations-admin-panel,
+html.rrhh-embedded-root .operator-detail-panel {
+  border: 1px solid var(--dashboard-border) !important;
+  border-radius: 8px;
+  background: var(--dashboard-panel-bg) !important;
+  color: var(--dashboard-text) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .dashboard-title-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 70px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+html.rrhh-embedded-root .dashboard-title-panel h2,
+html.rrhh-embedded-root .section-head h2,
+html.rrhh-embedded-root .period-kpi-item strong,
+html.rrhh-embedded-root .dashboard-date-control strong {
+  color: var(--dashboard-heading) !important;
+}
+
+html.rrhh-embedded-root .dashboard-title-panel .muted,
+html.rrhh-embedded-root .section-head .muted,
+html.rrhh-embedded-root .period-card-head span,
+html.rrhh-embedded-root .dashboard-date-control span,
+html.rrhh-embedded-root .dashboard-table-search span,
+html.rrhh-embedded-root .dashboard-table-status-filter span {
+  color: var(--dashboard-muted) !important;
+}
+
+html.rrhh-embedded-root .dashboard-date-control {
+  display: grid;
+  grid-template-columns: minmax(160px, auto) 42px 112px 42px;
+  align-items: end;
+  gap: 10px;
+}
+
+html.rrhh-embedded-root .dashboard-date-control > div {
+  min-width: 160px;
+  text-align: right;
+}
+
+html.rrhh-embedded-root .dashboard-period-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+html.rrhh-embedded-root .dashboard-period-card,
+html.rrhh-embedded-root .operations-admin-panel,
+html.rrhh-embedded-root .operator-detail-panel {
+  padding: 14px;
+}
+
+html.rrhh-embedded-root .period-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--dashboard-border);
+}
+
+html.rrhh-embedded-root .period-kpi-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+}
+
+html.rrhh-embedded-root .period-kpi-item {
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 6px;
+  background: var(--dashboard-panel-soft) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root .period-kpi-item span {
+  color: var(--dashboard-muted) !important;
+}
+
+html.rrhh-embedded-root .period-kpi-item.has-action {
+  grid-template-columns: 1fr auto;
+}
+
+html.rrhh-embedded-root .operations-admin-panel,
+html.rrhh-embedded-root .operator-detail-panel {
+  margin-bottom: 16px;
+}
+
+html.rrhh-embedded-root .dashboard-layout {
+  display: block;
+}
+
+html.rrhh-embedded-root .dashboard-table-filters {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px);
+  gap: 10px;
+  margin: 12px 0;
+}
+
+html.rrhh-embedded-root .dashboard-table-search,
+html.rrhh-embedded-root .dashboard-table-status-filter {
+  display: grid;
+  gap: 4px;
+}
+
+html.rrhh-embedded-root input,
+html.rrhh-embedded-root select,
+html.rrhh-embedded-root textarea {
+  border: 1px solid var(--dashboard-border-strong) !important;
+  background: var(--dashboard-panel-bg) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root input::placeholder,
+html.rrhh-embedded-root textarea::placeholder {
+  color: var(--dashboard-muted) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--dashboard-border) !important;
+  border-radius: 8px;
+  background: var(--dashboard-panel-bg) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--dashboard-panel-bg) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table th {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--dashboard-border);
+  background: var(--dashboard-row-alt) !important;
+  color: var(--dashboard-heading) !important;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+html.rrhh-embedded-root .dashboard-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--dashboard-border);
+  background: var(--dashboard-panel-bg) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table tbody tr:nth-child(even) td {
+  background: var(--dashboard-row) !important;
+}
+
+html.rrhh-embedded-root .kiosk-badge,
+html.rrhh-embedded-root .status-pill,
+html.rrhh-embedded-root .validation-pill {
+  border: 1px solid var(--dashboard-border) !important;
+  background: var(--dashboard-accent-soft) !important;
+  color: var(--dashboard-accent) !important;
+}
+
+html.rrhh-embedded-root .ghost-button,
+html.rrhh-embedded-root .primary-button {
+  border-radius: 6px;
+}
+
+html.rrhh-embedded-root .ghost-button {
+  border: 1px solid var(--dashboard-border-strong) !important;
+  background: var(--dashboard-panel-bg) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root .primary-button {
+  border: 1px solid #2f6be6 !important;
+  background: #2f6be6 !important;
+  color: #ffffff !important;
+}
+
+html.rrhh-embedded-root .mark-add-button-plus {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  border-color: #2f6be6 !important;
+  background: #2f6be6 !important;
+  color: #ffffff !important;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+html.rrhh-embedded-root .mark-pair-item,
+html.rrhh-embedded-root .mark-detail-item,
+html.rrhh-embedded-root .incident-detail-grid > *,
+html.rrhh-embedded-root .comparison {
+  border: 1px solid var(--dashboard-border) !important;
+  background: var(--dashboard-panel-soft) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-embedded-root .modal-backdrop.open {
+  background: rgba(5, 10, 18, 0.46);
+}
+
+html.rrhh-embedded-root .person-modal {
+  border: 1px solid var(--dashboard-border-strong) !important;
+  background: var(--dashboard-panel-bg) !important;
+  color: var(--dashboard-text) !important;
+}
+
+html.rrhh-parent-theme-light .incident-modal-note {
+  border-color: #d6e1ef !important;
+  background: #f7f9fd !important;
+  color: #465266 !important;
+}
+
+@media (max-width: 1050px) {
+  html.rrhh-embedded-root .dashboard-period-grid,
+  html.rrhh-embedded-root .dashboard-table-filters {
+    grid-template-columns: 1fr;
+  }
+
+  html.rrhh-embedded-root .dashboard-title-panel,
+  html.rrhh-embedded-root .dashboard-date-control {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+}

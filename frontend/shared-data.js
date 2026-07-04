@@ -28,7 +28,7 @@ const DEFAULT_AUTH = {
     {
       id: "rrhh",
       name: "RRHH",
-      modules: ["plan", "dashboard", "aprobaciones", "operaciones", "reportes", "analisis", "liquidacion", "personal", "marcas", "mis-marcas"],
+      modules: ["plan", "dashboard", "aprobaciones", "operaciones", "reportes", "analisis", "liquidacion", "personal", "config", "marcas", "mis-marcas"],
       dashboard: ["dashboardAllPersonnel", "dashboardCosts", "dashboardOperations"],
     },
     {

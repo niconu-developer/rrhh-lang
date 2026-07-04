@@ -5,6 +5,208 @@
   padding-top: 4px;
 }
 
+html.rrhh-parent-theme-light {
+  --config-page-bg: #f3f6fa;
+  --config-panel-bg: #ffffff;
+  --config-panel-soft: #f7f9fc;
+  --config-border: #d7dee8;
+  --config-border-strong: #c6d0de;
+  --config-text: #1f2633;
+  --config-muted: #657286;
+  --config-heading: #171b24;
+  --config-accent: #2f6be6;
+  --config-accent-soft: #eaf1ff;
+}
+
+html.rrhh-parent-theme-dark {
+  --config-page-bg: #0b1018;
+  --config-panel-bg: #141b27;
+  --config-panel-soft: #1b2433;
+  --config-border: #2f3c55;
+  --config-border-strong: #3c4e70;
+  --config-text: #edf3ff;
+  --config-muted: #a7b4c8;
+  --config-heading: #ffffff;
+  --config-accent: #79a8ff;
+  --config-accent-soft: #1c315c;
+}
+
+html.rrhh-parent-theme-light body,
+html.rrhh-parent-theme-dark body {
+  background: var(--config-page-bg) !important;
+  color: var(--config-text) !important;
+}
+
+html.rrhh-embedded-root .config-shell {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 18px 20px 28px;
+  background: var(--config-page-bg);
+}
+
+html.rrhh-embedded-root .config-sidebar,
+html.rrhh-embedded-root .config-content,
+html.rrhh-embedded-root .admin-panel,
+html.rrhh-embedded-root .setting-card {
+  border: 1px solid var(--config-border) !important;
+  border-radius: 8px;
+  background: var(--config-panel-bg) !important;
+  color: var(--config-text) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .config-sidebar {
+  align-self: start;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+html.rrhh-embedded-root .config-content {
+  display: block;
+  min-height: 320px;
+  padding: 0;
+  overflow: hidden;
+}
+
+html.rrhh-embedded-root .config-nav {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--config-border) !important;
+  border-radius: 6px;
+  background: var(--config-panel-soft) !important;
+  color: var(--config-text) !important;
+  text-align: left;
+}
+
+html.rrhh-embedded-root .config-nav.active {
+  border-color: var(--config-accent) !important;
+  background: var(--config-accent-soft) !important;
+  color: var(--config-heading) !important;
+}
+
+html.rrhh-embedded-root .admin-panel {
+  min-height: 320px;
+  padding: 14px;
+}
+
+html.rrhh-embedded-root .admin-panel:not(.active),
+html.rrhh-embedded-root .config-section:not(.active) {
+  display: none !important;
+}
+
+html.rrhh-embedded-root .section-head h2,
+html.rrhh-embedded-root .setting-card strong,
+html.rrhh-embedded-root .access-subhead h3,
+html.rrhh-embedded-root .admin-list-item strong {
+  color: var(--config-heading) !important;
+}
+
+html.rrhh-embedded-root .muted,
+html.rrhh-embedded-root .setting-card small,
+html.rrhh-embedded-root .access-subhead span,
+html.rrhh-embedded-root .admin-list-item span {
+  color: var(--config-muted) !important;
+}
+
+html.rrhh-embedded-root .inline-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+
+html.rrhh-embedded-root input,
+html.rrhh-embedded-root select,
+html.rrhh-embedded-root textarea {
+  border: 1px solid var(--config-border-strong) !important;
+  background: var(--config-panel-bg) !important;
+  color: var(--config-text) !important;
+}
+
+html.rrhh-embedded-root input::placeholder,
+html.rrhh-embedded-root textarea::placeholder {
+  color: var(--config-muted) !important;
+}
+
+html.rrhh-embedded-root .setting-card {
+  min-height: 142px;
+  padding: 12px;
+}
+
+html.rrhh-embedded-root .setting-card span:first-child {
+  color: var(--config-accent) !important;
+}
+
+html.rrhh-embedded-root .setting-input-line input {
+  background: var(--config-panel-soft) !important;
+}
+
+html.rrhh-embedded-root .admin-list,
+html.rrhh-embedded-root .role-card-grid,
+html.rrhh-embedded-root .generated-link-box,
+html.rrhh-embedded-root .permission-matrix-wrap {
+  border-color: var(--config-border) !important;
+  background: var(--config-panel-soft) !important;
+  color: var(--config-text) !important;
+}
+
+html.rrhh-embedded-root .admin-list-item,
+html.rrhh-embedded-root .role-card,
+html.rrhh-embedded-root .permission-role-card,
+html.rrhh-embedded-root .location-table,
+html.rrhh-embedded-root .location-row {
+  border: 1px solid var(--config-border) !important;
+  background: var(--config-panel-bg) !important;
+  color: var(--config-text) !important;
+}
+
+html.rrhh-embedded-root .ghost-button,
+html.rrhh-embedded-root .primary-button {
+  border-radius: 6px;
+}
+
+html.rrhh-embedded-root .ghost-button {
+  border: 1px solid var(--config-border-strong) !important;
+  background: var(--config-panel-bg) !important;
+  color: var(--config-text) !important;
+}
+
+html.rrhh-embedded-root .primary-button {
+  border: 1px solid #2f6be6 !important;
+  background: #2f6be6 !important;
+  color: #ffffff !important;
+}
+
+html.rrhh-embedded-root .person-modal {
+  border: 1px solid var(--config-border-strong) !important;
+  background: var(--config-panel-bg) !important;
+  color: var(--config-text) !important;
+}
+
+html.rrhh-parent-theme-light .setting-card {
+  background: #ffffff !important;
+}
+
+html.rrhh-parent-theme-light .setting-input-line span {
+  color: #657286 !important;
+}
+
+@media (max-width: 1000px) {
+  html.rrhh-embedded-root .config-shell {
+    grid-template-columns: 1fr;
+  }
+
+  html.rrhh-embedded-root .inline-form,
+  html.rrhh-embedded-root .compact-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .setting-card {
   display: grid;
   align-content: start;
