@@ -1,5 +1,6 @@
 import json
 import math
+import re
 import secrets
 from datetime import datetime, timedelta
 
@@ -864,6 +865,177 @@ def user_by_email(email):
         WHERE lower(coalesce(usuarios.email, '')) = ?
           AND usuarios.activo = 1
     """, (clean_email,))
+
+
+def mapped_rrhh_role(external_role):
+    role = (
+        str(external_role or "")
+        .strip()
+        .lower()
+        .replace("á", "a")
+        .replace("é", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ú", "u")
+    )
+    compact_role = re.sub(r"[^a-z0-9]+", "", role)
+    if compact_role in {"superadmin", "superadministrador", "admin", "administrador", "administrator"}:
+        return "admin"
+    if compact_role in {"adminrrhh", "rrhh", "rh", "hr", "recursoshumanos", "humanresources"}:
+        return "rrhh"
+    if compact_role in {"logistico", "logisticos"}:
+        return "usuario"
+    return None
+
+
+def external_rrhh_value(external_user, key, default=None):
+    rrhh = external_user.get("rrhh") if isinstance(external_user, dict) else None
+    if isinstance(rrhh, dict) and rrhh.get(key) is not None:
+        return rrhh.get(key)
+    if not isinstance(external_user, dict):
+        return default
+    if external_user.get(key) is not None:
+        return external_user.get(key)
+    return external_user.get(f"rrhh_{key}", default)
+
+
+def sync_external_user(external_user):
+    email = str((external_user or {}).get("email") or "").strip().lower()
+    if not email:
+        return None
+
+    name = str((external_user or {}).get("name") or email).strip() or email
+    active = 1 if (external_user or {}).get("active", True) is not False else 0
+    operational_role = str(external_rrhh_value(external_user, "operational_role", "") or "").strip() or "Operador"
+    employee_code = str(
+        external_rrhh_value(
+            external_user,
+            "private_code",
+            external_rrhh_value(external_user, "employee_code", "")
+        ) or ""
+    ).strip() or None
+    schedule_type = str(external_rrhh_value(external_user, "schedule_type", "variable") or "variable").strip() or "variable"
+    fixed_schedule = external_rrhh_value(external_user, "fixed_schedule", [])
+    if not isinstance(fixed_schedule, list):
+        fixed_schedule = []
+    app_role = mapped_rrhh_role((external_user or {}).get("role"))
+    if not app_role:
+        return None
+
+    with connect() as connection:
+        existing_user = connection.execute("""
+            SELECT
+              usuarios.id,
+              usuarios.persona_id,
+              usuarios.rol_app_id,
+              roles_app.nombre AS rol_app
+            FROM usuarios
+            JOIN roles_app ON roles_app.id = usuarios.rol_app_id
+            WHERE lower(coalesce(usuarios.email, '')) = ?
+               OR lower(usuarios.usuario) = ?
+        """, (email, email)).fetchone()
+        existing_person = connection.execute("""
+            SELECT id, codigo_privado
+            FROM personas
+            WHERE lower(coalesce(email, '')) = ?
+        """, (email,)).fetchone()
+
+        persona_id = existing_user["persona_id"] if existing_user and existing_user["persona_id"] else None
+        if not persona_id and existing_person:
+            persona_id = existing_person["id"]
+
+        role_id = role_id_for(connection, operational_role)
+        current_person = connection.execute("SELECT codigo_privado FROM personas WHERE id = ?", (persona_id,)).fetchone() if persona_id else None
+        private_code = employee_code or (current_person["codigo_privado"] if current_person else None) or next_private_code(connection)
+        person_values = (
+            name,
+            private_code,
+            email,
+            role_id,
+            active,
+            schedule_type,
+            json.dumps(fixed_schedule, ensure_ascii=False),
+            parse_decimal_value(external_rrhh_value(external_user, "hourly_rate"), 0),
+            parse_decimal_value(external_rrhh_value(external_user, "agreed_hours"), 190),
+            external_rrhh_value(external_user, "driver_license_type", "NO TIENE") or "NO TIENE",
+            external_rrhh_value(external_user, "driver_license_expires_on") or None,
+            external_rrhh_value(external_user, "health_card_expires_on") or None,
+        )
+
+        if persona_id:
+            connection.execute("""
+                UPDATE personas
+                SET nombre = ?,
+                    codigo_privado = ?,
+                    email = ?,
+                    rol_operativo_id = ?,
+                    activo = ?,
+                    horario_tipo = ?,
+                    horario_fijo_json = ?,
+                    valor_hora = ?,
+                    horas_acordadas = ?,
+                    tipo_libreta = ?,
+                    vencimiento_libreta = ?,
+                    vencimiento_carne_salud = ?
+                WHERE id = ?
+            """, (*person_values, persona_id))
+        else:
+            cursor = connection.execute("""
+                INSERT INTO personas (
+                  nombre,
+                  codigo_privado,
+                  email,
+                  rol_operativo_id,
+                  activo,
+                  horario_tipo,
+                  horario_fijo_json,
+                  valor_hora,
+                  horas_acordadas,
+                  tipo_libreta,
+                  vencimiento_libreta,
+                  vencimiento_carne_salud
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, person_values)
+            persona_id = cursor.lastrowid
+
+        app_role_id = app_role_id_for(connection, app_role)
+        if existing_user:
+            connection.execute("""
+                UPDATE usuarios
+                SET usuario = ?,
+                    email = ?,
+                    persona_id = ?,
+                    rol_app_id = ?,
+                    activo = ?
+                WHERE id = ?
+            """, (email, email, persona_id, app_role_id, active, existing_user["id"]))
+        else:
+            connection.execute("""
+                INSERT INTO usuarios (
+                  usuario,
+                  password_hash,
+                  email,
+                  persona_id,
+                  rol_app_id,
+                  activo,
+                  password_inicializada
+                ) VALUES (?, ?, ?, ?, ?, ?, 0)
+            """, (email, hash_password(secrets.token_urlsafe(32)), email, persona_id, app_role_id, active))
+
+        connection.commit()
+
+    return user_by_email(email)
+
+
+def sync_external_personnel(external_users):
+    synced = []
+    for external_user in external_users or []:
+      if not isinstance(external_user, dict):
+          continue
+      user = sync_external_user(external_user)
+      if user:
+          synced.append(user)
+    return synced
 
 
 def authenticate_login(identifier, password):

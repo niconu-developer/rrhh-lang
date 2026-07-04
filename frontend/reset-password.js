@@ -36,7 +36,7 @@ resetForm.addEventListener("submit", async (event) => {
     }
     showToast("Contraseña creada");
     window.setTimeout(() => {
-      window.location.href = "./login.html";
+      window.location.href = "/login";
     }, 1200);
   } catch (error) {
     showToast("No se pudo conectar con la base local");

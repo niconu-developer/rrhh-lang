@@ -157,9 +157,15 @@ function shortLocationAddress(address) {
 }
 
 function normalizeApplicationRole(roleId) {
-  if (roleId === "supervisor") return "rrhh";
-  if (roleId === "operador") return "usuario";
-  if (["admin", "rrhh", "usuario"].includes(roleId)) return roleId;
+  const raw = String(roleId || "").trim();
+  const normalized = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+  if (["superadmin", "superadministrador", "admin", "administrador", "administrator"].includes(normalized)) return "admin";
+  if (["adminrrhh", "rrhh", "rh", "hr", "recursoshumanos", "humanresources", "supervisor"].includes(normalized)) return "rrhh";
+  if (["logistico", "logisticos", "operadores", "operador", "usuario", "user"].includes(normalized)) return "usuario";
   return "usuario";
 }
 

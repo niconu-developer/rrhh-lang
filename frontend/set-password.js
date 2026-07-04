@@ -56,7 +56,7 @@ setPasswordForm.addEventListener("submit", async (event) => {
     }
     showToast("Contraseña guardada");
     window.setTimeout(() => {
-      window.location.href = "./login.html";
+      window.location.href = "/login";
     }, 1200);
   } catch (error) {
     showToast("No se pudo conectar con la base");

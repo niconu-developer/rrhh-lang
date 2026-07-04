@@ -152,8 +152,17 @@ async function plannerApi(path, options = {}) {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error || "No se pudo conectar con la base");
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = null;
+  }
+  if (!response.ok) {
+    const error = new Error(payload?.error || "No se pudo conectar con la base");
+    error.status = response.status;
+    throw error;
+  }
   return payload;
 }
 
@@ -1956,6 +1965,7 @@ function cancelInlineEdit() {
   setSingleSelectedCell(personIndex, dayIndex);
   render();
   setSideMode("person", "operador");
+  focusSelectedButton();
   return true;
 }
 
@@ -2410,8 +2420,12 @@ async function initPlanner() {
   } catch (error) {
     backendPlannerEnabled = false;
     elements.head.innerHTML = "";
-    elements.body.innerHTML = `<tr><td class="planner-error-cell" colspan="8">No se pudo conectar con la base. Verificá que el backend esté abierto y probá entrar por http://127.0.0.1:8765/plan-semanal.html.</td></tr>`;
-    showToast("Base requerida para usar el plan semanal");
+    const isAuthError = error?.status === 401 || error?.status === 403;
+    const message = isAuthError
+      ? "No se pudo validar tu sesión de la app principal para cargar RRHH. Volvé a entrar desde el login general o pedí que revisen tus permisos de RRHH."
+      : "No se pudo conectar con los datos de RRHH. Verificá que el servicio esté operativo e intentá nuevamente.";
+    elements.body.innerHTML = `<tr><td class="planner-error-cell" colspan="8">${message}</td></tr>`;
+    showToast(isAuthError ? "Sesión o permisos de RRHH pendientes" : "Datos de RRHH no disponibles");
   }
 }
 

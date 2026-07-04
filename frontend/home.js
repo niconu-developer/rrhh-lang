@@ -1,5 +1,9 @@
 if (!currentUser()) {
-  window.location.href = "./login.html?next=index.html";
+  if (parentAppSessionAvailableSync()) {
+    renderHome();
+  } else {
+    redirectToParentLogin();
+  }
 } else {
   renderSessionActions(document.querySelector("#sessionActions"));
   renderHome();

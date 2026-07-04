@@ -284,3 +284,111 @@
   font-size: 12px;
   font-weight: 850;
 }
+
+body.rrhh-embedded-body .operation-date-row td {
+  background: var(--table-date) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .operation-plan-cell strong,
+body.rrhh-embedded-body .operation-detail-edit-grid article strong,
+body.rrhh-embedded-body .operation-day-plan strong,
+body.rrhh-embedded-body .operation-context-line strong,
+body.rrhh-embedded-body .operation-value-box {
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .operation-plan-cell span,
+body.rrhh-embedded-body .operation-detail-section > span,
+body.rrhh-embedded-body .operation-detail-edit-grid span,
+body.rrhh-embedded-body .operation-detail-edit-grid article small,
+body.rrhh-embedded-body .operation-day-plan small,
+body.rrhh-embedded-body .operation-context-head,
+body.rrhh-embedded-body .operation-context-line.empty,
+body.rrhh-embedded-body .operation-context-empty {
+  color: var(--muted) !important;
+}
+
+body.rrhh-embedded-body .operation-detail-section,
+body.rrhh-embedded-body .operation-detail-edit-grid article,
+body.rrhh-embedded-body .operation-value-box,
+body.rrhh-embedded-body .operation-context-table {
+  border-color: var(--soft-line) !important;
+  background: var(--shift) !important;
+}
+
+body.rrhh-embedded-body .operation-detail-section,
+body.rrhh-embedded-body .operation-context-table {
+  border-radius: 8px;
+}
+
+body.rrhh-embedded-body .operation-day-plan {
+  border-right-color: var(--soft-line) !important;
+}
+
+body.rrhh-embedded-body .operation-context-head,
+body.rrhh-embedded-body .operation-context-line {
+  border-bottom-color: var(--soft-line) !important;
+}
+
+body.rrhh-embedded-body .operation-context-head {
+  background: var(--table-head) !important;
+}
+
+body.rrhh-embedded-body .operation-context-line {
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .operation-context-line:nth-child(even) {
+  background: var(--table-row-alt) !important;
+}
+
+body.rrhh-embedded-body .operations-validation-table td:has(> .mark-pill) {
+  font-weight: 700;
+  text-align: center;
+}
+
+body.rrhh-embedded-body .operations-validation-table .mark-pill {
+  display: block !important;
+  width: 100%;
+  min-height: 100%;
+  border-radius: 0 !important;
+  padding: 9px 10px !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.15;
+  text-align: center;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operations-validation-table td:has(> .mark-pill.approved) {
+  background: #edf7f1 !important;
+  color: #2f6f4d !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operations-validation-table td:has(> .mark-pill.pending) {
+  background: #fbf4df !important;
+  color: #8a6a2d !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operations-validation-table td:has(> .mark-pill.rejected) {
+  background: #f8edf1 !important;
+  color: #874258 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operations-validation-table td:has(> .mark-pill.approved) {
+  background: rgba(75, 231, 133, 0.14) !important;
+  color: #a8f3c2 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operations-validation-table td:has(> .mark-pill.pending) {
+  background: rgba(255, 215, 107, 0.14) !important;
+  color: #ffe4a1 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operations-validation-table td:has(> .mark-pill.rejected) {
+  background: rgba(255, 140, 153, 0.15) !important;
+  color: #ffc5cd !important;
+}

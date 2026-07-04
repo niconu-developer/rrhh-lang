@@ -1,10 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=League+Spartan:wght@400;500;600;700;800&display=swap');
+
 :root {
-  --ink: #182026;
-  --muted: #65727d;
-  --line: #1e2429;
-  --soft-line: #d4dbe0;
+  --ink: #23242a;
+  --muted: #676a73;
+  --line: #24262d;
+  --soft-line: #d8dbe2;
   --panel: #ffffff;
-  --page: #eef2f4;
+  --page: #f6f7f9;
   --free: #b8e4d0;
   --free-strong: #80caa8;
   --shift: #f8fafb;
@@ -12,7 +14,7 @@
   --danger: #d64550;
   --accent: #2563eb;
   --accent-dark: #1d4ed8;
-  --shadow: 0 16px 40px rgba(16, 24, 40, 0.12);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
 }
 
 * {
@@ -47,9 +49,45 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 14px 24px;
+  padding: 34px 56px 20px;
+  border-bottom: 0;
+  background: var(--page);
+}
+
+.rrhh-module-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 30px;
+  min-height: 72px;
+  padding: 24px 56px 0;
   border-bottom: 1px solid var(--soft-line);
-  background: #f9fbfc;
+  background: var(--page);
+  overflow-x: auto;
+}
+
+.rrhh-module-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: #53565f;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.rrhh-module-tab.active {
+  color: var(--ink);
+}
+
+.rrhh-module-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #5aa6c8;
 }
 
 .brand-heading {
@@ -82,7 +120,7 @@ a {
 
 .brand-logo {
   display: block;
-  width: 104px;
+  width: 84px;
   height: auto;
 }
 
@@ -107,7 +145,7 @@ a {
 }
 
 .brand-heading .eyebrow {
-  white-space: nowrap;
+  display: none;
 }
 
 h1,
@@ -116,7 +154,7 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(18px, 2vw, 24px);
+  font-size: clamp(28px, 3vw, 36px);
   line-height: 1.05;
   white-space: nowrap;
 }
@@ -200,7 +238,7 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 18px;
-  padding: 18px;
+  padding: 18px 56px 42px;
 }
 
 .plan-shell {
@@ -312,7 +350,7 @@ select.current-week-selected {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
   gap: 16px;
-  padding: 18px;
+  padding: 18px 56px 42px;
 }
 
 .config-sidebar {
@@ -362,7 +400,7 @@ select.current-week-selected {
 }
 
 .personnel-shell {
-  padding: 18px;
+  padding: 18px 56px 42px;
 }
 
 .personnel-panel {
@@ -4724,6 +4762,436 @@ select.current-week-selected {
   }
 }
 
+body.rrhh-module-body.rrhh-embedded-body {
+  --ink: #f5f7ff;
+  --muted: #aab6d1;
+  --line: #222d42;
+  --soft-line: #2d3c54;
+  --panel: #121821;
+  --page: #090d12;
+  --shift: #171e2a;
+  --warning: #ffd76b;
+  --danger: #ff8c99;
+  --accent: #5c91ff;
+  --accent-dark: #6ba3ff;
+  --shadow: none;
+  background: var(--page) !important;
+  color: var(--ink) !important;
+  font-family: "League Spartan", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .topbar,
+body.rrhh-module-body.rrhh-embedded-body .rrhh-module-tabs,
+body.rrhh-module-body.rrhh-embedded-body .brand-heading,
+body.rrhh-module-body.rrhh-embedded-body .top-actions,
+body.rrhh-module-body.rrhh-embedded-body .session-chip {
+  display: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .shell,
+body.rrhh-module-body.rrhh-embedded-body .config-shell,
+body.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+body.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+body.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+body.rrhh-module-body.rrhh-embedded-body .home-shell,
+body.rrhh-module-body.rrhh-embedded-body .help-shell {
+  padding: 0 !important;
+  background: var(--page) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .planner-panel,
+body.rrhh-module-body.rrhh-embedded-body .side-panel,
+body.rrhh-module-body.rrhh-embedded-body .grid-frame,
+body.rrhh-module-body.rrhh-embedded-body .schedule,
+body.rrhh-module-body.rrhh-embedded-body .report-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-title-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-period-card,
+body.rrhh-module-body.rrhh-embedded-body .operations-admin-panel,
+body.rrhh-module-body.rrhh-embedded-body .operator-detail-panel,
+body.rrhh-module-body.rrhh-embedded-body .config-panel,
+body.rrhh-module-body.rrhh-embedded-body .config-sidebar,
+body.rrhh-module-body.rrhh-embedded-body .admin-panel,
+body.rrhh-module-body.rrhh-embedded-body .home-group,
+body.rrhh-module-body.rrhh-embedded-body .help-panel,
+body.rrhh-module-body.rrhh-embedded-body .help-sidebar {
+  border-color: var(--soft-line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body #planShell,
+body.rrhh-module-body.rrhh-embedded-body .grid-frame,
+body.rrhh-module-body.rrhh-embedded-body .schedule,
+body.rrhh-module-body.rrhh-embedded-body #scheduleHead,
+body.rrhh-module-body.rrhh-embedded-body #scheduleBody {
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body h1,
+body.rrhh-module-body.rrhh-embedded-body h2,
+body.rrhh-module-body.rrhh-embedded-body .section-head h2 {
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body label,
+body.rrhh-module-body.rrhh-embedded-body .eyebrow,
+body.rrhh-module-body.rrhh-embedded-body .muted {
+  color: var(--muted) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .ghost-button,
+body.rrhh-module-body.rrhh-embedded-body .ghost-link,
+body.rrhh-module-body.rrhh-embedded-body select,
+body.rrhh-module-body.rrhh-embedded-body input,
+body.rrhh-module-body.rrhh-embedded-body textarea {
+  border-color: var(--soft-line) !important;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+}
+
+/* App-lang embedded theme bridge. Keep this block last so it wins over legacy standalone RRHH colors. */
+body.rrhh-module-body.rrhh-embedded-body.rrhh-parent-theme-dark {
+  --ink: #f5f7ff;
+  --muted: #aab6d1;
+  --dim: #74809b;
+  --line: #222d42;
+  --soft-line: #2d3c54;
+  --panel: #121821;
+  --page: #090d12;
+  --shift: #171e2a;
+  --table-head: #171e2a;
+  --table-row: #121821;
+  --table-row-alt: #151d29;
+  --table-date: #171e2a;
+  --table-selected: #1e3d72;
+  --accent: #5c91ff;
+  --accent-dark: #6ba3ff;
+  --warning: #ffd76b;
+  --danger: #ff8c99;
+  --success: #4be785;
+  --shadow: none;
+}
+
+body.rrhh-module-body.rrhh-embedded-body.rrhh-parent-theme-light {
+  --ink: #18181b;
+  --muted: #52525b;
+  --dim: #a1a1aa;
+  --line: #d4d4d8;
+  --soft-line: #e4e4e7;
+  --panel: #ffffff;
+  --page: #f6f7f9;
+  --shift: #f4f4f5;
+  --table-head: #f0f1f3;
+  --table-row: #ffffff;
+  --table-row-alt: #fafafa;
+  --table-date: #e8eef8;
+  --table-selected: #dbeafe;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --success: #15803d;
+  --shadow: none;
+}
+
+body.rrhh-module-body.rrhh-embedded-body,
+body.rrhh-module-body.rrhh-embedded-body .shell,
+body.rrhh-module-body.rrhh-embedded-body .config-shell,
+body.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+body.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+body.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+body.rrhh-module-body.rrhh-embedded-body .home-shell,
+body.rrhh-module-body.rrhh-embedded-body .help-shell {
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell {
+  display: grid;
+  gap: 18px;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .report-panel {
+  margin: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .section-head {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .section-head h2 {
+  color: var(--ink) !important;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .report-filters {
+  align-items: end;
+  gap: 8px;
+}
+
+body.rrhh-module-body.rrhh-embedded-body label,
+body.rrhh-module-body.rrhh-embedded-body .eyebrow,
+body.rrhh-module-body.rrhh-embedded-body .muted,
+body.rrhh-module-body.rrhh-embedded-body .table-pagination,
+body.rrhh-module-body.rrhh-embedded-body .table-pagination strong {
+  color: var(--muted) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .kiosk-badge,
+body.rrhh-module-body.rrhh-embedded-body .approval-total-badge,
+body.rrhh-module-body.rrhh-embedded-body .operation-total-badge {
+  border: 1px solid var(--soft-line) !important;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body input,
+body.rrhh-module-body.rrhh-embedded-body select,
+body.rrhh-module-body.rrhh-embedded-body textarea,
+body.rrhh-module-body.rrhh-embedded-body .ghost-button,
+body.rrhh-module-body.rrhh-embedded-body .ghost-link {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body input::placeholder,
+body.rrhh-module-body.rrhh-embedded-body textarea::placeholder {
+  color: var(--dim) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .primary-button {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .primary-button:hover {
+  background: var(--accent-dark) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table-wrap {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table {
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table th,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table th {
+  border-color: var(--soft-line) !important;
+  background: var(--table-head) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table td,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table td {
+  border-color: var(--soft-line) !important;
+  background: var(--table-row) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td {
+  background: var(--table-row-alt) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .approval-date-row td,
+body.rrhh-module-body.rrhh-embedded-body .operation-date-row td {
+  background: var(--table-date) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .approval-row.selected td,
+body.rrhh-module-body.rrhh-embedded-body .operations-validation-table tr.selected td {
+  background: var(--table-selected) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .person-modal {
+  border: 1px solid var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .modal-head {
+  border-color: var(--soft-line) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .toast {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body,
+body.rrhh-module-body.rrhh-embedded-body .shell,
+body.rrhh-module-body.rrhh-embedded-body .config-shell,
+body.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+body.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+body.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+body.rrhh-module-body.rrhh-embedded-body .home-shell,
+body.rrhh-module-body.rrhh-embedded-body .help-shell {
+  background: var(--page) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .topbar,
+body.rrhh-module-body.rrhh-embedded-body .rrhh-module-tabs,
+body.rrhh-module-body.rrhh-embedded-body .brand-heading,
+body.rrhh-module-body.rrhh-embedded-body .top-actions,
+body.rrhh-module-body.rrhh-embedded-body .session-chip {
+  display: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .shell,
+body.rrhh-module-body.rrhh-embedded-body .config-shell,
+body.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+body.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+body.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+body.rrhh-module-body.rrhh-embedded-body .home-shell,
+body.rrhh-module-body.rrhh-embedded-body .help-shell {
+  padding: 0 !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body h1,
+body.rrhh-module-body.rrhh-embedded-body h2,
+body.rrhh-module-body.rrhh-embedded-body .section-head h2 {
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body label,
+body.rrhh-module-body.rrhh-embedded-body .eyebrow,
+body.rrhh-module-body.rrhh-embedded-body .muted {
+  color: var(--muted) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .planner-panel,
+body.rrhh-module-body.rrhh-embedded-body .side-panel,
+body.rrhh-module-body.rrhh-embedded-body .grid-frame,
+body.rrhh-module-body.rrhh-embedded-body .schedule,
+body.rrhh-module-body.rrhh-embedded-body .report-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-title-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-period-card,
+body.rrhh-module-body.rrhh-embedded-body .operations-admin-panel,
+body.rrhh-module-body.rrhh-embedded-body .operator-detail-panel,
+body.rrhh-module-body.rrhh-embedded-body .config-panel,
+body.rrhh-module-body.rrhh-embedded-body .config-sidebar,
+body.rrhh-module-body.rrhh-embedded-body .admin-panel,
+body.rrhh-module-body.rrhh-embedded-body .home-group,
+body.rrhh-module-body.rrhh-embedded-body .help-panel,
+body.rrhh-module-body.rrhh-embedded-body .help-sidebar {
+  border-color: var(--soft-line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .ghost-button,
+body.rrhh-module-body.rrhh-embedded-body .ghost-link,
+body.rrhh-module-body.rrhh-embedded-body select,
+body.rrhh-module-body.rrhh-embedded-body input,
+body.rrhh-module-body.rrhh-embedded-body textarea {
+  border-color: var(--soft-line) !important;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .grid-frame,
+body.rrhh-module-body.rrhh-embedded-body .schedule,
+body.rrhh-module-body.rrhh-embedded-body #scheduleHead,
+body.rrhh-module-body.rrhh-embedded-body #scheduleBody {
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+.rrhh-module-body.rrhh-embedded-body,
+.rrhh-module-body.rrhh-embedded-body .shell,
+.rrhh-module-body.rrhh-embedded-body .config-shell,
+.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+.rrhh-module-body.rrhh-embedded-body .home-shell,
+.rrhh-module-body.rrhh-embedded-body .help-shell {
+  background: var(--page);
+}
+
+.rrhh-module-body.rrhh-embedded-body .shell,
+.rrhh-module-body.rrhh-embedded-body .config-shell,
+.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+.rrhh-module-body.rrhh-embedded-body .home-shell,
+.rrhh-module-body.rrhh-embedded-body .help-shell {
+  padding: 0;
+}
+
+.rrhh-module-body.rrhh-embedded-body h1,
+.rrhh-module-body.rrhh-embedded-body h2,
+.rrhh-module-body.rrhh-embedded-body .section-head h2 {
+  color: var(--ink);
+}
+
+.rrhh-module-body.rrhh-embedded-body label,
+.rrhh-module-body.rrhh-embedded-body .eyebrow,
+.rrhh-module-body.rrhh-embedded-body .muted {
+  color: var(--muted);
+}
+
+.rrhh-module-body.rrhh-embedded-body .planner-panel,
+.rrhh-module-body.rrhh-embedded-body .side-panel,
+.rrhh-module-body.rrhh-embedded-body .report-panel,
+.rrhh-module-body.rrhh-embedded-body .dashboard-title-panel,
+.rrhh-module-body.rrhh-embedded-body .dashboard-period-card,
+.rrhh-module-body.rrhh-embedded-body .operations-admin-panel,
+.rrhh-module-body.rrhh-embedded-body .operator-detail-panel,
+.rrhh-module-body.rrhh-embedded-body .config-panel,
+.rrhh-module-body.rrhh-embedded-body .config-sidebar,
+.rrhh-module-body.rrhh-embedded-body .admin-panel,
+.rrhh-module-body.rrhh-embedded-body .home-group,
+.rrhh-module-body.rrhh-embedded-body .help-panel,
+.rrhh-module-body.rrhh-embedded-body .help-sidebar {
+  border-color: var(--soft-line);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.rrhh-module-body.rrhh-embedded-body .ghost-button,
+.rrhh-module-body.rrhh-embedded-body .ghost-link,
+.rrhh-module-body.rrhh-embedded-body select,
+.rrhh-module-body.rrhh-embedded-body input,
+.rrhh-module-body.rrhh-embedded-body textarea {
+  border-color: var(--soft-line);
+  background: var(--shift);
+  color: var(--ink);
+}
+
 /* Dark product skin experiment. Keep the weekly plan grid cells/table visually unchanged. */
 body {
   background:
@@ -6149,4 +6617,553 @@ label {
   .mobile-sheet-actions button {
     min-height: 44px;
   }
+}
+
+/* Integrated app chrome: RRHH behaves like a mother-app module with internal sections. */
+body.rrhh-module-body {
+  background: #f6f7f9;
+  color: #23242a;
+  font-family: "Nunito Sans", "Inter", ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.rrhh-embedded-body {
+  --ink: #f5f7ff;
+  --muted: #aab6d1;
+  --line: #222d42;
+  --soft-line: #2d3c54;
+  --panel: #121821;
+  --page: #090d12;
+  --shift: #171e2a;
+  --warning: #ffd76b;
+  --danger: #ff8c99;
+  --accent: #5c91ff;
+  --accent-dark: #6ba3ff;
+  --shadow: none;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "League Spartan", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.rrhh-embedded-body .topbar,
+.rrhh-embedded-body .rrhh-module-tabs,
+.rrhh-embedded-body .brand-heading,
+.rrhh-embedded-body .top-actions,
+.rrhh-embedded-body .session-chip {
+  display: none !important;
+}
+
+.rrhh-embedded-body .shell,
+.rrhh-embedded-body .config-shell,
+.rrhh-embedded-body .personnel-shell,
+.rrhh-embedded-body .dashboard-shell,
+.rrhh-embedded-body .payroll-shell,
+.rrhh-embedded-body .analysis-shell,
+.rrhh-embedded-body .home-shell,
+.rrhh-embedded-body .help-shell {
+  padding: 0;
+  background: var(--page);
+}
+
+.rrhh-embedded-body h1 {
+  font-size: 22px;
+}
+
+.rrhh-embedded-body h2,
+.rrhh-embedded-body h3 {
+  color: var(--ink);
+}
+
+.rrhh-embedded-body .admin-panel,
+.rrhh-embedded-body .panel,
+.rrhh-embedded-body .summary-card,
+.rrhh-embedded-body .metric-card,
+.rrhh-embedded-body .person-card,
+.rrhh-embedded-body .dashboard-card,
+.rrhh-embedded-body .report-card,
+.rrhh-embedded-body .analysis-card,
+.rrhh-embedded-body .config-section,
+.rrhh-embedded-body .calendar-panel,
+.rrhh-embedded-body .side-panel,
+.rrhh-embedded-body .table-card,
+.rrhh-embedded-body .modal-card {
+  background: var(--panel);
+  border-color: var(--soft-line);
+  box-shadow: none;
+}
+
+.rrhh-embedded-body input,
+.rrhh-embedded-body select,
+.rrhh-embedded-body textarea {
+  background: var(--shift);
+  border-color: var(--soft-line);
+  color: var(--ink);
+}
+
+.rrhh-embedded-body input::placeholder,
+.rrhh-embedded-body textarea::placeholder {
+  color: #74809b;
+}
+
+.rrhh-embedded-body .ghost-button,
+.rrhh-embedded-body .ghost-link,
+.rrhh-embedded-body .secondary-button,
+.rrhh-embedded-body .config-nav {
+  background: transparent;
+  border-color: var(--soft-line);
+  color: var(--muted);
+}
+
+.rrhh-embedded-body .ghost-button:hover,
+.rrhh-embedded-body .ghost-link:hover,
+.rrhh-embedded-body .secondary-button:hover,
+.rrhh-embedded-body .config-nav:hover,
+.rrhh-embedded-body .config-nav.active {
+  background: var(--shift);
+  color: var(--ink);
+}
+
+.rrhh-embedded-body table,
+.rrhh-embedded-body thead,
+.rrhh-embedded-body tbody,
+.rrhh-embedded-body tr,
+.rrhh-embedded-body th,
+.rrhh-embedded-body td {
+  border-color: var(--soft-line);
+}
+
+.rrhh-embedded-body th {
+  background: #1f2937;
+  color: var(--ink);
+}
+
+.rrhh-embedded-body td {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.rrhh-module-body .rrhh-module-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 30px;
+  min-height: 72px;
+  padding: 24px 56px 0;
+  border-bottom: 1px solid #d8dbe2;
+  background: #f6f7f9;
+  overflow-x: auto;
+}
+
+.rrhh-module-body .rrhh-module-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: #53565f;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.rrhh-module-body .rrhh-module-tab.active {
+  color: #23242a;
+}
+
+.rrhh-module-body .rrhh-module-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #5aa6c8;
+}
+
+.rrhh-module-body .topbar {
+  min-height: 0;
+  padding: 34px 56px 20px;
+  border-bottom: 0;
+  background: #f6f7f9;
+  box-shadow: none;
+}
+
+.rrhh-module-body .brand-home,
+.rrhh-module-body .brand-heading > div::before,
+.rrhh-module-body .brand-heading .eyebrow {
+  display: none;
+}
+
+.rrhh-module-body .brand-heading,
+.rrhh-module-body .brand-heading > div {
+  gap: 0;
+}
+
+.rrhh-module-body h1 {
+  color: #17191f;
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 950;
+}
+
+.rrhh-module-body h2,
+.rrhh-module-body .section-head h2 {
+  color: #23242a;
+}
+
+.rrhh-module-body .session-chip,
+.rrhh-module-body label,
+.rrhh-module-body .eyebrow,
+.rrhh-module-body .muted {
+  color: #676a73;
+}
+
+.rrhh-module-body .shell,
+.rrhh-module-body .config-shell,
+.rrhh-module-body .personnel-shell,
+.rrhh-module-body .dashboard-shell,
+.rrhh-module-body .payroll-shell,
+.rrhh-module-body .analysis-shell,
+.rrhh-module-body .home-shell,
+.rrhh-module-body .help-shell {
+  padding-left: 56px;
+  padding-right: 56px;
+  background: #f6f7f9;
+}
+
+.rrhh-module-body .planner-panel,
+.rrhh-module-body .side-panel,
+.rrhh-module-body .report-panel,
+.rrhh-module-body .dashboard-title-panel,
+.rrhh-module-body .dashboard-period-card,
+.rrhh-module-body .operations-admin-panel,
+.rrhh-module-body .operator-detail-panel,
+.rrhh-module-body .config-panel,
+.rrhh-module-body .config-sidebar,
+.rrhh-module-body .admin-panel,
+.rrhh-module-body .home-group,
+.rrhh-module-body .help-panel,
+.rrhh-module-body .help-sidebar {
+  border-color: #d8dbe2;
+  background: #fff;
+  color: #23242a;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+}
+
+.rrhh-module-body .primary-button {
+  background: #2f66e8;
+}
+
+.rrhh-module-body .primary-button:hover {
+  background: #2658cf;
+}
+
+.rrhh-module-body .ghost-button,
+.rrhh-module-body .ghost-link,
+.rrhh-module-body .session-chip,
+.rrhh-module-body select,
+.rrhh-module-body input,
+.rrhh-module-body textarea {
+  border-color: #d8dbe2;
+  background: #fff;
+  color: #23242a;
+}
+
+@media (max-width: 680px) {
+  .rrhh-module-body .rrhh-module-tabs {
+    gap: 18px;
+    min-height: 58px;
+    padding: 14px 16px 0;
+  }
+
+  .rrhh-module-body .rrhh-module-tab {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .rrhh-module-body .topbar {
+    padding: 18px 16px 12px;
+  }
+
+  .rrhh-module-body h1 {
+    font-size: 24px;
+    white-space: normal;
+  }
+
+  .rrhh-module-body .shell,
+  .rrhh-module-body .config-shell,
+  .rrhh-module-body .personnel-shell,
+  .rrhh-module-body .dashboard-shell,
+  .rrhh-module-body .payroll-shell,
+  .rrhh-module-body .analysis-shell,
+  .rrhh-module-body .home-shell,
+  .rrhh-module-body .help-shell {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+body.rrhh-module-body.rrhh-embedded-body {
+  --ink: #f5f7ff;
+  --muted: #aab6d1;
+  --line: #222d42;
+  --soft-line: #2d3c54;
+  --panel: #121821;
+  --page: #090d12;
+  --shift: #171e2a;
+  --warning: #ffd76b;
+  --danger: #ff8c99;
+  --accent: #5c91ff;
+  --accent-dark: #6ba3ff;
+  --shadow: none;
+  background: var(--page) !important;
+  color: var(--ink) !important;
+  font-family: "League Spartan", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .topbar,
+body.rrhh-module-body.rrhh-embedded-body .rrhh-module-tabs,
+body.rrhh-module-body.rrhh-embedded-body .brand-heading,
+body.rrhh-module-body.rrhh-embedded-body .top-actions,
+body.rrhh-module-body.rrhh-embedded-body .session-chip {
+  display: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .shell,
+body.rrhh-module-body.rrhh-embedded-body .config-shell,
+body.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+body.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+body.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+body.rrhh-module-body.rrhh-embedded-body .home-shell,
+body.rrhh-module-body.rrhh-embedded-body .help-shell {
+  padding: 0 !important;
+  background: var(--page) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .planner-panel,
+body.rrhh-module-body.rrhh-embedded-body .side-panel,
+body.rrhh-module-body.rrhh-embedded-body .grid-frame,
+body.rrhh-module-body.rrhh-embedded-body .schedule,
+body.rrhh-module-body.rrhh-embedded-body .report-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-title-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-period-card,
+body.rrhh-module-body.rrhh-embedded-body .operations-admin-panel,
+body.rrhh-module-body.rrhh-embedded-body .operator-detail-panel,
+body.rrhh-module-body.rrhh-embedded-body .config-panel,
+body.rrhh-module-body.rrhh-embedded-body .config-sidebar,
+body.rrhh-module-body.rrhh-embedded-body .admin-panel,
+body.rrhh-module-body.rrhh-embedded-body .home-group,
+body.rrhh-module-body.rrhh-embedded-body .help-panel,
+body.rrhh-module-body.rrhh-embedded-body .help-sidebar {
+  border-color: var(--soft-line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body #planShell,
+body.rrhh-module-body.rrhh-embedded-body .grid-frame,
+body.rrhh-module-body.rrhh-embedded-body .schedule,
+body.rrhh-module-body.rrhh-embedded-body #scheduleHead,
+body.rrhh-module-body.rrhh-embedded-body #scheduleBody {
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body h1,
+body.rrhh-module-body.rrhh-embedded-body h2,
+body.rrhh-module-body.rrhh-embedded-body .section-head h2 {
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body label,
+body.rrhh-module-body.rrhh-embedded-body .eyebrow,
+body.rrhh-module-body.rrhh-embedded-body .muted {
+  color: var(--muted) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .ghost-button,
+body.rrhh-module-body.rrhh-embedded-body .ghost-link,
+body.rrhh-module-body.rrhh-embedded-body select,
+body.rrhh-module-body.rrhh-embedded-body input,
+body.rrhh-module-body.rrhh-embedded-body textarea {
+  border-color: var(--soft-line) !important;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+}
+/* Final app-lang embedded theme bridge. This must stay at EOF. */
+body.rrhh-module-body.rrhh-embedded-body.rrhh-parent-theme-dark {
+  --ink: #f5f7ff;
+  --muted: #aab6d1;
+  --dim: #74809b;
+  --line: #222d42;
+  --soft-line: #2d3c54;
+  --panel: #121821;
+  --page: #090d12;
+  --shift: #171e2a;
+  --table-head: #171e2a;
+  --table-row: #121821;
+  --table-row-alt: #151d29;
+  --table-date: #171e2a;
+  --table-selected: #1e3d72;
+  --accent: #5c91ff;
+  --accent-dark: #6ba3ff;
+  --warning: #ffd76b;
+  --danger: #ff8c99;
+  --success: #4be785;
+  --shadow: none;
+}
+
+body.rrhh-module-body.rrhh-embedded-body.rrhh-parent-theme-light {
+  --ink: #18181b;
+  --muted: #52525b;
+  --dim: #a1a1aa;
+  --line: #d4d4d8;
+  --soft-line: #e4e4e7;
+  --panel: #ffffff;
+  --page: #f6f7f9;
+  --shift: #f4f4f5;
+  --table-head: #f0f1f3;
+  --table-row: #ffffff;
+  --table-row-alt: #fafafa;
+  --table-date: #e8eef8;
+  --table-selected: #dbeafe;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --success: #15803d;
+  --shadow: none;
+}
+
+body.rrhh-module-body.rrhh-embedded-body,
+body.rrhh-module-body.rrhh-embedded-body .shell,
+body.rrhh-module-body.rrhh-embedded-body .config-shell,
+body.rrhh-module-body.rrhh-embedded-body .personnel-shell,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell,
+body.rrhh-module-body.rrhh-embedded-body .payroll-shell,
+body.rrhh-module-body.rrhh-embedded-body .analysis-shell,
+body.rrhh-module-body.rrhh-embedded-body .home-shell,
+body.rrhh-module-body.rrhh-embedded-body .help-shell {
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .topbar,
+body.rrhh-module-body.rrhh-embedded-body .rrhh-module-tabs,
+body.rrhh-module-body.rrhh-embedded-body .brand-heading,
+body.rrhh-module-body.rrhh-embedded-body .top-actions,
+body.rrhh-module-body.rrhh-embedded-body .session-chip {
+  display: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-shell {
+  display: grid;
+  gap: 18px;
+  padding: 0 !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .report-panel,
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table-wrap,
+body.rrhh-module-body.rrhh-embedded-body .person-modal,
+body.rrhh-module-body.rrhh-embedded-body .toast {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .report-panel {
+  margin: 0 !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .section-head {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .section-head h2 {
+  color: var(--ink) !important;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+body.rrhh-module-body.rrhh-embedded-body label,
+body.rrhh-module-body.rrhh-embedded-body .eyebrow,
+body.rrhh-module-body.rrhh-embedded-body .muted,
+body.rrhh-module-body.rrhh-embedded-body .table-pagination,
+body.rrhh-module-body.rrhh-embedded-body .table-pagination strong {
+  color: var(--muted) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .kiosk-badge,
+body.rrhh-module-body.rrhh-embedded-body .approval-total-badge,
+body.rrhh-module-body.rrhh-embedded-body .operation-total-badge {
+  border: 1px solid var(--soft-line) !important;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body input,
+body.rrhh-module-body.rrhh-embedded-body select,
+body.rrhh-module-body.rrhh-embedded-body textarea,
+body.rrhh-module-body.rrhh-embedded-body .ghost-button,
+body.rrhh-module-body.rrhh-embedded-body .ghost-link {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body input::placeholder,
+body.rrhh-module-body.rrhh-embedded-body textarea::placeholder {
+  color: var(--dim) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .primary-button {
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .primary-button:hover {
+  background: var(--accent-dark) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table {
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table th,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table th {
+  border-color: var(--soft-line) !important;
+  background: var(--table-head) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table td,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table td {
+  border-color: var(--soft-line) !important;
+  background: var(--table-row) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .dashboard-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td,
+body.rrhh-module-body.rrhh-embedded-body .report-preview-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td {
+  background: var(--table-row-alt) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .approval-date-row td,
+body.rrhh-module-body.rrhh-embedded-body .operation-date-row td {
+  background: var(--table-date) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-module-body.rrhh-embedded-body .approval-row.selected td,
+body.rrhh-module-body.rrhh-embedded-body .operations-validation-table tr.selected td {
+  background: var(--table-selected) !important;
+  color: var(--ink) !important;
 }

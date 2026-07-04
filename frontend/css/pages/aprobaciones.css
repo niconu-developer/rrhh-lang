@@ -1,0 +1,251 @@
+body.rrhh-embedded-body .approval-total-badge .positive,
+body.rrhh-embedded-body .hours-diff.positive-ok {
+  color: var(--success) !important;
+}
+
+body.rrhh-embedded-body .approval-total-badge .negative,
+body.rrhh-embedded-body .hours-diff.negative,
+body.rrhh-embedded-body .hours-diff.positive-danger {
+  color: var(--danger) !important;
+}
+
+body.rrhh-embedded-body .approval-total-badge .neutral,
+body.rrhh-embedded-body .hours-diff.neutral {
+  color: var(--muted) !important;
+}
+
+body.rrhh-embedded-body .hours-diff.positive-warning {
+  color: var(--warning) !important;
+}
+
+body.rrhh-embedded-body .approval-row-actions,
+body.rrhh-embedded-body .approval-inline-actions {
+  gap: 6px;
+}
+
+body.rrhh-embedded-body .planned-shift-cell,
+body.rrhh-embedded-body .mark-segments {
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .planned-shift-cell strong,
+body.rrhh-embedded-body .mark-segment strong {
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .mark-segment,
+body.rrhh-embedded-body .planned-shift-cell span,
+body.rrhh-embedded-body .mark-segment small {
+  color: var(--muted) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .hours-diff {
+  background: #eef2f8 !important;
+  color: #334155 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .hours-diff.negative,
+body.rrhh-embedded-body.rrhh-parent-theme-light .hours-diff.positive-danger {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .hours-diff.positive-ok {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .hours-diff.positive-warning {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+}
+
+body.rrhh-embedded-body .approval-detail-summary,
+body.rrhh-embedded-body .incident-detail-grid,
+body.rrhh-embedded-body .approval-turns-summary,
+body.rrhh-embedded-body .mark-edit-form {
+  display: grid;
+  gap: 10px;
+}
+
+body.rrhh-embedded-body .approval-detail-summary article,
+body.rrhh-embedded-body .approval-detail-section,
+body.rrhh-embedded-body .approval-observation-list article,
+body.rrhh-embedded-body .approval-turns-summary article,
+body.rrhh-embedded-body .approval-turns-table,
+body.rrhh-embedded-body .mark-single-fields {
+  border: 1px solid var(--soft-line) !important;
+  border-radius: 8px;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .approval-detail-summary article,
+body.rrhh-embedded-body .approval-detail-section,
+body.rrhh-embedded-body .approval-turns-summary article {
+  padding: 10px 12px;
+}
+
+body.rrhh-embedded-body .approval-detail-summary span,
+body.rrhh-embedded-body .approval-detail-section > span,
+body.rrhh-embedded-body .approval-turns-summary span,
+body.rrhh-embedded-body .approval-detail-head,
+body.rrhh-embedded-body .approval-turns-head {
+  color: var(--muted) !important;
+}
+
+body.rrhh-embedded-body .approval-detail-summary strong,
+body.rrhh-embedded-body .approval-detail-section strong,
+body.rrhh-embedded-body .approval-detail-line strong,
+body.rrhh-embedded-body .approval-turns-summary strong {
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .approval-detail-table,
+body.rrhh-embedded-body .approval-turns-table {
+  overflow: hidden;
+}
+
+body.rrhh-embedded-body .approval-detail-head,
+body.rrhh-embedded-body .approval-detail-line,
+body.rrhh-embedded-body .approval-turns-head,
+body.rrhh-embedded-body .approval-turns-line {
+  border-color: var(--soft-line) !important;
+  color: var(--ink) !important;
+}
+
+body.rrhh-embedded-body .approval-detail-head,
+body.rrhh-embedded-body .approval-turns-head {
+  background: var(--table-head) !important;
+}
+
+body.rrhh-embedded-body .approval-detail-line,
+body.rrhh-embedded-body .approval-turns-line {
+  background: var(--panel) !important;
+}
+
+body.rrhh-embedded-body .approval-detail-line.empty,
+body.rrhh-embedded-body .approval-turns-line.empty,
+body.rrhh-embedded-body .approval-turns-empty {
+  color: var(--muted) !important;
+}
+
+body.rrhh-embedded-body .approval-turn-add-button {
+  width: 34px;
+  min-width: 34px;
+  border-radius: 8px;
+}
+
+body.rrhh-embedded-body .mark-single-fields {
+  padding: 10px;
+}
+
+body.rrhh-embedded-body .approvals-table td:has(> .mark-pill),
+body.rrhh-embedded-body .approvals-table td:has(.hours-diff) {
+  text-align: center;
+}
+
+body.rrhh-embedded-body .approvals-table td:has(> .mark-pill) {
+  font-weight: 700;
+}
+
+body.rrhh-embedded-body .mark-pill,
+body.rrhh-embedded-body .hours-diff {
+  display: block !important;
+  width: 100%;
+  min-height: 100%;
+  border-radius: 0 !important;
+  padding: 9px 10px !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.15;
+  text-align: center;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(> .mark-pill.approved-manual),
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(> .mark-pill.approved) {
+  background: #edf7f1 !important;
+  color: #2f6f4d !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(> .mark-pill.approved-with-incident) {
+  background: #edf4ff !important;
+  color: #315d9b !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(> .mark-pill.pending),
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(> .mark-pill.requires-review) {
+  background: #f8edf1 !important;
+  color: #874258 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(> .mark-pill.rejected) {
+  background: #f1f2f5 !important;
+  color: #5f6672 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(.hours-diff.neutral) {
+  background: #f3f5f8 !important;
+  color: #5f6672 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(.hours-diff.negative),
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(.hours-diff.positive-danger) {
+  background: #f9eeee !important;
+  color: #9f4f4f !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(.hours-diff.positive-ok) {
+  background: #edf7f1 !important;
+  color: #2f6f4d !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .approvals-table td:has(.hours-diff.positive-warning) {
+  background: #fbf4df !important;
+  color: #8a6a2d !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(> .mark-pill.approved-manual),
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(> .mark-pill.approved) {
+  background: rgba(75, 231, 133, 0.14) !important;
+  color: #a8f3c2 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(> .mark-pill.approved-with-incident) {
+  background: rgba(92, 145, 255, 0.16) !important;
+  color: #bfd3ff !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(> .mark-pill.pending),
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(> .mark-pill.requires-review) {
+  background: rgba(255, 140, 153, 0.15) !important;
+  color: #ffc5cd !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(> .mark-pill.rejected) {
+  background: rgba(170, 182, 209, 0.12) !important;
+  color: #c6d0e6 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(.hours-diff.neutral) {
+  background: rgba(170, 182, 209, 0.10) !important;
+  color: #c6d0e6 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(.hours-diff.negative),
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(.hours-diff.positive-danger) {
+  background: rgba(255, 140, 153, 0.14) !important;
+  color: #ffc5cd !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(.hours-diff.positive-ok) {
+  background: rgba(75, 231, 133, 0.14) !important;
+  color: #a8f3c2 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .approvals-table td:has(.hours-diff.positive-warning) {
+  background: rgba(255, 215, 107, 0.14) !important;
+  color: #ffe4a1 !important;
+}

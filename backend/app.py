@@ -24,11 +24,13 @@ from backend.services import AprobacionesService, IncidenciasService, Observacio
 from backend.settings import (
     ADMIN_BOOTSTRAP_PASSWORD,
     BACKEND_DIR,
+    EXTERNAL_AUTH_ALLOW_COOKIELESS,
     DB_PATH,
     EXTERNAL_AUTH_COOKIE_NAME,
     EXTERNAL_AUTH_DEBUG,
     EXTERNAL_AUTH_ME_URL,
     EXTERNAL_AUTH_TIMEOUT_SECONDS,
+    EXTERNAL_PERSONNEL_URL,
     FRONTEND_DIR,
     HOST,
     INTEGRATION_API_KEY,
@@ -738,7 +740,7 @@ def ensure_persona_id(connection, name, role_name="Operador"):
 
 ROLE_MODULES = {
     "admin": {"*"},
-    "rrhh": {"personas", "roles-operativos", "ubicaciones", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "observaciones-jornal", "operaciones", "operacion-tarifas", "reportes", "reconocimientos-faciales", "access-links"},
+    "rrhh": {"personas", "roles-app", "roles-operativos", "ubicaciones", "configuracion", "usuarios", "turnos", "jornales", "aprobaciones", "marcas", "observaciones-jornal", "operaciones", "operacion-tarifas", "reportes", "relojes-faciales", "reconocimientos-faciales", "access-links"},
     "usuario": {"personas", "turnos", "marcas", "operaciones", "ubicaciones", "configuracion"},
 }
 
@@ -784,6 +786,14 @@ def cookie_header_contains(cookie_header, cookie_name):
 def external_auth_log(message):
     if EXTERNAL_AUTH_DEBUG:
         print(f"[external-auth] {message}", file=sys.stderr)
+
+
+def external_personnel_url():
+    if EXTERNAL_PERSONNEL_URL:
+        return EXTERNAL_PERSONNEL_URL
+    if EXTERNAL_AUTH_ME_URL and EXTERNAL_AUTH_ME_URL.endswith("/api/auth/me"):
+        return EXTERNAL_AUTH_ME_URL[:-len("/api/auth/me")] + "/api/auth/rrhh-personnel"
+    return ""
 
 
 class PlannerHandler(SimpleHTTPRequestHandler):
@@ -938,17 +948,21 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             external_auth_log("sin PLANNER_EXTERNAL_AUTH_ME_URL; se omite SSO externo")
             return None
         cookie_header = self.headers.get("Cookie", "")
-        if not cookie_header_contains(cookie_header, EXTERNAL_AUTH_COOKIE_NAME):
+        has_external_cookie = cookie_header_contains(cookie_header, EXTERNAL_AUTH_COOKIE_NAME)
+        if not has_external_cookie and not EXTERNAL_AUTH_ALLOW_COOKIELESS:
             external_auth_log(f"no se encontro cookie {EXTERNAL_AUTH_COOKIE_NAME}")
             return None
-        external_auth_log(f"cookie {EXTERNAL_AUTH_COOKIE_NAME} detectada; consultando /me")
+        if has_external_cookie:
+            external_auth_log(f"cookie {EXTERNAL_AUTH_COOKIE_NAME} detectada; consultando /me")
+        else:
+            external_auth_log("SSO externo sin cookie habilitado; consultando /me")
         try:
+            headers = {"Accept": "application/json"}
+            if cookie_header:
+                headers["Cookie"] = cookie_header
             request = Request(
                 EXTERNAL_AUTH_ME_URL,
-                headers={
-                    "Accept": "application/json",
-                    "Cookie": cookie_header,
-                },
+                headers=headers,
             )
             with urlopen(request, timeout=EXTERNAL_AUTH_TIMEOUT_SECONDS) as response:
                 if response.status != 200:
@@ -971,9 +985,9 @@ class PlannerHandler(SimpleHTTPRequestHandler):
             external_auth_log("/me no devolvio email")
             return None
         external_auth_log(f"/me devolvio email {email}")
-        user = repo.user_by_email(email)
+        user = repo.sync_external_user(external_user)
         if not user:
-            external_auth_log(f"email {email} no existe activo en RRHH")
+            external_auth_log(f"email {email} no pudo sincronizarse en RRHH")
             return None
         external_auth_log(f"email {email} aceptado con rol local {user.get('rol_app')}")
         user["external_auth"] = True
@@ -1008,10 +1022,49 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         return module_from_path(path) in allowed
 
     def route_get(self, path, query):
+        if path == "/api/personas":
+            self.sync_external_personnel_if_available()
         return api_routes.route_get(self, path, query)
 
     def route_post(self, path, payload):
         return api_routes.route_post(self, path, payload)
+
+    def sync_external_personnel_if_available(self):
+        if not self.current_user or not self.current_user.get("external_auth"):
+            return
+        url = external_personnel_url()
+        if not url:
+            return
+        cookie_header = self.headers.get("Cookie", "")
+        try:
+            request = Request(
+                url,
+                headers={
+                    "Accept": "application/json",
+                    "Cookie": cookie_header,
+                },
+            )
+            with urlopen(request, timeout=EXTERNAL_AUTH_TIMEOUT_SECONDS) as response:
+                if response.status != 200:
+                    external_auth_log(f"personal externo respondio {response.status}")
+                    return
+                payload = json.loads(response.read().decode("utf-8"))
+        except HTTPError as error:
+            external_auth_log(f"personal externo respondio {error.code}")
+            return
+        except (URLError, TimeoutError) as error:
+            external_auth_log(f"error consultando personal externo: {error.__class__.__name__}")
+            return
+        except (ValueError, json.JSONDecodeError):
+            external_auth_log("personal externo no devolvio JSON")
+            return
+        if not isinstance(payload, list):
+            external_auth_log("personal externo no devolvio una lista")
+            return
+        try:
+            repo.sync_external_personnel(payload)
+        except Exception as error:
+            external_auth_log(f"no se pudo sincronizar personal externo: {error}")
 
     def login(self, payload):
         identifier = str(payload.get("usuario") or payload.get("email") or "").strip()
@@ -1244,6 +1297,7 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         return IncidenciasService.upsert_incidencia(connection, incident)
 
     def save_turno(self, payload):
+        self.sync_external_personnel_if_available()
         with connect() as connection:
             persona_id = repo.upsert_turno(connection, payload)
             if payload.get("fecha"):
@@ -1255,6 +1309,7 @@ class PlannerHandler(SimpleHTTPRequestHandler):
         return {"ok": True}
 
     def save_turnos_lote(self, payload):
+        self.sync_external_personnel_if_available()
         turnos = payload.get("turnos") or []
         dates = sorted({turno.get("fecha") for turno in turnos if turno.get("fecha")})
         with connect() as connection:

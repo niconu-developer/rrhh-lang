@@ -152,3 +152,436 @@
 #exportDayButton {
   margin-top: 12px;
 }
+
+body.rrhh-embedded-body #planShell,
+body.rrhh-embedded-body .grid-frame,
+body.rrhh-embedded-body .schedule,
+body.rrhh-embedded-body #scheduleHead,
+body.rrhh-embedded-body #scheduleBody {
+  background: #090d12 !important;
+  color: #f5f7ff !important;
+}
+
+body.rrhh-embedded-body .planner-panel,
+body.rrhh-embedded-body .side-panel {
+  background: #121821 !important;
+  border-color: #2d3c54 !important;
+  box-shadow: none !important;
+}
+
+body.rrhh-embedded-body .panel-resizer {
+  background: #2d3c54 !important;
+}
+
+/* Embedded app-lang theme bridge for the weekly planner. */
+body.rrhh-embedded-body.rrhh-parent-theme-dark {
+  --plan-page: #090d12;
+  --plan-panel: #121821;
+  --plan-panel-soft: #171e2a;
+  --plan-head: #202938;
+  --plan-person: #202938;
+  --plan-shift: #121821;
+  --plan-line: #2d3c54;
+  --plan-line-soft: #394761;
+  --plan-text: #f5f7ff;
+  --plan-muted: #aab6d1;
+  --plan-dim: #74809b;
+  --plan-free-bg: #b8e4d0;
+  --plan-free-text: #0f172a;
+  --plan-absent-bg: #421820;
+  --plan-absent-text: #ffb4bf;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light {
+  --plan-page: #f3f6fa;
+  --plan-panel: #fbfcfe;
+  --plan-panel-soft: #f1f5f9;
+  --plan-head: #eef3f8;
+  --plan-person: #e8edf4;
+  --plan-shift: #fdfefe;
+  --plan-line: #cfd7e3;
+  --plan-line-soft: #e3e9f1;
+  --plan-text: #202632;
+  --plan-muted: #5c6675;
+  --plan-dim: #8d97a6;
+  --plan-free-bg: #b7e4d1;
+  --plan-free-text: #0f172a;
+  --plan-absent-bg: #fee2e2;
+  --plan-absent-text: #991b1b;
+  --plan-blue-soft: #dbeafe;
+  --plan-blue-line: #bcd2f4;
+  --plan-blue-ink: #244574;
+  --plan-section-blue: #4f74e8;
+  --plan-section-orange: #a85419;
+}
+
+body.rrhh-embedded-body #planShell,
+body.rrhh-embedded-body .plan-shell {
+  background: var(--plan-page) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .planner-panel,
+body.rrhh-embedded-body .side-panel {
+  background: var(--plan-panel) !important;
+  border-color: var(--plan-line) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .panel-resizer {
+  background: var(--plan-line) !important;
+}
+
+body.rrhh-embedded-body .toolbar label,
+body.rrhh-embedded-body .side-panel label,
+body.rrhh-embedded-body .side-panel .muted,
+body.rrhh-embedded-body #daySummaryCount {
+  color: var(--plan-muted) !important;
+}
+
+body.rrhh-embedded-body .grid-frame {
+  background: var(--plan-panel) !important;
+  border-color: var(--plan-line) !important;
+}
+
+body.rrhh-embedded-body .schedule,
+body.rrhh-embedded-body #scheduleHead,
+body.rrhh-embedded-body #scheduleBody {
+  background: var(--plan-panel) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .schedule th,
+body.rrhh-embedded-body .schedule td {
+  border-color: var(--plan-line) !important;
+}
+
+body.rrhh-embedded-body .schedule th {
+  background: var(--plan-head) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .month-head,
+body.rrhh-embedded-body .person-cell {
+  background: var(--plan-person) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .month-head-button,
+body.rrhh-embedded-body .person-button,
+body.rrhh-embedded-body .day-head-button {
+  color: inherit !important;
+}
+
+body.rrhh-embedded-body .month-head-button:hover,
+body.rrhh-embedded-body .month-head-button:focus-visible,
+body.rrhh-embedded-body .person-button:hover,
+body.rrhh-embedded-body .person-button:focus-visible,
+body.rrhh-embedded-body .day-head-button:hover,
+body.rrhh-embedded-body .day-head-button:focus-visible {
+  background: var(--plan-panel-soft) !important;
+}
+
+body.rrhh-embedded-body .shift-cell,
+body.rrhh-embedded-body .shift-cell .shift-button {
+  background: var(--plan-shift) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .time-row {
+  border-bottom-color: var(--plan-line-soft) !important;
+  color: var(--plan-muted) !important;
+}
+
+body.rrhh-embedded-body .time-row span + span {
+  border-left-color: var(--plan-line-soft) !important;
+}
+
+body.rrhh-embedded-body .activity-row {
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .shift-cell.free,
+body.rrhh-embedded-body .shift-cell.free .shift-button {
+  background: var(--plan-free-bg) !important;
+  color: var(--plan-free-text) !important;
+}
+
+body.rrhh-embedded-body .shift-cell.empty,
+body.rrhh-embedded-body .shift-cell.empty .shift-button {
+  background: var(--plan-panel-soft) !important;
+  color: var(--plan-dim) !important;
+}
+
+body.rrhh-embedded-body .shift-cell.absent,
+body.rrhh-embedded-body .shift-cell.absent .shift-button {
+  background: var(--plan-absent-bg) !important;
+  color: var(--plan-absent-text) !important;
+}
+
+body.rrhh-embedded-body .shift-cell.license,
+body.rrhh-embedded-body .shift-cell.license .shift-button {
+  color: #0f172a !important;
+}
+
+body.rrhh-embedded-body .shift-cell.suspended,
+body.rrhh-embedded-body .shift-cell.suspended .shift-button {
+  color: #3d2d00 !important;
+}
+
+body.rrhh-embedded-body .person-card,
+body.rrhh-embedded-body .operator-stats article,
+body.rrhh-embedded-body .operator-week-item,
+body.rrhh-embedded-body .day-summary-item,
+body.rrhh-embedded-body .comparison,
+body.rrhh-embedded-body #diaPanel {
+  background: var(--plan-panel-soft) !important;
+  border-color: var(--plan-line) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .person-card h2,
+body.rrhh-embedded-body .person-card p,
+body.rrhh-embedded-body .operator-stats strong,
+body.rrhh-embedded-body .operator-week-item strong,
+body.rrhh-embedded-body .day-summary-item strong {
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body .operator-stats span,
+body.rrhh-embedded-body .operator-week-item span,
+body.rrhh-embedded-body .day-summary-item span,
+body.rrhh-embedded-body .day-summary-item .day-summary-shift {
+  color: var(--plan-muted) !important;
+}
+
+body.rrhh-embedded-body .planner-panel {
+  display: flex;
+  min-height: min(820px, calc(100vh - 132px));
+  flex-direction: column;
+}
+
+body.rrhh-embedded-body .grid-frame {
+  flex: 1 1 auto;
+  height: clamp(500px, calc(100vh - 220px), 820px);
+  max-height: none !important;
+}
+
+body.rrhh-embedded-body .side-panel {
+  max-height: calc(100vh - 132px);
+  overflow: auto;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light {
+  --plan-text: #303642;
+  --plan-muted: #656d7a;
+  --plan-dim: #8b93a1;
+  --plan-head: #eef3f8;
+  --plan-person: #e8edf4;
+  --plan-panel-soft: #f1f5f9;
+  --plan-line: #cfd7e3;
+  --plan-line-soft: #e3e9f1;
+  --plan-row-alt: #f7fafd;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark {
+  --plan-row-alt: #151d29;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .schedule th {
+  font-weight: 750;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light #planShell,
+body.rrhh-embedded-body.rrhh-parent-theme-light .plan-shell {
+  background:
+    linear-gradient(180deg, rgba(219, 234, 254, 0.42) 0%, rgba(243, 246, 250, 0) 190px),
+    var(--plan-page) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .planner-panel {
+  background: rgba(255, 255, 255, 0.74) !important;
+  border-color: var(--plan-line) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .toolbar {
+  border-bottom: 1px solid var(--plan-line-soft);
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.88) 0%, rgba(248, 251, 255, 0.58) 100%);
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .grid-frame {
+  background: #f8fbff !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .schedule {
+  box-shadow: inset 0 0 0 1px rgba(188, 210, 244, 0.24);
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .month-head-button,
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-button,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-head-button {
+  font-weight: 750;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-button {
+  font-weight: 600;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .time-row {
+  color: var(--plan-dim) !important;
+  font-weight: 600;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .activity-row {
+  color: var(--plan-text) !important;
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .schedule tbody tr:nth-child(even) .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical),
+body.rrhh-embedded-body.rrhh-parent-theme-light .schedule tbody tr:nth-child(even) .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical) .shift-button {
+  background: var(--plan-row-alt) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-cell.free,
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-cell.free .shift-button {
+  background: linear-gradient(180deg, #b9e7d4 0%, #acdcca 100%) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-cell.selected,
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-cell.selected .shift-button {
+  box-shadow: inset 0 0 0 2px #2563eb !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .side-panel {
+  background: #f8fbff !important;
+  border-color: var(--plan-blue-line) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .side-panel::before {
+  content: "";
+  display: block;
+  height: 10px;
+  margin: -1px -1px 0;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(90deg, #2563eb 0%, #5aa6c8 58%, #86c6b2 100%);
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-card,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-stats article,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item,
+body.rrhh-embedded-body.rrhh-parent-theme-light .comparison,
+body.rrhh-embedded-body.rrhh-parent-theme-light #diaPanel {
+  background: #f2f6fb !important;
+  border-color: #cbd6e6 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item:nth-child(even),
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item:nth-child(even) {
+  background: #edf3fa !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item.current,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item.current {
+  background: var(--plan-blue-soft) !important;
+  border-color: var(--plan-blue-line) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-card h2,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-stats strong,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item strong,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item strong {
+  color: #272d38 !important;
+  font-weight: 760;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-stats span,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item span,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item span {
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-card .avatar {
+  background: #263246 !important;
+  color: #f8fafc !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light #planShell {
+  align-items: stretch;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .planner-panel,
+body.rrhh-embedded-body.rrhh-parent-theme-light .side-panel {
+  height: min(820px, calc(100vh - 132px));
+  min-height: 0;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .grid-frame {
+  height: auto;
+  min-height: 0;
+  background:
+    linear-gradient(180deg, rgba(235, 242, 252, 0.82) 0%, rgba(247, 250, 253, 0.72) 100%) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .toolbar select,
+body.rrhh-embedded-body.rrhh-parent-theme-light .toolbar input {
+  background: #f6f9fd !important;
+  border-color: #cfd9e7 !important;
+  color: #111827 !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .schedule th,
+body.rrhh-embedded-body.rrhh-parent-theme-light .month-head-button,
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-button,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-head-button {
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-head span {
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical),
+body.rrhh-embedded-body.rrhh-parent-theme-light .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical) .shift-button {
+  background: #fbfdff !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .time-row,
+body.rrhh-embedded-body.rrhh-parent-theme-light .time-row span {
+  color: #111827 !important;
+  font-weight: 520;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .activity-row {
+  color: #111827 !important;
+  font-weight: 720;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .side-panel {
+  background:
+    linear-gradient(180deg, #f2f7fd 0%, #f8fbff 140px, #f4f8fc 100%) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-card,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-stats article,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item {
+  background: rgba(241, 246, 252, 0.92) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-card h2,
+body.rrhh-embedded-body.rrhh-parent-theme-light .person-card p,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-stats strong,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item strong,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item strong {
+  color: #202632 !important;
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-stats span,
+body.rrhh-embedded-body.rrhh-parent-theme-light .operator-week-item span,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item span,
+body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item .day-summary-shift {
+  color: #5d6674 !important;
+  font-weight: 560;
+}
