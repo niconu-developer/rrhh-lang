@@ -585,3 +585,115 @@ body.rrhh-embedded-body.rrhh-parent-theme-light .day-summary-item .day-summary-s
   color: #5d6674 !important;
   font-weight: 560;
 }
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark {
+  --plan-text: #f5f7ff;
+  --plan-muted: #b4bfd4;
+  --plan-dim: #8e99ad;
+  --plan-head: #182130;
+  --plan-person: #1b2535;
+  --plan-panel: #101720;
+  --plan-panel-soft: #17202c;
+  --plan-shift: #111923;
+  --plan-line: #2c3a50;
+  --plan-line-soft: #35445d;
+  --plan-row-alt: #151f2b;
+  --plan-free-bg: #a7dcc8;
+  --plan-free-text: #0b1721;
+  --plan-absent-bg: #401820;
+  --plan-absent-text: #ffc0c8;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark #planShell,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .plan-shell {
+  align-items: stretch;
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, 0.12) 0%, rgba(9, 13, 18, 0) 190px),
+    var(--plan-page) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .planner-panel,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .side-panel {
+  height: min(820px, calc(100vh - 132px));
+  min-height: 0;
+  background: var(--plan-panel) !important;
+  border-color: var(--plan-line) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .toolbar {
+  border-bottom: 1px solid var(--plan-line-soft);
+  background: linear-gradient(180deg, rgba(23, 32, 44, 0.96) 0%, rgba(16, 23, 32, 0.8) 100%);
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .toolbar select,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .toolbar input {
+  background: #111923 !important;
+  border-color: var(--plan-line) !important;
+  color: var(--plan-text) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .grid-frame {
+  height: auto;
+  min-height: 0;
+  background:
+    linear-gradient(180deg, rgba(19, 29, 43, 0.88) 0%, rgba(12, 18, 27, 0.82) 100%) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .schedule th,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .month-head-button,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .person-button,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .day-head-button,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .day-head span {
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical),
+body.rrhh-embedded-body.rrhh-parent-theme-dark .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical) .shift-button {
+  background: var(--plan-shift) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .schedule tbody tr:nth-child(even) .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical),
+body.rrhh-embedded-body.rrhh-parent-theme-dark .schedule tbody tr:nth-child(even) .shift-cell:not(.free):not(.empty):not(.absent):not(.license):not(.suspended):not(.medical) .shift-button {
+  background: var(--plan-row-alt) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .time-row,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .time-row span {
+  color: #d6deec !important;
+  font-weight: 520;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .activity-row {
+  color: #f8fbff !important;
+  font-weight: 720;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .side-panel {
+  background:
+    linear-gradient(180deg, #131d2b 0%, #101720 140px, #0e151e 100%) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .person-card,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operator-stats article,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operator-week-item,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .day-summary-item {
+  background: rgba(23, 32, 44, 0.94) !important;
+  border-color: var(--plan-line) !important;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .person-card h2,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .person-card p,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operator-stats strong,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operator-week-item strong,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .day-summary-item strong {
+  color: #f8fbff !important;
+  font-weight: 650;
+}
+
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operator-stats span,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .operator-week-item span,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .day-summary-item span,
+body.rrhh-embedded-body.rrhh-parent-theme-dark .day-summary-item .day-summary-shift {
+  color: #b4bfd4 !important;
+  font-weight: 560;
+}

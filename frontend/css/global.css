@@ -5029,6 +5029,27 @@ body.rrhh-module-body.rrhh-embedded-body .operations-validation-table tr.selecte
   color: var(--ink) !important;
 }
 
+html.rrhh-embedded-root body,
+html.rrhh-embedded-root .topbar,
+html.rrhh-embedded-root .rrhh-module-tabs,
+html.rrhh-embedded-root .brand-heading,
+html.rrhh-embedded-root .top-actions,
+html.rrhh-embedded-root .session-chip {
+  visibility: visible;
+}
+
+html.rrhh-embedded-root .topbar,
+html.rrhh-embedded-root .rrhh-module-tabs,
+html.rrhh-embedded-root .brand-heading,
+html.rrhh-embedded-root .top-actions,
+html.rrhh-embedded-root .session-chip {
+  display: none !important;
+}
+
+html.rrhh-embedded-root body {
+  margin: 0 !important;
+}
+
 body.rrhh-module-body.rrhh-embedded-body .person-modal {
   border: 1px solid var(--line) !important;
   background: var(--panel) !important;
