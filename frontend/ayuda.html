@@ -4,7 +4,17 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ayuda y documentación</title>
-    <link rel="stylesheet" href="./css/global.css?v=20260703-integrated-dark2" />
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const embedded = window.self !== window.top || params.get("embedded") === "1";
+        if (!embedded) return;
+        const theme = params.get("theme") === "light" ? "light" : "dark";
+        document.documentElement.classList.add("rrhh-embedded-root", `rrhh-parent-theme-${theme}`);
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
+    <link rel="stylesheet" href="./css/global.css?v=20260704-prepaint2" />
     <link rel="stylesheet" href="./css/pages/ayuda.css?v=20260610-css-split1" />
   </head>
   <body>

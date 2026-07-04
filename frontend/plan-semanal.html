@@ -11,10 +11,11 @@
         if (!embedded) return;
         const theme = params.get("theme") === "light" ? "light" : "dark";
         document.documentElement.classList.add("rrhh-embedded-root", `rrhh-parent-theme-${theme}`);
+        document.documentElement.style.colorScheme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="./css/global.css?v=20260704-embedded-prepaint1" />
-    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260704-plan-height1" />
+    <link rel="stylesheet" href="./css/global.css?v=20260704-prepaint2" />
+    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260704-prepaint2" />
   </head>
   <body>
     <header class="topbar">

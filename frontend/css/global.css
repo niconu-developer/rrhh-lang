@@ -5029,6 +5029,165 @@ body.rrhh-module-body.rrhh-embedded-body .operations-validation-table tr.selecte
   color: var(--ink) !important;
 }
 
+/* Prepaint bridge: these rules apply before auth-session.js can tag <body>. */
+html.rrhh-parent-theme-dark {
+  --ink: #f5f7ff;
+  --muted: #aab6d1;
+  --dim: #74809b;
+  --line: #222d42;
+  --soft-line: #2d3c54;
+  --panel: #121821;
+  --page: #090d12;
+  --shift: #171e2a;
+  --table-head: #171e2a;
+  --table-row: #121821;
+  --table-row-alt: #151d29;
+  --table-date: #171e2a;
+  --table-selected: #1e3d72;
+  --accent: #5c91ff;
+  --accent-dark: #6ba3ff;
+  --warning: #ffd76b;
+  --danger: #ff8c99;
+  --success: #4be785;
+  --shadow: none;
+}
+
+html.rrhh-parent-theme-light {
+  --ink: #18181b;
+  --muted: #52525b;
+  --dim: #a1a1aa;
+  --line: #d4d4d8;
+  --soft-line: #e4e4e7;
+  --panel: #ffffff;
+  --page: #f6f7f9;
+  --shift: #f4f4f5;
+  --table-head: #f0f1f3;
+  --table-row: #ffffff;
+  --table-row-alt: #fafafa;
+  --table-date: #e8eef8;
+  --table-selected: #dbeafe;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --success: #15803d;
+  --shadow: none;
+}
+
+html.rrhh-embedded-root,
+html.rrhh-embedded-root body {
+  min-height: 100%;
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+html.rrhh-embedded-root .topbar,
+html.rrhh-embedded-root .rrhh-module-tabs,
+html.rrhh-embedded-root .brand-heading,
+html.rrhh-embedded-root .top-actions,
+html.rrhh-embedded-root .session-chip {
+  display: none !important;
+}
+
+html.rrhh-embedded-root .shell,
+html.rrhh-embedded-root .config-shell,
+html.rrhh-embedded-root .personnel-shell,
+html.rrhh-embedded-root .dashboard-shell,
+html.rrhh-embedded-root .payroll-shell,
+html.rrhh-embedded-root .analysis-shell,
+html.rrhh-embedded-root .home-shell,
+html.rrhh-embedded-root .help-shell {
+  padding: 0 !important;
+  background: var(--page) !important;
+  color: var(--ink) !important;
+}
+
+html.rrhh-embedded-root .planner-panel,
+html.rrhh-embedded-root .side-panel,
+html.rrhh-embedded-root .grid-frame,
+html.rrhh-embedded-root .schedule,
+html.rrhh-embedded-root .report-panel,
+html.rrhh-embedded-root .dashboard-title-panel,
+html.rrhh-embedded-root .dashboard-period-card,
+html.rrhh-embedded-root .operations-admin-panel,
+html.rrhh-embedded-root .operator-detail-panel,
+html.rrhh-embedded-root .config-panel,
+html.rrhh-embedded-root .config-sidebar,
+html.rrhh-embedded-root .admin-panel,
+html.rrhh-embedded-root .home-group,
+html.rrhh-embedded-root .help-panel,
+html.rrhh-embedded-root .help-sidebar {
+  border-color: var(--soft-line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root input,
+html.rrhh-embedded-root select,
+html.rrhh-embedded-root textarea,
+html.rrhh-embedded-root .ghost-button,
+html.rrhh-embedded-root .ghost-link {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .tab,
+html.rrhh-embedded-root .kiosk-badge,
+html.rrhh-embedded-root .approval-total-badge,
+html.rrhh-embedded-root .operation-total-badge,
+html.rrhh-embedded-root .mark-pill,
+html.rrhh-embedded-root .status-pill,
+html.rrhh-embedded-root .validation-pill {
+  border-color: var(--soft-line) !important;
+  background: var(--shift) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .tab.active,
+html.rrhh-embedded-root .primary-button {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .dashboard-table,
+html.rrhh-embedded-root .report-preview-table,
+html.rrhh-embedded-root .approvals-table,
+html.rrhh-embedded-root .operations-validation-table {
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table th,
+html.rrhh-embedded-root .report-preview-table th,
+html.rrhh-embedded-root .approvals-table th,
+html.rrhh-embedded-root .operations-validation-table th {
+  border-color: var(--soft-line) !important;
+  background: var(--table-head) !important;
+  color: var(--ink) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table td,
+html.rrhh-embedded-root .report-preview-table td,
+html.rrhh-embedded-root .approvals-table td,
+html.rrhh-embedded-root .operations-validation-table td {
+  border-color: var(--soft-line) !important;
+  background: var(--table-row) !important;
+  color: var(--ink) !important;
+}
+
+html.rrhh-embedded-root .dashboard-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td,
+html.rrhh-embedded-root .report-preview-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td,
+html.rrhh-embedded-root .approvals-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td,
+html.rrhh-embedded-root .operations-validation-table tbody tr:nth-child(even):not(.approval-date-row):not(.operation-date-row) td {
+  background: var(--table-row-alt) !important;
+}
+
 html.rrhh-embedded-root body,
 html.rrhh-embedded-root .topbar,
 html.rrhh-embedded-root .rrhh-module-tabs,

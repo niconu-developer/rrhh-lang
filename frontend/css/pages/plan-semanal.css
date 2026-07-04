@@ -326,27 +326,8 @@
   margin-top: 12px;
 }
 
-body.rrhh-embedded-body #planShell,
-body.rrhh-embedded-body .grid-frame,
-body.rrhh-embedded-body .schedule,
-body.rrhh-embedded-body #scheduleHead,
-body.rrhh-embedded-body #scheduleBody {
-  background: #090d12 !important;
-  color: #f5f7ff !important;
-}
-
-body.rrhh-embedded-body .planner-panel,
-body.rrhh-embedded-body .side-panel {
-  background: #121821 !important;
-  border-color: #2d3c54 !important;
-  box-shadow: none !important;
-}
-
-body.rrhh-embedded-body .panel-resizer {
-  background: #2d3c54 !important;
-}
-
 /* Embedded app-lang theme bridge for the weekly planner. */
+html.rrhh-parent-theme-dark,
 body.rrhh-embedded-body.rrhh-parent-theme-dark {
   --plan-page: #090d12;
   --plan-panel: #121821;
@@ -365,6 +346,7 @@ body.rrhh-embedded-body.rrhh-parent-theme-dark {
   --plan-absent-text: #ffb4bf;
 }
 
+html.rrhh-parent-theme-light,
 body.rrhh-embedded-body.rrhh-parent-theme-light {
   --plan-page: #f3f6fa;
   --plan-panel: #fbfcfe;
@@ -386,6 +368,34 @@ body.rrhh-embedded-body.rrhh-parent-theme-light {
   --plan-blue-ink: #244574;
   --plan-section-blue: #4f74e8;
   --plan-section-orange: #a85419;
+}
+
+html.rrhh-embedded-root #planShell,
+html.rrhh-embedded-root .grid-frame,
+html.rrhh-embedded-root .schedule,
+html.rrhh-embedded-root #scheduleHead,
+html.rrhh-embedded-root #scheduleBody,
+body.rrhh-embedded-body #planShell,
+body.rrhh-embedded-body .grid-frame,
+body.rrhh-embedded-body .schedule,
+body.rrhh-embedded-body #scheduleHead,
+body.rrhh-embedded-body #scheduleBody {
+  background: var(--plan-page, var(--page)) !important;
+  color: var(--plan-text, var(--ink)) !important;
+}
+
+html.rrhh-embedded-root .planner-panel,
+html.rrhh-embedded-root .side-panel,
+body.rrhh-embedded-body .planner-panel,
+body.rrhh-embedded-body .side-panel {
+  background: var(--plan-panel, var(--panel)) !important;
+  border-color: var(--plan-line, var(--soft-line)) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .panel-resizer,
+body.rrhh-embedded-body .panel-resizer {
+  background: var(--plan-line, var(--soft-line)) !important;
 }
 
 body.rrhh-embedded-body #planShell,

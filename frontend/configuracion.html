@@ -11,9 +11,10 @@
         var theme = params.get("theme") === "light" ? "light" : "dark";
         document.documentElement.classList.toggle("rrhh-embedded-root", embedded);
         document.documentElement.classList.add("rrhh-parent-theme-" + theme);
+        document.documentElement.style.colorScheme = theme;
       })();
     </script>
-    <link rel="stylesheet" href="./css/global.css?v=20260704-embedded-prepaint1" />
+    <link rel="stylesheet" href="./css/global.css?v=20260704-prepaint2" />
     <link rel="stylesheet" href="./css/pages/configuracion.css?v=20260704-light-config1" />
   </head>
   <body>
