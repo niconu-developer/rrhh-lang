@@ -59,6 +59,16 @@ let aiSuggestions = [];
 let aiSuggestionsDayIndex = null;
 let aiSuggestionsLoading = false;
 let aiSuggestionsError = "";
+let rrhhAiRules = null;
+
+const DEFAULT_RRHH_AI_RULES = Object.freeze({
+  phases: ["evento"],
+  ignoreNames: ["x", "sinnombre"],
+  activitySources: ["place", "name"],
+  scheduleMode: "phase",
+  conflictMode: "review",
+  matchMode: "normalize",
+});
 
 const elements = {
   head: document.querySelector("#scheduleHead"),
@@ -779,6 +789,94 @@ function aiNormalizeName(value) {
   return normalizeSearchText(value).replace(/[^a-z0-9]/g, "");
 }
 
+function normalizeRuleToken(value) {
+  return normalizeSearchText(value)
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function splitRuleValues(value) {
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeRulePhase(value) {
+  const token = normalizeRuleToken(value);
+  if (["armado", "montaje", "setup", "carga"].includes(token)) return "armado";
+  if (["evento", "operacion", "operativo", "operacion_evento"].includes(token)) return "evento";
+  if (["desarmado", "desmontaje", "teardown", "descarga"].includes(token)) return "desarmado";
+  return "";
+}
+
+function normalizeActivitySource(value) {
+  const token = normalizeRuleToken(value);
+  if (["lugar", "ubicacion", "place", "venue"].includes(token)) return "place";
+  if (["evento", "nombre_evento", "nombre", "event", "name"].includes(token)) return "name";
+  if (["cliente", "client"].includes(token)) return "client";
+  if (["rol", "role"].includes(token)) return "role";
+  if (["sector", "seccion", "section"].includes(token)) return "section";
+  return "";
+}
+
+function parseRrhhAiRules(text) {
+  const rules = {
+    phases: [...DEFAULT_RRHH_AI_RULES.phases],
+    ignoreNames: [...DEFAULT_RRHH_AI_RULES.ignoreNames],
+    activitySources: [...DEFAULT_RRHH_AI_RULES.activitySources],
+    scheduleMode: DEFAULT_RRHH_AI_RULES.scheduleMode,
+    conflictMode: DEFAULT_RRHH_AI_RULES.conflictMode,
+    matchMode: DEFAULT_RRHH_AI_RULES.matchMode,
+  };
+
+  String(text || "").split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) return;
+    const separatorIndex = line.indexOf(":");
+    if (separatorIndex < 0) return;
+    const key = normalizeRuleToken(line.slice(0, separatorIndex));
+    const values = splitRuleValues(line.slice(separatorIndex + 1));
+    const tokens = values.map(normalizeRuleToken);
+
+    if (["fases", "fases_de_gestion", "phases"].includes(key)) {
+      const phases = values.map(normalizeRulePhase).filter(Boolean);
+      if (phases.length) rules.phases = [...new Set(phases)];
+      return;
+    }
+
+    if (["ignorar_personas", "personas_ignoradas", "ignore_names"].includes(key)) {
+      const ignored = values.map((value) => aiNormalizeName(value)).filter(Boolean);
+      if (ignored.length) rules.ignoreNames = [...new Set([...rules.ignoreNames, ...ignored])];
+      return;
+    }
+
+    if (["nombre_turno", "texto_turno", "actividad", "activity"].includes(key)) {
+      const sources = values.map(normalizeActivitySource).filter(Boolean);
+      if (sources.length) rules.activitySources = [...new Set(sources)];
+      return;
+    }
+
+    if (["horarios", "horario", "schedule"].includes(key)) {
+      if (tokens.some((token) => ["usar_horario_evento", "evento", "event"].includes(token))) rules.scheduleMode = "event";
+      if (tokens.some((token) => ["usar_horario_por_fase", "por_fase", "fase", "phase"].includes(token))) rules.scheduleMode = "phase";
+      return;
+    }
+
+    if (["conflictos", "conflict"].includes(key)) {
+      if (tokens.some((token) => ["ignorar_conflicto", "ignorar", "overwrite", "pisar"].includes(token))) rules.conflictMode = "ignore";
+      if (tokens.some((token) => ["marcar_conflicto", "revisar", "review"].includes(token))) rules.conflictMode = "review";
+      return;
+    }
+
+    if (["match_personas", "personas", "matching"].includes(key)) {
+      if (tokens.some((token) => ["normalizar_nombre", "normalizar", "normalize"].includes(token))) rules.matchMode = "normalize";
+    }
+  });
+
+  return rules;
+}
+
 function findPlannerPersonIndexByName(name) {
   const target = aiNormalizeName(name);
   if (!target) return -1;
@@ -794,6 +892,16 @@ function formatAiDate(day) {
 
 function eventAssignments(event) {
   return Array.isArray(event?.staff_assignments) ? event.staff_assignments : [];
+}
+
+async function loadRrhhAiRules() {
+  try {
+    const payload = await parentAppApi("/api/settings/rrhh_ai_rules");
+    rrhhAiRules = parseRrhhAiRules(payload?.value || "");
+  } catch (error) {
+    rrhhAiRules = parseRrhhAiRules("");
+  }
+  return rrhhAiRules;
 }
 
 async function parentAppApi(path) {
@@ -820,13 +928,51 @@ async function loadParentEventsForDay(day) {
   return parentAppApi(`/api/events?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`);
 }
 
-function buildAiSuggestion({ event, assignment, dayIndex }) {
+function shouldUseAssignmentForPlan(assignment, rules) {
+  const phase = normalizeRulePhase(assignment?.phase || "evento");
+  if (!rules.phases.includes(phase)) return false;
+  const personName = aiNormalizeName(assignment?.person_name || "");
+  if (!personName) return false;
+  return !rules.ignoreNames.some((ignored) => ignored && personName === ignored);
+}
+
+function eventValueForActivitySource(event, assignment, source) {
+  if (source === "place") return event.place;
+  if (source === "name") return event.name;
+  if (source === "client") return event.client;
+  if (source === "role") return assignment.role;
+  if (source === "section") return assignment.section;
+  return "";
+}
+
+function activityFromRrhhRules(event, assignment, rules) {
+  const value = rules.activitySources
+    .map((source) => eventValueForActivitySource(event, assignment, source))
+    .find((item) => String(item || "").trim());
+  return normalizeActivity(value || event.place || event.name || "OPERACION");
+}
+
+function timeFromRrhhRules(event, assignment, rules) {
+  const phase = normalizeRulePhase(assignment?.phase || "evento");
+  if (rules.scheduleMode === "phase") {
+    if (phase === "armado" && (event.setup_start || event.setup_end)) {
+      return { start: event.setup_start, end: event.setup_end };
+    }
+    if (phase === "desarmado" && (event.teardown_start || event.teardown_end)) {
+      return { start: event.teardown_start, end: event.teardown_end };
+    }
+  }
+  return { start: event.start_time, end: event.end_time };
+}
+
+function buildAiSuggestion({ event, assignment, dayIndex, rules }) {
   const personIndex = findPlannerPersonIndexByName(assignment.person_name);
-  const start = normalizeTime(event.start_time || "");
-  const end = normalizeTime(event.end_time || "");
-  const place = normalizeActivity(event.place || event.name || "OPERACION");
+  const scheduledTime = timeFromRrhhRules(event, assignment, rules);
+  const start = normalizeTime(scheduledTime.start || "");
+  const end = normalizeTime(scheduledTime.end || "");
+  const activity = activityFromRrhhRules(event, assignment, rules);
   const existing = personIndex >= 0 ? getShift(personIndex, dayIndex) : null;
-  const hasExisting = existing ? !isEmptyShift(existing) : false;
+  const hasExisting = rules.conflictMode === "review" && existing ? !isEmptyShift(existing) : false;
   const existingLabel = existing?.noSchedule
     ? existing.status
     : existing
@@ -844,7 +990,7 @@ function buildAiSuggestion({ event, assignment, dayIndex }) {
     role: assignment.role || "",
     draftStart: start,
     draftEnd: end,
-    draftActivity: place,
+    draftActivity: activity,
     existingLabel,
     hasExisting,
     status: personIndex >= 0 ? "pending" : "unmatched",
@@ -946,13 +1092,13 @@ async function suggestDayWithAi(dayIndex) {
   renderAiPanel();
   try {
     const day = days[dayIndex];
-    const events = await loadParentEventsForDay(day);
+    const [events, rules] = await Promise.all([loadParentEventsForDay(day), loadRrhhAiRules()]);
     const suggestions = [];
     events.forEach((event) => {
       eventAssignments(event)
-        .filter((assignment) => String(assignment?.phase || "").toLowerCase() === "evento" && assignment.person_name && assignment.person_name !== "X")
+        .filter((assignment) => shouldUseAssignmentForPlan(assignment, rules))
         .forEach((assignment) => {
-          suggestions.push(buildAiSuggestion({ event, assignment, dayIndex }));
+          suggestions.push(buildAiSuggestion({ event, assignment, dayIndex, rules }));
         });
     });
     aiSuggestions = suggestions;
