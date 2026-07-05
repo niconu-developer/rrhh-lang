@@ -120,7 +120,8 @@
 
 .ai-suggestions-list {
   display: grid;
-  gap: 10px;
+  align-content: start;
+  gap: 8px;
 }
 
 .ai-empty-state {
@@ -140,11 +141,11 @@
 
 .ai-suggestion-card {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid #2d3850;
   border-radius: 8px;
   background: #151a23;
-  padding: 10px;
+  padding: 9px;
 }
 
 .ai-suggestion-card.warning {
@@ -162,26 +163,40 @@
   opacity: 0.58;
 }
 
-.ai-suggestion-top {
+.ai-suggestion-context {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
-.ai-suggestion-top div {
+.ai-suggestion-person,
+.ai-suggestion-source {
   display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
-.ai-suggestion-top strong {
-  color: #f8fbff;
-  font-size: 14px;
-  line-height: 1.15;
+.ai-suggestion-person {
+  flex: 0 0 88px;
 }
 
-.ai-suggestion-top span,
-.ai-suggestion-top em,
+.ai-suggestion-source {
+  flex: 1 1 auto;
+}
+
+.ai-suggestion-person strong,
+.ai-suggestion-source strong {
+  color: #f8fbff;
+  font-size: 13px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-suggestion-person span,
+.ai-suggestion-source span,
+.ai-suggestion-context em,
 .ai-suggestion-source,
 .ai-existing {
   color: #9ba6ba;
@@ -190,25 +205,23 @@
   line-height: 1.25;
 }
 
-.ai-suggestion-top em {
+.ai-suggestion-context em {
   flex: 0 0 auto;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 999px;
-  padding: 4px 7px;
+  padding: 3px 6px;
   font-style: normal;
   white-space: nowrap;
 }
 
 .ai-suggestion-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 112px minmax(0, 1fr);
   gap: 8px;
+  align-items: end;
 }
 
-.ai-suggestion-activity-field {
-  grid-column: 1 / -1;
-}
-
+.ai-suggestion-time-field,
 .ai-suggestion-fields label {
   display: grid;
   gap: 4px;
@@ -218,6 +231,19 @@
   text-transform: uppercase;
 }
 
+.ai-suggestion-time-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-suggestion-separator {
+  color: #9ba6ba;
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .ai-suggestion-fields input {
   width: 100%;
   min-width: 0;
@@ -225,30 +251,23 @@
   border-radius: 8px;
   background: #0f141c;
   color: #f8fbff;
-  padding: 8px 9px;
+  padding: 7px 8px;
   font: inherit;
   font-weight: 760;
   text-transform: uppercase;
-}
-
-.ai-suggestion-source {
-  display: grid;
-  gap: 3px;
-  border-left: 3px solid rgba(91, 131, 239, 0.66);
-  padding-left: 8px;
 }
 
 .ai-existing {
   border-radius: 8px;
   background: rgba(246, 183, 72, 0.1);
   margin: 0;
-  padding: 8px;
+  padding: 7px 8px;
   color: #f3c06a;
 }
 
 .ai-suggestion-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(72px, 0.8fr);
   gap: 8px;
 }
 
@@ -594,7 +613,8 @@ body.rrhh-embedded-body .person-card p,
 body.rrhh-embedded-body .operator-stats strong,
 body.rrhh-embedded-body .operator-week-item strong,
 body.rrhh-embedded-body .day-summary-item strong,
-body.rrhh-embedded-body .ai-suggestion-top strong {
+body.rrhh-embedded-body .ai-suggestion-person strong,
+body.rrhh-embedded-body .ai-suggestion-source strong {
   color: var(--plan-text) !important;
 }
 
@@ -602,11 +622,18 @@ body.rrhh-embedded-body .operator-stats span,
 body.rrhh-embedded-body .operator-week-item span,
 body.rrhh-embedded-body .day-summary-item span,
 body.rrhh-embedded-body .day-summary-item .day-summary-shift,
-body.rrhh-embedded-body .ai-suggestion-top span,
-body.rrhh-embedded-body .ai-suggestion-top em,
-body.rrhh-embedded-body .ai-suggestion-source,
+body.rrhh-embedded-body .ai-suggestion-person span,
+body.rrhh-embedded-body .ai-suggestion-source span,
+body.rrhh-embedded-body .ai-suggestion-context em,
+body.rrhh-embedded-body .ai-suggestion-separator,
 body.rrhh-embedded-body .ai-empty-state {
   color: var(--plan-muted) !important;
+}
+
+body.rrhh-embedded-body .ai-suggestion-fields input {
+  background: var(--plan-shift) !important;
+  border-color: var(--plan-line) !important;
+  color: var(--plan-text) !important;
 }
 
 body.rrhh-embedded-body .planner-panel {

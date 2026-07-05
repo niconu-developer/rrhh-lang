@@ -894,40 +894,43 @@ function renderAiPanel() {
     .map((suggestion) => {
       const disabled = suggestion.status !== "pending";
       const statusClass = suggestion.hasExisting ? "warning" : suggestion.status;
+      const sourceLabel = suggestion.eventPlace
+        ? `${suggestion.eventName} · ${suggestion.eventPlace}`
+        : suggestion.eventName;
       const existing = suggestion.hasExisting
-        ? `<p class="ai-existing">Actual: ${escapeHtml(suggestion.existingLabel)}</p>`
+        ? `<p class="ai-existing">En el plan: ${escapeHtml(suggestion.existingLabel)}</p>`
         : "";
-      return `<article class="ai-suggestion-card ${statusClass}" data-ai-suggestion="${escapeAttr(suggestion.id)}">
-        <div class="ai-suggestion-top">
-          <div>
+      const applyDisabled = disabled || suggestion.personIndex < 0;
+      return `<article class="ai-suggestion-card ai-suggestion-compact ${statusClass}" data-ai-suggestion="${escapeAttr(suggestion.id)}">
+        <div class="ai-suggestion-context">
+          <div class="ai-suggestion-person">
             <strong>${escapeHtml(suggestion.personName)}</strong>
-            <span>${escapeHtml(suggestion.role || "Operación")}</span>
+            <span>${escapeHtml(suggestion.role || "Sin rol")}</span>
+          </div>
+          <div class="ai-suggestion-source">
+            <span>Gestión</span>
+            <strong>${escapeHtml(sourceLabel)}</strong>
           </div>
           <em>${suggestionStatusLabel(suggestion)}</em>
         </div>
         <div class="ai-suggestion-fields">
-          <label>
-            Entrada
-            <input class="ai-suggestion-start" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftStart))}" ${disabled ? "disabled" : ""} />
-          </label>
-          <label>
-            Salida
-            <input class="ai-suggestion-end" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftEnd))}" ${disabled ? "disabled" : ""} />
-          </label>
+          <div class="ai-suggestion-time-field" aria-label="Horario sugerido">
+            <span>Horario sugerido</span>
+            <div class="ai-suggestion-time-inputs">
+              <input class="ai-suggestion-start" aria-label="Entrada sugerida" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftStart))}" ${disabled ? "disabled" : ""} />
+              <span class="ai-suggestion-separator">-</span>
+              <input class="ai-suggestion-end" aria-label="Salida sugerida" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftEnd))}" ${disabled ? "disabled" : ""} />
+            </div>
+          </div>
           <label class="ai-suggestion-activity-field">
-            Texto
+            Nombre
             <input class="ai-suggestion-activity" type="text" value="${escapeAttr(suggestion.draftActivity)}" ${disabled ? "disabled" : ""} />
           </label>
         </div>
-        <div class="ai-suggestion-source">
-          <span>Base: Operación</span>
-          <span>${escapeHtml(suggestion.eventName)}</span>
-          <span>${escapeHtml(suggestion.eventPlace || suggestion.draftActivity)}</span>
-        </div>
         ${existing}
         <div class="ai-suggestion-actions">
-          <button class="ghost-button small" type="button" data-ai-action="discard" ${disabled ? "disabled" : ""}>No</button>
-          <button class="primary-button small" type="button" data-ai-action="apply" ${disabled || suggestion.personIndex < 0 ? "disabled" : ""}>Sí</button>
+          <button class="primary-button small" type="button" data-ai-action="apply" ${applyDisabled ? "disabled" : ""}>Marcar en el plan</button>
+          <button class="ghost-button small" type="button" data-ai-action="discard" ${disabled ? "disabled" : ""}>Ignorar</button>
         </div>
       </article>`;
     })
