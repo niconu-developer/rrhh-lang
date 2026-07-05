@@ -1009,7 +1009,6 @@ body.rrhh-embedded-body #iaPanel.active {
 }
 
 body.rrhh-embedded-body .operator-week,
-body.rrhh-embedded-body .day-summary-list,
 body.rrhh-embedded-body .ai-suggestions-list {
   flex: 1 1 auto;
   min-height: 0;
@@ -1017,10 +1016,39 @@ body.rrhh-embedded-body .ai-suggestions-list {
   padding-right: 2px;
 }
 
-body.rrhh-embedded-body .operator-week-item,
-body.rrhh-embedded-body .day-summary-item {
+body.rrhh-embedded-body .operator-week-item {
   min-height: 58px;
   align-content: center;
+}
+
+body.rrhh-embedded-body #diaPanel.active {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+body.rrhh-embedded-body #diaPanel .day-summary-list {
+  display: grid;
+  align-content: start;
+  grid-auto-rows: max-content;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-height: 0;
+  overflow: visible;
+  padding-right: 0;
+}
+
+body.rrhh-embedded-body #diaPanel .day-summary-item {
+  min-height: 0;
+  align-content: start;
+  gap: 4px;
+  padding: 12px;
+}
+
+body.rrhh-embedded-body #diaPanel .day-summary-item strong,
+body.rrhh-embedded-body #diaPanel .day-summary-item span {
+  display: block;
 }
 
 body.rrhh-embedded-body.rrhh-parent-theme-light .planner-panel,
