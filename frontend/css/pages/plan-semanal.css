@@ -332,6 +332,9 @@ body.rrhh-embedded-body.rrhh-parent-theme-dark {
   --plan-page: #090d12;
   --plan-panel: #121821;
   --plan-panel-soft: #171e2a;
+  --plan-tabs-bg: #0f141c;
+  --plan-tab-bg: #171e2b;
+  --plan-tab-text: #dbe4f4;
   --plan-head: #202938;
   --plan-person: #202938;
   --plan-shift: #121821;
@@ -351,6 +354,9 @@ body.rrhh-embedded-body.rrhh-parent-theme-light {
   --plan-page: #f3f6fa;
   --plan-panel: #fbfcfe;
   --plan-panel-soft: #f1f5f9;
+  --plan-tabs-bg: #eef3f8;
+  --plan-tab-bg: #ffffff;
+  --plan-tab-text: #202632;
   --plan-head: #eef3f8;
   --plan-person: #e8edf4;
   --plan-shift: #fdfefe;
@@ -390,7 +396,46 @@ body.rrhh-embedded-body .planner-panel,
 body.rrhh-embedded-body .side-panel {
   background: var(--plan-panel, var(--panel)) !important;
   border-color: var(--plan-line, var(--soft-line)) !important;
+  border-radius: 8px !important;
   box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .side-panel,
+body.rrhh-embedded-body .side-panel {
+  overflow: hidden !important;
+}
+
+html.rrhh-embedded-root .side-panel::before,
+body.rrhh-embedded-body .side-panel::before {
+  content: none !important;
+  display: none !important;
+}
+
+html.rrhh-embedded-root .side-panel .tabs,
+body.rrhh-embedded-body .side-panel .tabs {
+  gap: 12px !important;
+  padding: 12px !important;
+  border-bottom: 1px solid var(--plan-line, var(--soft-line)) !important;
+  border-radius: 8px 8px 0 0 !important;
+  background: var(--plan-tabs-bg, var(--shift)) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .side-panel .tab,
+body.rrhh-embedded-body .side-panel .tab {
+  min-height: 48px !important;
+  border: 1px solid var(--plan-line, var(--soft-line)) !important;
+  border-radius: 7px !important;
+  background: var(--plan-tab-bg, var(--panel)) !important;
+  color: var(--plan-tab-text, var(--ink)) !important;
+  box-shadow: none !important;
+}
+
+html.rrhh-embedded-root .side-panel .tab.active,
+body.rrhh-embedded-body .side-panel .tab.active {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: #ffffff !important;
 }
 
 html.rrhh-embedded-root .panel-resizer,
@@ -653,12 +698,8 @@ body.rrhh-embedded-body.rrhh-parent-theme-light .side-panel {
 }
 
 body.rrhh-embedded-body.rrhh-parent-theme-light .side-panel::before {
-  content: "";
-  display: block;
-  height: 10px;
-  margin: -1px -1px 0;
-  border-radius: 8px 8px 0 0;
-  background: linear-gradient(90deg, #2563eb 0%, #5aa6c8 58%, #86c6b2 100%);
+  content: none !important;
+  display: none !important;
 }
 
 body.rrhh-embedded-body.rrhh-parent-theme-light .person-card,
