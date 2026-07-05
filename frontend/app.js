@@ -1247,6 +1247,16 @@ function getVisiblePeople() {
 
 function updateOperatorDetail() {
   const person = people[selected.personIndex];
+  if (!person) {
+    elements.operatorAvatar.textContent = "--";
+    elements.operatorName.textContent = "";
+    elements.operatorRole.textContent = "";
+    elements.operatorShiftCount.textContent = "-";
+    elements.operatorHours.textContent = "-";
+    elements.operatorPendingHours.textContent = "-";
+    elements.operatorWeek.innerHTML = "";
+    return;
+  }
 
   const weekItems = person.shifts
     .map((_, dayIndex) => {
@@ -2119,13 +2129,14 @@ function openTab(tabName) {
 }
 
 function setSideMode(mode, activeTab) {
-  const visibleTabs = mode === "day" ? ["dia"] : mode === "bulk" ? ["lotes"] : mode === "ai" ? ["ia"] : ["operador"];
+  const visibleTabs = mode === "empty" ? [] : mode === "day" ? ["dia"] : mode === "bulk" ? ["lotes"] : mode === "ai" ? ["ia"] : ["operador"];
   document.querySelector(".side-panel")?.setAttribute("data-side-mode", mode);
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.hidden = !visibleTabs.includes(tab.dataset.tab);
   });
   document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
   document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+  if (!visibleTabs.length) return;
   openTab(activeTab || visibleTabs[0]);
 }
 
@@ -2519,7 +2530,9 @@ document.addEventListener("keydown", (event) => {
   const isCopyPaste = key === "c" || key === "v";
   const isUndo = key === "z";
   const editable = event.target.closest("input, textarea, select");
+  const hasCellSelection = selectedCells.size > 0;
   if (!editable && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
+    if (!hasCellSelection) return;
     event.preventDefault();
     if (event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
       extendHorizontalSelection(event.key === "ArrowLeft" ? -1 : 1);
@@ -2532,17 +2545,20 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   if (!editable && event.key === "Enter") {
+    if (!hasCellSelection) return;
     event.preventDefault();
     startInlineEdit();
     return;
   }
   if (!editable && (event.key === "Delete" || event.key === "Backspace")) {
+    if (!hasCellSelection) return;
     event.preventDefault();
     clearSelectedShifts();
     return;
   }
   if ((!isCopyPaste && !isUndo) || (!event.ctrlKey && !event.metaKey)) return;
   if (editable) return;
+  if (isCopyPaste && !hasCellSelection) return;
   event.preventDefault();
   if (key === "c") copyContextShift();
   if (key === "v") pasteContextShift(selected);
@@ -2646,13 +2662,15 @@ elements.summaryTo.addEventListener("change", () => {
 });
 elements.week.addEventListener("change", () => {
   setActiveWeek(Number(elements.week.value));
-  setSingleSelectedCell(selected.personIndex, selected.dayIndex);
+  selectedCells = new Set();
+  selectionAnchor = null;
   aiSuggestions = [];
   aiSuggestionsDayIndex = null;
   aiSuggestionsLoading = false;
   aiSuggestionsError = "";
   loadMonthlyPersonData().catch(() => {});
   render();
+  setSideMode("empty");
   showToast(copiedShift ? "Semana actualizada. Podés pegar lo copiado" : "Semana actualizada");
 });
 document.querySelectorAll(".tab").forEach((button) => {
@@ -2666,9 +2684,10 @@ document.querySelector("#todayButton")?.addEventListener("click", () => {
   elements.week.value = String(CURRENT_WEEK_OFFSET);
   selected = { personIndex: 0, dayIndex: 0 };
   selectedDayDetailIndex = 0;
-  setSingleSelectedCell(0, 0);
+  selectedCells = new Set();
+  selectionAnchor = null;
   render();
-  setSideMode("person", "operador");
+  setSideMode("empty");
   showToast("Semana actual seleccionada");
 });
 
@@ -2689,10 +2708,10 @@ async function initPlanner() {
     await hydratePlannerFromBackend();
     restorePendingPlannerTurns();
     setActiveWeek(currentWeekIndex);
-    setSingleSelectedCell(selected.personIndex, selected.dayIndex);
-    await loadMonthlyPersonData();
+    selectedCells = new Set();
+    selectionAnchor = null;
     render();
-    setSideMode("person", "operador");
+    setSideMode("empty");
     showToast("Plan semanal conectado a la base");
   } catch (error) {
     backendPlannerEnabled = false;

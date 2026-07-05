@@ -15,7 +15,7 @@
       })();
     </script>
     <link rel="stylesheet" href="./css/global.css?v=20260704-prepaint2" />
-    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260704-shellfix1" />
+    <link rel="stylesheet" href="./css/pages/plan-semanal.css?v=20260705-sideempty1" />
   </head>
   <body>
     <header class="topbar">
@@ -87,9 +87,9 @@
 
       <div class="panel-resizer" id="panelResizer" role="separator" aria-label="Redimensionar panel lateral" aria-orientation="vertical" tabindex="0"></div>
 
-      <aside class="side-panel" aria-label="Detalle del turno">
+      <aside class="side-panel" data-side-mode="empty" aria-label="Detalle del turno">
         <nav class="tabs" aria-label="Vistas">
-          <button class="tab active" data-tab="operador" type="button">Operador</button>
+          <button class="tab" data-tab="operador" type="button">Operador</button>
           <button class="tab" data-tab="dia" type="button">Día</button>
           <button class="tab" data-tab="lotes" type="button">Lotes</button>
           <button class="tab" data-tab="ia" type="button" hidden>IA</button>
@@ -111,7 +111,7 @@
           <button class="primary-button full" id="exportDayButton" type="button">Exportar día</button>
         </section>
 
-        <section class="tab-panel active" id="operadorPanel">
+        <section class="tab-panel" id="operadorPanel">
           <div class="person-card">
             <div class="avatar" id="operatorAvatar">LU</div>
             <div>

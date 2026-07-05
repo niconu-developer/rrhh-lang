@@ -62,6 +62,10 @@
   display: none;
 }
 
+.side-panel[data-side-mode="empty"] .tab-panel {
+  display: none !important;
+}
+
 .side-panel .tab-panel {
   padding: 12px;
 }
@@ -403,6 +407,16 @@ body.rrhh-embedded-body .side-panel {
 html.rrhh-embedded-root .side-panel,
 body.rrhh-embedded-body .side-panel {
   overflow: hidden !important;
+}
+
+html.rrhh-embedded-root .side-panel[data-side-mode="empty"],
+body.rrhh-embedded-body .side-panel[data-side-mode="empty"] {
+  background: var(--plan-panel, var(--panel)) !important;
+}
+
+html.rrhh-embedded-root .side-panel[data-side-mode="empty"] .tab-panel,
+body.rrhh-embedded-body .side-panel[data-side-mode="empty"] .tab-panel {
+  display: none !important;
 }
 
 html.rrhh-embedded-root .side-panel::before,
