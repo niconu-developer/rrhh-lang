@@ -1078,10 +1078,14 @@ function phaseLabelForSuggestion(phase) {
 }
 
 function suggestionActivityLabel(sourceItem, assignment) {
-  const prefix = sourceItem.sourceType === "events"
-    ? phaseLabelForSuggestion(assignment.phase)
-    : sourceItem.sourceLabel;
-  return normalizeActivity(`${prefix || "Operación"} ${sourceItem.name || ""}`.trim());
+  return normalizeActivity(sourceItem.name || "OPERACION");
+}
+
+function suggestionHeadingLabel(sourceItem, assignment) {
+  if (sourceItem.sourceType === "events") {
+    return `${phaseLabelForSuggestion(assignment.phase)} ${sourceItem.name || "Evento"}`.trim();
+  }
+  return sourceItem.name || sourceItem.sourceLabel || "Tarea";
 }
 
 function buildAiSuggestion({ source, assignment, dayIndex, rules }) {
@@ -1106,6 +1110,7 @@ function buildAiSuggestion({ source, assignment, dayIndex, rules }) {
     sourceType: source.sourceType,
     sourceLabel: source.sourceLabel,
     phaseLabel: phaseLabelForSuggestion(assignment.phase),
+    headingLabel: suggestionHeadingLabel(source, assignment),
     eventName: source.name || "Gestion",
     eventPlace: source.place || "",
     sourceContext: sourceContextLabel(source, assignment, section),
@@ -1247,7 +1252,9 @@ function renderAiPanel() {
         : "";
       const matchedPending = pendingSuggestions.filter((item) => item.personIndex >= 0);
       const applyDisabled = disabled || matchedPending.length === 0;
-      const placeLabel = suggestion.sectionName || suggestion.eventPlace || "";
+      const isTaskSuggestion = suggestion.sourceType === "tasks";
+      const placeLabel = isTaskSuggestion ? "" : (suggestion.sectionName || suggestion.eventPlace || "");
+      const headingClass = isTaskSuggestion ? "ai-suggestion-heading full" : "ai-suggestion-heading";
       const peopleRows = suggestionGroupDetailLabel(group)
         .map((item) => `<div class="ai-suggestion-person-row">
           <strong>${escapeHtml(item.personName)}</strong>
@@ -1257,9 +1264,9 @@ function renderAiPanel() {
       const statusLabel = suggestionGroupStatusLabel(group);
       const statusPill = statusLabel ? `<em>${escapeHtml(statusLabel)}</em>` : "";
       return `<article class="ai-suggestion-card ai-suggestion-compact ${statusClass}" data-ai-suggestion-group="${escapeAttr(group.id)}">
-        <div class="ai-suggestion-heading">
-          <strong>${escapeHtml(suggestion.eventName || sourceLabel || "Gestion")}</strong>
-          <span>${escapeHtml(placeLabel)}</span>
+        <div class="${headingClass}">
+          <strong>${escapeHtml(suggestion.headingLabel || sourceLabel || "Gestion")}</strong>
+          ${placeLabel ? `<span>${escapeHtml(placeLabel)}</span>` : ""}
           ${statusPill}
         </div>
         <div class="ai-suggestion-people">${peopleRows}</div>

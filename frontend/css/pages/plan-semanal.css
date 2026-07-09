@@ -170,6 +170,10 @@
   gap: 8px;
 }
 
+.ai-suggestion-heading.full {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .ai-suggestion-heading strong {
   color: #f8fbff;
   font-size: 13px;
