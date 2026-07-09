@@ -1073,8 +1073,15 @@ function sourceContextLabel(sourceItem, assignment, section = null) {
 
 function phaseLabelForSuggestion(phase) {
   const phaseKey = normalizeRulePhase(phase);
-  const labels = { armado: "Armado", evento: "Operacion", desarmado: "Desarmado" };
+  const labels = { armado: "Armado", evento: "Operación", desarmado: "Desarmado" };
   return labels[phaseKey] || phaseKey || "Gestion";
+}
+
+function suggestionActivityLabel(sourceItem, assignment) {
+  const prefix = sourceItem.sourceType === "events"
+    ? phaseLabelForSuggestion(assignment.phase)
+    : sourceItem.sourceLabel;
+  return normalizeActivity(`${prefix || "Operación"} ${sourceItem.name || ""}`.trim());
 }
 
 function buildAiSuggestion({ source, assignment, dayIndex, rules }) {
@@ -1083,7 +1090,7 @@ function buildAiSuggestion({ source, assignment, dayIndex, rules }) {
   const scheduledTime = timeFromRrhhRules(source, assignment, rules, section);
   const start = normalizeTime(scheduledTime.start || "");
   const end = normalizeTime(scheduledTime.end || "");
-  const activity = activityFromRrhhRules(source, assignment, rules, section);
+  const activity = suggestionActivityLabel(source, assignment) || activityFromRrhhRules(source, assignment, rules, section);
   const existing = personIndex >= 0 ? getShift(personIndex, dayIndex) : null;
   const hasExisting = rules.conflictMode === "review" && existing ? !isEmptyShift(existing) : false;
   const existingLabel = existing?.noSchedule
@@ -1135,10 +1142,10 @@ function suggestionGroupKey(suggestion) {
     suggestion.dayIndex,
     suggestion.sourceType,
     suggestion.sourceId,
+    suggestion.phaseLabel,
     suggestion.sectionName || suggestion.eventPlace || suggestion.phaseLabel,
     suggestion.draftStart,
     suggestion.draftEnd,
-    suggestion.draftActivity,
   ].map((item) => normalizeSearchText(item)).join("::");
 }
 
@@ -1216,15 +1223,18 @@ function renderAiPanel() {
     return;
   }
 
-  const pendingCount = aiSuggestions.filter((suggestion) => suggestion.status === "pending").length;
-  elements.aiSuggestionMeta.textContent = `${aiSuggestions.length} sugerencias encontradas · ${pendingCount} pendientes`;
+  const suggestionGroups = groupedAiSuggestions();
+  const pendingCount = suggestionGroups.filter((group) => (
+    group.suggestions.some((suggestion) => suggestion.status === "pending")
+  )).length;
+  elements.aiSuggestionMeta.textContent = `${suggestionGroups.length} bloques encontrados · ${pendingCount} pendientes`;
 
   if (!aiSuggestions.length) {
-    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">No encontramos personas asignadas en Gestión para este día.</div>`;
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">No encontramos personas de Gestión que coincidan con el plan para este día.</div>`;
     return;
   }
 
-  elements.aiSuggestionsList.innerHTML = groupedAiSuggestions()
+  elements.aiSuggestionsList.innerHTML = suggestionGroups
     .map((group) => {
       const suggestion = group.suggestions[0];
       const pendingSuggestions = group.suggestions.filter((item) => item.status === "pending");
@@ -1237,7 +1247,7 @@ function renderAiPanel() {
         : "";
       const matchedPending = pendingSuggestions.filter((item) => item.personIndex >= 0);
       const applyDisabled = disabled || matchedPending.length === 0;
-      const placeLabel = suggestion.sectionName || suggestion.eventPlace || suggestion.phaseLabel || "";
+      const placeLabel = suggestion.sectionName || suggestion.eventPlace || "";
       const peopleRows = suggestionGroupDetailLabel(group)
         .map((item) => `<div class="ai-suggestion-person-row">
           <strong>${escapeHtml(item.personName)}</strong>
@@ -1289,7 +1299,8 @@ async function suggestDayWithAi(dayIndex) {
       eventAssignments(source)
         .filter((assignment) => shouldUseAssignmentForPlan(assignment, rules, source))
         .forEach((assignment) => {
-          suggestions.push(buildAiSuggestion({ source, assignment, dayIndex, rules }));
+          const suggestion = buildAiSuggestion({ source, assignment, dayIndex, rules });
+          if (suggestion.personIndex >= 0) suggestions.push(suggestion);
         });
     });
     aiSuggestions = suggestions;
