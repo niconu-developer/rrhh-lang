@@ -141,11 +141,11 @@
 
 .ai-suggestion-card {
   display: grid;
-  gap: 8px;
+  gap: 9px;
   border: 1px solid #2d3850;
   border-radius: 8px;
   background: #151a23;
-  padding: 9px;
+  padding: 10px;
 }
 
 .ai-suggestion-card.warning {
@@ -163,29 +163,14 @@
   opacity: 0.58;
 }
 
-.ai-suggestion-context {
-  display: flex;
-  align-items: flex-start;
+.ai-suggestion-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(84px, 0.75fr) auto;
+  align-items: start;
   gap: 8px;
 }
 
-.ai-suggestion-person,
-.ai-suggestion-source {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-}
-
-.ai-suggestion-person {
-  flex: 0 0 88px;
-}
-
-.ai-suggestion-source {
-  flex: 1 1 auto;
-}
-
-.ai-suggestion-person strong,
-.ai-suggestion-source strong {
+.ai-suggestion-heading strong {
   color: #f8fbff;
   font-size: 13px;
   line-height: 1.15;
@@ -194,10 +179,8 @@
   white-space: nowrap;
 }
 
-.ai-suggestion-person span,
-.ai-suggestion-source span,
-.ai-suggestion-context em,
-.ai-suggestion-source,
+.ai-suggestion-heading span,
+.ai-suggestion-heading em,
 .ai-existing {
   color: #9ba6ba;
   font-size: 11px;
@@ -205,12 +188,49 @@
   line-height: 1.25;
 }
 
-.ai-suggestion-context em {
-  flex: 0 0 auto;
+.ai-suggestion-heading em {
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 999px;
   padding: 3px 6px;
   font-style: normal;
+  white-space: nowrap;
+}
+
+.ai-suggestion-people {
+  display: grid;
+  gap: 4px;
+}
+
+.ai-suggestion-person-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(76px, 0.9fr);
+  gap: 8px;
+  align-items: baseline;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  padding-bottom: 3px;
+}
+
+.ai-suggestion-person-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ai-suggestion-person-row strong {
+  color: #f8fbff;
+  font-size: 12px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-suggestion-person-row span {
+  color: #9ba6ba;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -221,14 +241,8 @@
   align-items: end;
 }
 
-.ai-suggestion-time-field,
-.ai-suggestion-fields label {
+.ai-suggestion-time-field {
   display: grid;
-  gap: 4px;
-  color: #9ba6ba;
-  font-size: 11px;
-  font-weight: 850;
-  text-transform: uppercase;
 }
 
 .ai-suggestion-time-inputs {
@@ -613,8 +627,8 @@ body.rrhh-embedded-body .person-card p,
 body.rrhh-embedded-body .operator-stats strong,
 body.rrhh-embedded-body .operator-week-item strong,
 body.rrhh-embedded-body .day-summary-item strong,
-body.rrhh-embedded-body .ai-suggestion-person strong,
-body.rrhh-embedded-body .ai-suggestion-source strong {
+body.rrhh-embedded-body .ai-suggestion-heading strong,
+body.rrhh-embedded-body .ai-suggestion-person-row strong {
   color: var(--plan-text) !important;
 }
 
@@ -622,9 +636,9 @@ body.rrhh-embedded-body .operator-stats span,
 body.rrhh-embedded-body .operator-week-item span,
 body.rrhh-embedded-body .day-summary-item span,
 body.rrhh-embedded-body .day-summary-item .day-summary-shift,
-body.rrhh-embedded-body .ai-suggestion-person span,
-body.rrhh-embedded-body .ai-suggestion-source span,
-body.rrhh-embedded-body .ai-suggestion-context em,
+body.rrhh-embedded-body .ai-suggestion-heading span,
+body.rrhh-embedded-body .ai-suggestion-heading em,
+body.rrhh-embedded-body .ai-suggestion-person-row span,
 body.rrhh-embedded-body .ai-suggestion-separator,
 body.rrhh-embedded-body .ai-empty-state {
   color: var(--plan-muted) !important;

@@ -1124,15 +1124,18 @@ function suggestionStatusLabel(suggestion) {
 }
 
 function suggestionVisibleSourceLabel(suggestion) {
-  return suggestion.sourceContext || (suggestion.eventPlace
-    ? `${suggestion.eventName} · ${suggestion.eventPlace}`
-    : suggestion.eventName);
+  return [
+    suggestion.eventName,
+    suggestion.sectionName || suggestion.eventPlace || suggestion.phaseLabel,
+  ].filter((item) => String(item || "").trim()).join(" · ");
 }
 
 function suggestionGroupKey(suggestion) {
   return [
     suggestion.dayIndex,
-    suggestionVisibleSourceLabel(suggestion),
+    suggestion.sourceType,
+    suggestion.sourceId,
+    suggestion.sectionName || suggestion.eventPlace || suggestion.phaseLabel,
     suggestion.draftStart,
     suggestion.draftEnd,
     suggestion.draftActivity,
@@ -1174,12 +1177,8 @@ function suggestionGroupPrimaryStatus(group) {
 
 function suggestionGroupDetailLabel(group) {
   const suggestions = group?.suggestions || [];
-  const roles = [...new Set(suggestions.map((suggestion) => String(suggestion.role || "").trim()).filter(Boolean))];
-  if (roles.length === 1) return roles[0];
-  if (!roles.length) return "Sin rol";
   return suggestions
-    .map((suggestion) => `${suggestion.personName} - ${suggestion.role || "Sin rol"}`)
-    .join(" · ");
+    .map((suggestion) => ({ personName: suggestion.personName, role: suggestion.role || "Sin rol" }));
 }
 
 function updateAiSuggestionDraftsFromCard(card, suggestions) {
@@ -1238,34 +1237,31 @@ function renderAiPanel() {
         : "";
       const matchedPending = pendingSuggestions.filter((item) => item.personIndex >= 0);
       const applyDisabled = disabled || matchedPending.length === 0;
-      const personNames = group.suggestions.map((item) => item.personName).join(", ");
-      const detailLabel = suggestionGroupDetailLabel(group);
+      const placeLabel = suggestion.sectionName || suggestion.eventPlace || suggestion.phaseLabel || "";
+      const peopleRows = suggestionGroupDetailLabel(group)
+        .map((item) => `<div class="ai-suggestion-person-row">
+          <strong>${escapeHtml(item.personName)}</strong>
+          <span>${escapeHtml(item.role)}</span>
+        </div>`)
+        .join("");
       const statusLabel = suggestionGroupStatusLabel(group);
       const statusPill = statusLabel ? `<em>${escapeHtml(statusLabel)}</em>` : "";
       return `<article class="ai-suggestion-card ai-suggestion-compact ${statusClass}" data-ai-suggestion-group="${escapeAttr(group.id)}">
-        <div class="ai-suggestion-context">
-          <div class="ai-suggestion-person">
-            <strong>${escapeHtml(personNames)}</strong>
-            <span>${escapeHtml(detailLabel)}</span>
-          </div>
-          <div class="ai-suggestion-source">
-            <strong>${escapeHtml(sourceLabel)}</strong>
-          </div>
+        <div class="ai-suggestion-heading">
+          <strong>${escapeHtml(suggestion.eventName || sourceLabel || "Gestion")}</strong>
+          <span>${escapeHtml(placeLabel)}</span>
           ${statusPill}
         </div>
+        <div class="ai-suggestion-people">${peopleRows}</div>
         <div class="ai-suggestion-fields">
           <div class="ai-suggestion-time-field" aria-label="Horario sugerido">
-            <span>Horario sugerido</span>
             <div class="ai-suggestion-time-inputs">
               <input class="ai-suggestion-start" aria-label="Entrada sugerida" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftStart))}" ${disabled ? "disabled" : ""} />
               <span class="ai-suggestion-separator">-</span>
               <input class="ai-suggestion-end" aria-label="Salida sugerida" type="text" inputmode="numeric" maxlength="5" value="${escapeAttr(compactTime(suggestion.draftEnd))}" ${disabled ? "disabled" : ""} />
             </div>
           </div>
-          <label class="ai-suggestion-activity-field">
-            Nombre
-            <input class="ai-suggestion-activity" type="text" value="${escapeAttr(suggestion.draftActivity)}" ${disabled ? "disabled" : ""} />
-          </label>
+          <input class="ai-suggestion-activity" aria-label="Nombre para el plan" type="text" value="${escapeAttr(suggestion.draftActivity)}" ${disabled ? "disabled" : ""} />
         </div>
         ${existing}
         <div class="ai-suggestion-actions">
@@ -2819,9 +2815,14 @@ elements.table.addEventListener("click", (event) => {
     shiftSelectCell(personIndex, dayIndex);
     render();
     setSideMode("person", "operador");
+    focusSelectedButton();
     return;
   }
-  startInlineEdit(personIndex, dayIndex);
+  if (editingCell) saveInlineEdit();
+  setSingleSelectedCell(personIndex, dayIndex);
+  render();
+  setSideMode("person", "operador");
+  focusSelectedButton();
 });
 
 elements.table.addEventListener("dblclick", (event) => {
