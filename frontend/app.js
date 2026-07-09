@@ -62,9 +62,10 @@ let aiSuggestionsError = "";
 let rrhhAiRules = null;
 
 const DEFAULT_RRHH_AI_RULES = Object.freeze({
-  phases: ["evento"],
+  sources: ["events", "tasks", "armados"],
+  phases: ["armado", "evento", "desarmado"],
   ignoreNames: ["x", "sinnombre"],
-  activitySources: ["place", "name"],
+  activitySources: ["section", "place", "name"],
   scheduleMode: "phase",
   conflictMode: "review",
   matchMode: "normalize",
@@ -820,8 +821,17 @@ function normalizeActivitySource(value) {
   return "";
 }
 
+function normalizeSuggestionSource(value) {
+  const token = normalizeRuleToken(value);
+  if (["eventos", "evento", "events", "event"].includes(token)) return "events";
+  if (["tareas", "tarea", "tasks", "task"].includes(token)) return "tasks";
+  if (["armados", "armado", "desarmados", "desarmado", "schedule", "setup"].includes(token)) return "armados";
+  return "";
+}
+
 function parseRrhhAiRules(text) {
   const rules = {
+    sources: [...DEFAULT_RRHH_AI_RULES.sources],
     phases: [...DEFAULT_RRHH_AI_RULES.phases],
     ignoreNames: [...DEFAULT_RRHH_AI_RULES.ignoreNames],
     activitySources: [...DEFAULT_RRHH_AI_RULES.activitySources],
@@ -839,9 +849,15 @@ function parseRrhhAiRules(text) {
     const values = splitRuleValues(line.slice(separatorIndex + 1));
     const tokens = values.map(normalizeRuleToken);
 
+    if (["fuentes", "origenes", "sources"].includes(key)) {
+      const sources = values.map(normalizeSuggestionSource).filter(Boolean);
+      if (sources.length) rules.sources = [...new Set(sources)];
+      return;
+    }
+
     if (["fases", "fases_de_gestion", "phases"].includes(key)) {
       const phases = values.map(normalizeRulePhase).filter(Boolean);
-      if (phases.length) rules.phases = [...new Set(phases)];
+      if (phases.length) rules.phases = [...new Set([...rules.phases, ...phases])];
       return;
     }
 
@@ -923,54 +939,151 @@ async function parentAppApi(path) {
   return payload;
 }
 
-async function loadParentEventsForDay(day) {
+async function loadParentPlanningSourcesForDay(day, rules) {
   const date = inputDateValue(day.fullDate);
-  return parentAppApi(`/api/events?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`);
+  const sourceSet = new Set(rules.sources?.length ? rules.sources : DEFAULT_RRHH_AI_RULES.sources);
+  const requests = [
+    sourceSet.has("events") ? parentAppApi(`/api/events?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`) : Promise.resolve([]),
+    sourceSet.has("tasks") ? parentAppApi(`/api/tasks?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`) : Promise.resolve([]),
+    sourceSet.has("armados") ? parentAppApi(`/api/armados?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`) : Promise.resolve([]),
+  ];
+  const [events, tasks, armados] = await Promise.all(requests);
+  return [
+    ...events.map(normalizeAiEventSource),
+    ...tasks.map(normalizeAiTaskSource),
+    ...armados.map(normalizeAiArmadoSource),
+  ];
 }
 
-function shouldUseAssignmentForPlan(assignment, rules) {
+function normalizeAiEventSource(event) {
+  return {
+    ...event,
+    sourceType: "events",
+    sourceId: `event-${event.id}`,
+    sourceLabel: "Evento",
+    name: event.name || "Evento",
+    place: event.place || "",
+    start_time: event.start_time || "",
+    end_time: event.end_time || "",
+  };
+}
+
+function normalizeAiTaskSource(task) {
+  return {
+    ...task,
+    sourceType: "tasks",
+    sourceId: `task-${task.id}`,
+    sourceLabel: "Tarea",
+    name: task.title || task.event_name || "Tarea",
+    place: task.event_name || task.owner || "",
+    start_time: task.time || "",
+    end_time: task.end_time || "",
+  };
+}
+
+function normalizeAiArmadoSource(armado) {
+  const isTeardown = normalizeRuleToken(armado.type) === "desarmado";
+  return {
+    ...armado,
+    sourceType: "armados",
+    sourceId: `armado-${armado.id}`,
+    sourceLabel: isTeardown ? "Desarmado" : "Armado",
+    name: armado.event_name || (isTeardown ? "Desarmado" : "Armado"),
+    place: armado.place || armado.event_place || "",
+    start_time: armado.start_time || "",
+    end_time: armado.end_time || "",
+  };
+}
+
+function shouldUseAssignmentForPlan(assignment, rules, source = null) {
   const phase = normalizeRulePhase(assignment?.phase || "evento");
   if (!rules.phases.includes(phase)) return false;
   const personName = aiNormalizeName(assignment?.person_name || "");
   if (!personName) return false;
+  if (source?.sourceType === "armados" && !rules.sources.includes("armados")) return false;
+  if (source?.sourceType === "tasks" && !rules.sources.includes("tasks")) return false;
+  if (source?.sourceType === "events" && !rules.sources.includes("events")) return false;
   return !rules.ignoreNames.some((ignored) => ignored && personName === ignored);
 }
 
-function eventValueForActivitySource(event, assignment, source) {
-  if (source === "place") return event.place;
-  if (source === "name") return event.name;
-  if (source === "client") return event.client;
+function sectionForAssignment(source, assignment) {
+  const sections = Array.isArray(source?.staff_sections) ? source.staff_sections : [];
+  const assignmentSection = String(assignment?.section || "General").trim();
+  return sections.find((section) => (
+    normalizeRulePhase(section.phase) === normalizeRulePhase(assignment?.phase || "evento") &&
+    normalizeSearchText(section.name) === normalizeSearchText(assignmentSection)
+  )) || null;
+}
+
+function sectionLabel(section, assignment) {
+  const explicit = String(section?.title || section?.name || assignment?.section || "").trim();
+  if (!explicit || normalizeSearchText(explicit) === "general") return "";
+  return explicit;
+}
+
+function eventValueForActivitySource(sourceItem, assignment, source, section = null) {
+  if (source === "section") return sectionLabel(section, assignment);
+  if (source === "place") return sourceItem.place;
+  if (source === "name") return sourceItem.name;
+  if (source === "client") return sourceItem.client;
   if (source === "role") return assignment.role;
-  if (source === "section") return assignment.section;
   return "";
 }
 
-function activityFromRrhhRules(event, assignment, rules) {
+function activityFromRrhhRules(sourceItem, assignment, rules, section = null) {
   const value = rules.activitySources
-    .map((source) => eventValueForActivitySource(event, assignment, source))
+    .map((source) => eventValueForActivitySource(sourceItem, assignment, source, section))
     .find((item) => String(item || "").trim());
-  return normalizeActivity(value || event.place || event.name || "OPERACION");
+  return normalizeActivity(value || sourceItem.place || sourceItem.name || "OPERACION");
 }
 
-function timeFromRrhhRules(event, assignment, rules) {
+function timeRangeFromText(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { start: "", end: "" };
+  const match = raw.match(/(\d{1,2}(?::\d{2})?)\s*(?:-|a|hasta)\s*(\d{1,2}(?::\d{2})?)/i);
+  if (match) return { start: normalizeTime(match[1]), end: normalizeTime(match[2]) };
+  const single = raw.match(/\b(\d{1,2}(?::\d{2})?)\b/);
+  if (single) return { start: normalizeTime(single[1]), end: "" };
+  return { start: "", end: "" };
+}
+
+function timeFromRrhhRules(sourceItem, assignment, rules, section = null) {
+  const sectionTime = timeRangeFromText(section?.time_text);
+  if (sectionTime.start || sectionTime.end) return sectionTime;
   const phase = normalizeRulePhase(assignment?.phase || "evento");
-  if (rules.scheduleMode === "phase") {
-    if (phase === "armado" && (event.setup_start || event.setup_end)) {
-      return { start: event.setup_start, end: event.setup_end };
+  if (sourceItem.sourceType === "events" && rules.scheduleMode === "phase") {
+    if (phase === "armado" && (sourceItem.setup_start || sourceItem.setup_end)) {
+      return { start: sourceItem.setup_start, end: sourceItem.setup_end };
     }
-    if (phase === "desarmado" && (event.teardown_start || event.teardown_end)) {
-      return { start: event.teardown_start, end: event.teardown_end };
+    if (phase === "desarmado" && (sourceItem.teardown_start || sourceItem.teardown_end)) {
+      return { start: sourceItem.teardown_start, end: sourceItem.teardown_end };
     }
   }
-  return { start: event.start_time, end: event.end_time };
+  return { start: sourceItem.start_time, end: sourceItem.end_time };
 }
 
-function buildAiSuggestion({ event, assignment, dayIndex, rules }) {
+function sourceContextLabel(sourceItem, assignment, section = null) {
+  const chunks = [
+    sourceItem.sourceLabel,
+    sourceItem.name,
+    sectionLabel(section, assignment) || sourceItem.place,
+  ].filter((item) => String(item || "").trim());
+  return chunks.join(" · ");
+}
+
+function phaseLabelForSuggestion(phase) {
+  const phaseKey = normalizeRulePhase(phase);
+  const labels = { armado: "Armado", evento: "Operacion", desarmado: "Desarmado" };
+  return labels[phaseKey] || phaseKey || "Gestion";
+}
+
+function buildAiSuggestion({ source, assignment, dayIndex, rules }) {
+  const section = sectionForAssignment(source, assignment);
   const personIndex = findPlannerPersonIndexByName(assignment.person_name);
-  const scheduledTime = timeFromRrhhRules(event, assignment, rules);
+  const scheduledTime = timeFromRrhhRules(source, assignment, rules, section);
   const start = normalizeTime(scheduledTime.start || "");
   const end = normalizeTime(scheduledTime.end || "");
-  const activity = activityFromRrhhRules(event, assignment, rules);
+  const activity = activityFromRrhhRules(source, assignment, rules, section);
   const existing = personIndex >= 0 ? getShift(personIndex, dayIndex) : null;
   const hasExisting = rules.conflictMode === "review" && existing ? !isEmptyShift(existing) : false;
   const existingLabel = existing?.noSchedule
@@ -980,11 +1093,16 @@ function buildAiSuggestion({ event, assignment, dayIndex, rules }) {
       : "";
 
   return {
-    id: `${event.id}-${assignment.id || assignment.person_name}-${dayIndex}`,
+    id: `${source.sourceId}-${assignment.id || assignment.person_name}-${dayIndex}`,
     dayIndex,
-    eventId: event.id,
-    eventName: event.name || "Evento",
-    eventPlace: event.place || "",
+    sourceId: source.sourceId,
+    sourceType: source.sourceType,
+    sourceLabel: source.sourceLabel,
+    phaseLabel: phaseLabelForSuggestion(assignment.phase),
+    eventName: source.name || "Gestion",
+    eventPlace: source.place || "",
+    sourceContext: sourceContextLabel(source, assignment, section),
+    sectionName: sectionLabel(section, assignment),
     personIndex,
     personName: assignment.person_name || "Sin persona",
     role: assignment.role || "",
@@ -1002,7 +1120,78 @@ function suggestionStatusLabel(suggestion) {
   if (suggestion.status === "discarded") return "Descartada";
   if (suggestion.status === "unmatched") return "Sin persona en plan";
   if (suggestion.hasExisting) return "Revisa conflicto";
-  return "Lista para aplicar";
+  return "";
+}
+
+function suggestionVisibleSourceLabel(suggestion) {
+  return suggestion.sourceContext || (suggestion.eventPlace
+    ? `${suggestion.eventName} · ${suggestion.eventPlace}`
+    : suggestion.eventName);
+}
+
+function suggestionGroupKey(suggestion) {
+  return [
+    suggestion.dayIndex,
+    suggestionVisibleSourceLabel(suggestion),
+    suggestion.draftStart,
+    suggestion.draftEnd,
+    suggestion.draftActivity,
+  ].map((item) => normalizeSearchText(item)).join("::");
+}
+
+function groupedAiSuggestions() {
+  const groups = new Map();
+  aiSuggestions.forEach((suggestion) => {
+    const key = suggestionGroupKey(suggestion);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: `group-${groups.size}`,
+        suggestions: [],
+      });
+    }
+    groups.get(key).suggestions.push(suggestion);
+  });
+  return [...groups.values()];
+}
+
+function suggestionGroupStatusLabel(group) {
+  const suggestions = group?.suggestions || [];
+  if (suggestions.every((suggestion) => suggestion.status === "applied")) return "Aplicadas";
+  if (suggestions.every((suggestion) => suggestion.status === "discarded")) return "Descartadas";
+  if (suggestions.every((suggestion) => suggestion.status === "unmatched")) return "Sin personas en plan";
+  if (suggestions.some((suggestion) => suggestion.hasExisting)) return "Revisa conflicto";
+  return suggestionStatusLabel(suggestions[0]);
+}
+
+function suggestionGroupPrimaryStatus(group) {
+  const suggestions = group?.suggestions || [];
+  if (suggestions.some((suggestion) => suggestion.hasExisting)) return "warning";
+  if (suggestions.every((suggestion) => suggestion.status === "applied")) return "applied";
+  if (suggestions.every((suggestion) => suggestion.status === "discarded")) return "discarded";
+  if (suggestions.every((suggestion) => suggestion.status === "unmatched")) return "unmatched";
+  return "pending";
+}
+
+function suggestionGroupDetailLabel(group) {
+  const suggestions = group?.suggestions || [];
+  const roles = [...new Set(suggestions.map((suggestion) => String(suggestion.role || "").trim()).filter(Boolean))];
+  if (roles.length === 1) return roles[0];
+  if (!roles.length) return "Sin rol";
+  return suggestions
+    .map((suggestion) => `${suggestion.personName} - ${suggestion.role || "Sin rol"}`)
+    .join(" · ");
+}
+
+function updateAiSuggestionDraftsFromCard(card, suggestions) {
+  const start = normalizeTime(card.querySelector(".ai-suggestion-start")?.value || "");
+  const end = normalizeTime(card.querySelector(".ai-suggestion-end")?.value || "");
+  const activity = normalizeActivity(card.querySelector(".ai-suggestion-activity")?.value || "");
+  suggestions.forEach((suggestion) => {
+    if (suggestion.status !== "pending") return;
+    suggestion.draftStart = start;
+    suggestion.draftEnd = end;
+    suggestion.draftActivity = activity;
+  });
 }
 
 function renderAiPanel() {
@@ -1011,8 +1200,8 @@ function renderAiPanel() {
   elements.aiSuggestionTitle.textContent = day ? `IA · ${formatAiDate(day)}` : "Elegí un día";
 
   if (aiSuggestionsLoading) {
-    elements.aiSuggestionMeta.textContent = "Buscando asignaciones de Operación...";
-    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">Cargando sugerencias del sistema madre.</div>`;
+    elements.aiSuggestionMeta.textContent = "Buscando asignaciones en Gestión...";
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">Cargando eventos, tareas y armados del sistema madre.</div>`;
     return;
   }
 
@@ -1032,32 +1221,37 @@ function renderAiPanel() {
   elements.aiSuggestionMeta.textContent = `${aiSuggestions.length} sugerencias encontradas · ${pendingCount} pendientes`;
 
   if (!aiSuggestions.length) {
-    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">No encontramos personas asignadas en Operación para este día.</div>`;
+    elements.aiSuggestionsList.innerHTML = `<div class="ai-empty-state">No encontramos personas asignadas en Gestión para este día.</div>`;
     return;
   }
 
-  elements.aiSuggestionsList.innerHTML = aiSuggestions
-    .map((suggestion) => {
-      const disabled = suggestion.status !== "pending";
-      const statusClass = suggestion.hasExisting ? "warning" : suggestion.status;
-      const sourceLabel = suggestion.eventPlace
-        ? `${suggestion.eventName} · ${suggestion.eventPlace}`
-        : suggestion.eventName;
-      const existing = suggestion.hasExisting
-        ? `<p class="ai-existing">En el plan: ${escapeHtml(suggestion.existingLabel)}</p>`
+  elements.aiSuggestionsList.innerHTML = groupedAiSuggestions()
+    .map((group) => {
+      const suggestion = group.suggestions[0];
+      const pendingSuggestions = group.suggestions.filter((item) => item.status === "pending");
+      const disabled = pendingSuggestions.length === 0;
+      const statusClass = suggestionGroupPrimaryStatus(group);
+      const sourceLabel = suggestionVisibleSourceLabel(suggestion);
+      const existingItems = group.suggestions.filter((item) => item.hasExisting);
+      const existing = existingItems.length
+        ? `<p class="ai-existing">En el plan: ${escapeHtml(existingItems.map((item) => `${item.personName}: ${item.existingLabel}`).join(" · "))}</p>`
         : "";
-      const applyDisabled = disabled || suggestion.personIndex < 0;
-      return `<article class="ai-suggestion-card ai-suggestion-compact ${statusClass}" data-ai-suggestion="${escapeAttr(suggestion.id)}">
+      const matchedPending = pendingSuggestions.filter((item) => item.personIndex >= 0);
+      const applyDisabled = disabled || matchedPending.length === 0;
+      const personNames = group.suggestions.map((item) => item.personName).join(", ");
+      const detailLabel = suggestionGroupDetailLabel(group);
+      const statusLabel = suggestionGroupStatusLabel(group);
+      const statusPill = statusLabel ? `<em>${escapeHtml(statusLabel)}</em>` : "";
+      return `<article class="ai-suggestion-card ai-suggestion-compact ${statusClass}" data-ai-suggestion-group="${escapeAttr(group.id)}">
         <div class="ai-suggestion-context">
           <div class="ai-suggestion-person">
-            <strong>${escapeHtml(suggestion.personName)}</strong>
-            <span>${escapeHtml(suggestion.role || "Sin rol")}</span>
+            <strong>${escapeHtml(personNames)}</strong>
+            <span>${escapeHtml(detailLabel)}</span>
           </div>
           <div class="ai-suggestion-source">
-            <span>Gestión</span>
             <strong>${escapeHtml(sourceLabel)}</strong>
           </div>
-          <em>${suggestionStatusLabel(suggestion)}</em>
+          ${statusPill}
         </div>
         <div class="ai-suggestion-fields">
           <div class="ai-suggestion-time-field" aria-label="Horario sugerido">
@@ -1092,13 +1286,14 @@ async function suggestDayWithAi(dayIndex) {
   renderAiPanel();
   try {
     const day = days[dayIndex];
-    const [events, rules] = await Promise.all([loadParentEventsForDay(day), loadRrhhAiRules()]);
+    const rules = await loadRrhhAiRules();
+    const sources = await loadParentPlanningSourcesForDay(day, rules);
     const suggestions = [];
-    events.forEach((event) => {
-      eventAssignments(event)
-        .filter((assignment) => shouldUseAssignmentForPlan(assignment, rules))
+    sources.forEach((source) => {
+      eventAssignments(source)
+        .filter((assignment) => shouldUseAssignmentForPlan(assignment, rules, source))
         .forEach((assignment) => {
-          suggestions.push(buildAiSuggestion({ event, assignment, dayIndex, rules }));
+          suggestions.push(buildAiSuggestion({ source, assignment, dayIndex, rules }));
         });
     });
     aiSuggestions = suggestions;
@@ -1107,8 +1302,8 @@ async function suggestDayWithAi(dayIndex) {
   } catch (error) {
     aiSuggestions = [];
     aiSuggestionsError = error?.status === 401 || error?.status === 403
-      ? "Tu sesión del sistema madre no tiene acceso a los eventos."
-      : (error?.message || "No se pudieron leer los eventos del sistema madre.");
+      ? "Tu sesión del sistema madre no tiene acceso a Gestión."
+      : (error?.message || "No se pudieron leer los datos de Gestión.");
     showToast("No se pudieron generar sugerencias");
   } finally {
     aiSuggestionsLoading = false;
@@ -1119,34 +1314,69 @@ async function suggestDayWithAi(dayIndex) {
 function updateAiSuggestionDraft(card) {
   const suggestion = aiSuggestions.find((item) => item.id === card?.dataset.aiSuggestion);
   if (!suggestion || suggestion.status !== "pending") return;
-  suggestion.draftStart = normalizeTime(card.querySelector(".ai-suggestion-start")?.value || "");
-  suggestion.draftEnd = normalizeTime(card.querySelector(".ai-suggestion-end")?.value || "");
-  suggestion.draftActivity = normalizeActivity(card.querySelector(".ai-suggestion-activity")?.value || "");
+  updateAiSuggestionDraftsFromCard(card, [suggestion]);
+}
+
+function updateAiSuggestionGroupDraft(card) {
+  const group = groupedAiSuggestions().find((item) => item.id === card?.dataset.aiSuggestionGroup);
+  if (!group) return null;
+  updateAiSuggestionDraftsFromCard(card, group.suggestions);
+  return group;
 }
 
 function applyAiSuggestion(suggestion) {
-  if (!suggestion || suggestion.personIndex < 0 || suggestion.status !== "pending") return;
-  const before = people[suggestion.personIndex].shifts[suggestion.dayIndex];
-  const after = serializeShift({
-    free: false,
-    start: suggestion.draftStart,
-    end: suggestion.draftEnd,
-    activity: normalizeActivity(suggestion.draftActivity || suggestion.eventPlace || suggestion.eventName || "OPERACION"),
+  applyAiSuggestionGroup({ suggestions: [suggestion] });
+}
+
+function applyAiSuggestionGroup(group) {
+  const applicable = (group?.suggestions || []).filter((suggestion) => (
+    suggestion && suggestion.personIndex >= 0 && suggestion.status === "pending"
+  ));
+  if (!applicable.length) return;
+  const changes = applicable.map((suggestion) => {
+    const before = people[suggestion.personIndex].shifts[suggestion.dayIndex];
+    const after = serializeShift({
+      free: false,
+      start: suggestion.draftStart,
+      end: suggestion.draftEnd,
+      activity: normalizeActivity(suggestion.draftActivity || suggestion.eventPlace || suggestion.eventName || "OPERACION"),
+    });
+    return { suggestion, personIndex: suggestion.personIndex, dayIndex: suggestion.dayIndex, before, after };
   });
-  pushUndo([{ personIndex: suggestion.personIndex, dayIndex: suggestion.dayIndex, before, after }], "sugerencia IA");
-  people[suggestion.personIndex].shifts[suggestion.dayIndex] = after;
-  selected = { personIndex: suggestion.personIndex, dayIndex: suggestion.dayIndex };
-  setSingleSelectedCell(suggestion.personIndex, suggestion.dayIndex);
-  suggestion.status = "applied";
+  pushUndo(changes, applicable.length > 1 ? "sugerencias IA" : "sugerencia IA");
+  changes.forEach((change) => {
+    people[change.personIndex].shifts[change.dayIndex] = change.after;
+    change.suggestion.status = "applied";
+  });
+  const first = changes[0];
+  selected = { personIndex: first.personIndex, dayIndex: first.dayIndex };
+  setSingleSelectedCell(first.personIndex, first.dayIndex);
   saveWeeks();
   render();
   setSideMode("ai", "ia");
-  showToast("Sugerencia aplicada");
+  showToast(applicable.length > 1 ? `${applicable.length} sugerencias aplicadas` : "Sugerencia aplicada");
 }
 
 function handleAiSuggestionClick(event) {
   const actionButton = event.target.closest("[data-ai-action]");
   if (!actionButton) return;
+  const groupCard = actionButton.closest("[data-ai-suggestion-group]");
+  if (groupCard) {
+    const group = updateAiSuggestionGroupDraft(groupCard);
+    if (!group) return;
+    if (actionButton.dataset.aiAction === "discard") {
+      group.suggestions.forEach((suggestion) => {
+        if (suggestion.status === "pending") suggestion.status = "discarded";
+      });
+      renderAiPanel();
+      showToast("Sugerencias descartadas");
+      return;
+    }
+    if (actionButton.dataset.aiAction === "apply") {
+      applyAiSuggestionGroup(group);
+    }
+    return;
+  }
   const card = actionButton.closest("[data-ai-suggestion]");
   updateAiSuggestionDraft(card);
   const suggestion = aiSuggestions.find((item) => item.id === card?.dataset.aiSuggestion);
@@ -2531,7 +2761,6 @@ function pasteContextShift(target = contextTarget || selected) {
 
 elements.table.addEventListener("click", (event) => {
   if (event.target.closest(".inline-shift-editor")) return;
-  if (editingCell) saveInlineEdit();
   if (suppressNextShiftClick) {
     suppressNextShiftClick = false;
     return;
@@ -2585,10 +2814,14 @@ elements.table.addEventListener("click", (event) => {
   const personIndex = Number(button.dataset.person);
   const dayIndex = Number(button.dataset.day);
   selected = { personIndex, dayIndex };
-  if (event.shiftKey) shiftSelectCell(personIndex, dayIndex);
-  else setSingleSelectedCell(personIndex, dayIndex);
-  render();
-  setSideMode("person", "operador");
+  if (event.shiftKey) {
+    if (editingCell) saveInlineEdit();
+    shiftSelectCell(personIndex, dayIndex);
+    render();
+    setSideMode("person", "operador");
+    return;
+  }
+  startInlineEdit(personIndex, dayIndex);
 });
 
 elements.table.addEventListener("dblclick", (event) => {
@@ -2606,13 +2839,14 @@ elements.table.addEventListener("contextmenu", (event) => {
 
 elements.table.addEventListener("mousedown", (event) => {
   if (event.target.closest(".inline-shift-editor")) return;
-  if (editingCell) saveInlineEdit();
   if (event.button !== 0) return;
   const button = event.target.closest(".shift-button");
   if (!button || event.detail > 1) return;
+  if (!event.shiftKey) return;
+  if (editingCell) saveInlineEdit();
   const personIndex = Number(button.dataset.person);
   const dayIndex = Number(button.dataset.day);
-  const startDayIndex = event.shiftKey && selectionAnchor?.personIndex === personIndex ? selectionAnchor.dayIndex : dayIndex;
+  const startDayIndex = selectionAnchor?.personIndex === personIndex ? selectionAnchor.dayIndex : dayIndex;
   dragSelection = {
     personIndex,
     startDayIndex,
@@ -2620,8 +2854,7 @@ elements.table.addEventListener("mousedown", (event) => {
     moved: false,
   };
   selected = { personIndex, dayIndex };
-  if (event.shiftKey) selectContiguousDays(personIndex, startDayIndex, dayIndex);
-  else setSingleSelectedCell(personIndex, dayIndex);
+  selectContiguousDays(personIndex, startDayIndex, dayIndex);
   render();
   event.preventDefault();
 });
@@ -2791,6 +3024,11 @@ elements.copyShiftButton.addEventListener("click", copyContextShift);
 elements.pasteShiftButton.addEventListener("click", () => pasteContextShift());
 elements.aiSuggestionsList?.addEventListener("click", handleAiSuggestionClick);
 elements.aiSuggestionsList?.addEventListener("input", (event) => {
+  const groupCard = event.target.closest("[data-ai-suggestion-group]");
+  if (groupCard) {
+    updateAiSuggestionGroupDraft(groupCard);
+    return;
+  }
   const card = event.target.closest("[data-ai-suggestion]");
   updateAiSuggestionDraft(card);
 });
