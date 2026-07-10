@@ -143,7 +143,7 @@
   display: grid;
   gap: 9px;
   border: 1px solid #2d3850;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #151a23;
   padding: 10px;
 }
@@ -176,7 +176,7 @@
 
 .ai-suggestion-heading strong {
   color: #f8fbff;
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -194,7 +194,7 @@
 
 .ai-suggestion-heading em {
   border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 3px 6px;
   font-style: normal;
   white-space: nowrap;
@@ -202,38 +202,45 @@
 
 .ai-suggestion-people {
   display: grid;
-  gap: 4px;
+  gap: 5px;
 }
 
-.ai-suggestion-person-row {
+.ai-suggestion-assignment-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(76px, 0.9fr);
-  gap: 8px;
-  align-items: baseline;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
-  padding-bottom: 3px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(74px, 0.9fr);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 5px;
+  background: rgba(59, 130, 246, 0.08);
 }
 
-.ai-suggestion-person-row:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.ai-suggestion-person-row strong {
+.ai-suggestion-assignment-row strong {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  background: rgba(96, 165, 250, 0.2);
   color: #f8fbff;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 880;
   line-height: 1.2;
   overflow: hidden;
+  padding: 6px 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ai-suggestion-person-row span {
-  color: #9ba6ba;
-  font-size: 11px;
-  font-weight: 750;
+.ai-suggestion-assignment-row span {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  background: rgba(148, 163, 184, 0.12);
+  color: #d8e1ee;
+  font-size: 12px;
+  font-weight: 820;
   line-height: 1.2;
   overflow: hidden;
+  padding: 6px 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -632,7 +639,7 @@ body.rrhh-embedded-body .operator-stats strong,
 body.rrhh-embedded-body .operator-week-item strong,
 body.rrhh-embedded-body .day-summary-item strong,
 body.rrhh-embedded-body .ai-suggestion-heading strong,
-body.rrhh-embedded-body .ai-suggestion-person-row strong {
+body.rrhh-embedded-body .ai-suggestion-assignment-row strong {
   color: var(--plan-text) !important;
 }
 
@@ -642,10 +649,14 @@ body.rrhh-embedded-body .day-summary-item span,
 body.rrhh-embedded-body .day-summary-item .day-summary-shift,
 body.rrhh-embedded-body .ai-suggestion-heading span,
 body.rrhh-embedded-body .ai-suggestion-heading em,
-body.rrhh-embedded-body .ai-suggestion-person-row span,
+body.rrhh-embedded-body .ai-suggestion-assignment-row span,
 body.rrhh-embedded-body .ai-suggestion-separator,
 body.rrhh-embedded-body .ai-empty-state {
   color: var(--plan-muted) !important;
+}
+
+body.rrhh-embedded-body .ai-suggestion-assignment-row {
+  border-color: var(--plan-line) !important;
 }
 
 body.rrhh-embedded-body .ai-suggestion-fields input {

@@ -1187,10 +1187,15 @@ function suggestionGroupPrimaryStatus(group) {
   return "pending";
 }
 
-function suggestionGroupDetailLabel(group) {
+function suggestionGroupRoleAssignments(group) {
   const suggestions = group?.suggestions || [];
-  return suggestions
-    .map((suggestion) => ({ personName: suggestion.personName, role: suggestion.role || "Sin rol" }));
+  const assignments = new Map();
+  suggestions.forEach((suggestion) => {
+    const role = suggestion.role || "Sin rol";
+    if (!assignments.has(role)) assignments.set(role, []);
+    assignments.get(role).push(suggestion.personName);
+  });
+  return [...assignments.entries()].map(([role, people]) => ({ role, people }));
 }
 
 function updateAiSuggestionDraftsFromCard(card, suggestions) {
@@ -1255,9 +1260,9 @@ function renderAiPanel() {
       const isTaskSuggestion = suggestion.sourceType === "tasks";
       const placeLabel = isTaskSuggestion ? "" : (suggestion.sectionName || suggestion.eventPlace || "");
       const headingClass = isTaskSuggestion ? "ai-suggestion-heading full" : "ai-suggestion-heading";
-      const peopleRows = suggestionGroupDetailLabel(group)
-        .map((item) => `<div class="ai-suggestion-person-row">
-          <strong>${escapeHtml(item.personName)}</strong>
+      const peopleRows = suggestionGroupRoleAssignments(group)
+        .map((item) => `<div class="ai-suggestion-assignment-row">
+          <strong>${escapeHtml(item.people.join(", "))}</strong>
           <span>${escapeHtml(item.role)}</span>
         </div>`)
         .join("");
